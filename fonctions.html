@@ -1,0 +1,457 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fonctions 🔍</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sujet:#E63946;--verbe:#4D96FF;--cod:#6BCB77;--coi:#FF9F1C;--cc_lieu:#C77DFF;--cc_temps:#FF6B9D;--cc_maniere:#26de81;--attr:#FFD93D;
+  --bg:#F5F0FF;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+#sc-home{background:linear-gradient(160deg,#1a0d2e,#2d1a4e);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+.legend-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.lc-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.legend-item{border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:8px;}
+.li-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.li-label{font-size:12px;font-weight:800;color:#fff;}
+.li-abbr{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px;}
+.mode-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.mode-row{border:2px solid rgba(255,255,255,.1);border-radius:13px;padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:all .2s;background:rgba(255,255,255,.04);}
+.mode-row:last-child{margin:0;}
+.mode-row.sel{border-color:#C77DFF;background:rgba(199,125,255,.1);}
+.start-btn{background:linear-gradient(135deg,#C77DFF,#4D96FF);color:#fff;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;margin:0 16px;}
+/* GAME */
+#sc-game{background:var(--bg);overflow-y:auto;padding-bottom:80px;}
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;background:var(--bg);position:sticky;top:0;z-index:10;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,#C77DFF,#4D96FF);border-radius:999px;transition:width .4s;}
+/* MODE 1: IDENTIFIER - cliquer sur les mots */
+.identify-card{background:#fff;border-radius:22px;margin:0 16px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);}
+.identify-hint{font-size:12px;font-weight:800;color:var(--gray);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.target-function{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;text-align:center;margin-bottom:14px;}
+.words-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;line-height:2.2;}
+.word-btn{padding:8px 12px;border-radius:10px;border:2px solid #E5E7EB;background:#F9FAFB;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:var(--dark);cursor:pointer;transition:all .2s;user-select:none;}
+.word-btn:active{transform:scale(.93);}
+.word-btn.selected{border-color:var(--gray);background:#F0F0F0;}
+.word-btn.correct{color:#fff;border-color:transparent;animation:pop .3s ease;}
+.word-btn.wrong{background:#FEE2E2;border-color:var(--sujet);color:var(--sujet);animation:shake .3s ease;}
+.word-btn.missed{border-color:var(--gray);background:rgba(156,163,175,.1);}
+/* MODE 2: COLORIER - colorier tous les mots */
+.colorier-card{background:#fff;border-radius:22px;margin:0 16px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);}
+.colorier-hint{font-size:12px;font-weight:700;color:var(--gray);text-align:center;margin-bottom:12px;}
+.palette-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:10px 16px 0;}
+.pal-btn{padding:7px 10px;border-radius:10px;border:3px solid transparent;font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;color:#fff;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;}
+.pal-btn.active{border-color:#fff;transform:scale(1.1);box-shadow:0 3px 10px rgba(0,0,0,.2);}
+.validate-btn{background:linear-gradient(135deg,#C77DFF,#4D96FF);color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin:10px 16px 0;}
+/* SHARED */
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--sujet);}
+.expl{background:#F5F0FF;border:2px solid #C77DFF;border-radius:14px;padding:12px 16px;margin:8px 16px 0;display:none;font-size:13px;font-weight:700;color:var(--dark);line-height:1.7;}
+.next-btn{background:linear-gradient(135deg,#C77DFF,#4D96FF);color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+/* RESULT */
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,#C77DFF,#4D96FF);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid #C77DFF;color:var(--dark);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span style="font-size:52px;display:block;animation:float 3s ease-in-out infinite">🔍</span>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#C77DFF,#4D96FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px">Fonctions</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px;margin-top:3px">Sujet · Verbe · COD · COI · CC</div>
+  </div>
+  <div class="home-body">
+    <div class="legend-card">
+      <div class="lc-title">🎨 Les fonctions et leurs couleurs</div>
+      <div class="legend-grid">
+        <div class="legend-item" style="background:rgba(230,57,70,.15)"><div class="li-dot" style="background:var(--sujet)"></div><div><div class="li-label">Sujet</div><div class="li-abbr">Qui fait l'action ?</div></div></div>
+        <div class="legend-item" style="background:rgba(77,150,255,.15)"><div class="li-dot" style="background:var(--verbe)"></div><div><div class="li-label">Verbe</div><div class="li-abbr">L'action</div></div></div>
+        <div class="legend-item" style="background:rgba(107,203,119,.15)"><div class="li-dot" style="background:var(--cod)"></div><div><div class="li-label">COD</div><div class="li-abbr">Quoi/Qui directement</div></div></div>
+        <div class="legend-item" style="background:rgba(255,159,28,.15)"><div class="li-dot" style="background:var(--coi)"></div><div><div class="li-label">COI</div><div class="li-abbr">À qui / de quoi</div></div></div>
+        <div class="legend-item" style="background:rgba(199,125,255,.15)"><div class="li-dot" style="background:var(--cc_lieu)"></div><div><div class="li-label">CC Lieu</div><div class="li-abbr">Où ?</div></div></div>
+        <div class="legend-item" style="background:rgba(255,107,157,.15)"><div class="li-dot" style="background:var(--cc_temps)"></div><div><div class="li-label">CC Temps</div><div class="li-abbr">Quand ?</div></div></div>
+        <div class="legend-item" style="background:rgba(38,222,129,.15)"><div class="li-dot" style="background:var(--cc_maniere)"></div><div><div class="li-label">CC Manière</div><div class="li-abbr">Comment ?</div></div></div>
+        <div class="legend-item" style="background:rgba(255,211,61,.15)"><div class="li-dot" style="background:var(--attr)"></div><div><div class="li-label">Attribut</div><div class="li-abbr">Est/Paraît + adjectif</div></div></div>
+      </div>
+    </div>
+    <div class="mode-card">
+      <div class="lc-title">🎮 Mode</div>
+      <div class="mode-row sel" data-mode="identifier" onclick="pickMode(this)">
+        <span style="font-size:22px">👆</span>
+        <div><div style="font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:#fff">Identifier</div><div style="font-size:11px;color:rgba(255,255,255,.45)">On te demande une fonction → touche les bons mots</div></div>
+      </div>
+      <div class="mode-row" data-mode="colorier" onclick="pickMode(this)">
+        <span style="font-size:22px">🎨</span>
+        <div><div style="font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:#fff">Coloriage complet</div><div style="font-size:11px;color:rgba(255,255,255,.45)">Colorie chaque mot de sa couleur de fonction</div></div>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startGame()">🚀 C'est parti !</button>
+  </div>
+</div>
+
+<div id="sc-game" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span style="background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--gray)" id="gnav-mode">Identifier</span>
+    <span style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark)" id="gnav-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:2px 0 6px" id="q-prog">1/10</div>
+
+  <!-- Mode identifier -->
+  <div id="zone-identify" style="display:none">
+    <div class="identify-card">
+      <div class="identify-hint">Touche les mots qui forment le/la</div>
+      <div class="target-function" id="target-function">Sujet</div>
+      <div class="words-row" id="words-row"></div>
+    </div>
+    <div style="font-size:12px;color:var(--gray);font-weight:700;text-align:center;margin:8px 16px 0" id="identify-hint">Touche tous les mots du groupe</div>
+  </div>
+
+  <!-- Mode colorier -->
+  <div id="zone-colorier" style="display:none">
+    <div class="colorier-card">
+      <div class="colorier-hint">Choisis une couleur puis touche les mots</div>
+      <div class="words-row" id="color-words-row"></div>
+    </div>
+    <div class="palette-row" id="palette-row"></div>
+    <button class="validate-btn" onclick="validateColorier()">✅ Vérifier</button>
+  </div>
+
+  <div class="fb-bar" id="fb-bar"></div>
+  <div class="expl" id="expl"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Phrase suivante →</button>
+</div>
+
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:#6BCB77">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--sujet)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:#C77DFF">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="startGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+</div>
+
+<script>
+// Fonctions disponibles avec couleurs
+const FONCTIONS = {
+  sujet:      {label:'Sujet',      color:'var(--sujet)',     question:'Quel est le sujet ?',      astuce:'Cherche qui fait l\'action : "Qui est-ce qui... ?"'},
+  verbe:      {label:'Verbe',      color:'var(--verbe)',     question:'Quel est le verbe ?',      astuce:'C\'est le mot qui indique l\'action ou l\'état'},
+  cod:        {label:'COD',        color:'var(--cod)',       question:'Quel est le COD ?',        astuce:'Pose la question "Verbe + quoi ? ou qui ?" sans préposition'},
+  coi:        {label:'COI',        color:'var(--coi)',       question:'Quel est le COI ?',        astuce:'Pose la question "Verbe + à qui ? à quoi ? de qui ?"'},
+  cc_lieu:    {label:'CC Lieu',    color:'var(--cc_lieu)',   question:'Quel est le CC de lieu ?', astuce:'Pose la question "Où ?" ou "D\'où ?"'},
+  cc_temps:   {label:'CC Temps',   color:'var(--cc_temps)',  question:'Quel est le CC de temps ?',astuce:'Pose la question "Quand ?" ou "Pendant combien de temps ?"'},
+  cc_maniere: {label:'CC Manière', color:'var(--cc_maniere)',question:'Quel est le CC de manière ?',astuce:'Pose la question "Comment ?" ou "De quelle manière ?"'},
+  attribut:   {label:'Attribut',   color:'var(--attr)',      question:'Quel est l\'attribut du sujet ?',astuce:'Après les verbes être, paraître, sembler... → l\'attribut qualifie le sujet'},
+};
+
+// Phrases annotées : chaque mot a sa fonction
+const PHRASES = [
+  {
+    words:[
+      {w:'Le',f:'sujet'},{w:'petit',f:'sujet'},{w:'chat',f:'sujet'},
+      {w:'mange',f:'verbe'},
+      {w:'une',f:'cod'},{w:'souris',f:'cod'},
+      {w:'dans',f:'cc_lieu'},{w:'le',f:'cc_lieu'},{w:'jardin',f:'cc_lieu'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Le petit chat" (qui mange ?). Verbe = "mange". COD = "une souris" (mange quoi ?). CC Lieu = "dans le jardin" (où ?)'
+  },
+  {
+    words:[
+      {w:'Marie',f:'sujet'},
+      {w:'donne',f:'verbe'},
+      {w:'un',f:'cod'},{w:'cadeau',f:'cod'},
+      {w:'à',f:'coi'},{w:'son',f:'coi'},{w:'ami',f:'coi'},
+      {w:'demain',f:'cc_temps'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Marie". Verbe = "donne". COD = "un cadeau" (donne quoi ?). COI = "à son ami" (à qui ?). CC Temps = "demain" (quand ?)'
+  },
+  {
+    words:[
+      {w:'Les',f:'sujet'},{w:'enfants',f:'sujet'},
+      {w:'courent',f:'verbe'},
+      {w:'rapidement',f:'cc_maniere'},
+      {w:'dans',f:'cc_lieu'},{w:'la',f:'cc_lieu'},{w:'cour',f:'cc_lieu'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Les enfants". Verbe = "courent". CC Manière = "rapidement". CC Lieu = "dans la cour"'
+  },
+  {
+    words:[
+      {w:'Mon',f:'sujet'},{w:'père',f:'sujet'},
+      {w:'est',f:'verbe'},
+      {w:'médecin',f:'attribut'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Mon père". Verbe = "est". Attribut = "médecin" (qualifie le sujet via le verbe être)'
+  },
+  {
+    words:[
+      {w:'Elle',f:'sujet'},
+      {w:'parle',f:'verbe'},
+      {w:'de',f:'coi'},{w:'son',f:'coi'},{w:'voyage',f:'coi'},
+      {w:'doucement',f:'cc_maniere'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Elle". Verbe = "parle". COI = "de son voyage" (parle de quoi ?). CC Manière = "doucement"'
+  },
+  {
+    words:[
+      {w:'Le',f:'sujet'},{w:'chien',f:'sujet'},
+      {w:'aboie',f:'verbe'},
+      {w:'bruyamment',f:'cc_maniere'},
+      {w:'la',f:'cc_temps'},{w:'nuit',f:'cc_temps'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Le chien". Verbe = "aboie". CC Manière = "bruyamment". CC Temps = "la nuit"'
+  },
+  {
+    words:[
+      {w:'Paul',f:'sujet'},
+      {w:'a',f:'verbe'},{w:'lu',f:'verbe'},
+      {w:'ce',f:'cod'},{w:'livre',f:'cod'},
+      {w:'hier',f:'cc_temps'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Paul". Verbe = "a lu". COD = "ce livre" (a lu quoi ?). CC Temps = "hier"'
+  },
+  {
+    words:[
+      {w:'Les',f:'sujet'},{w:'élèves',f:'sujet'},
+      {w:'semblent',f:'verbe'},
+      {w:'fatigués',f:'attribut'},
+      {w:'aujourd\'hui',f:'cc_temps'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Les élèves". Verbe = "semblent". Attribut = "fatigués" (après verbe d\'état). CC Temps = "aujourd\'hui"'
+  },
+  {
+    words:[
+      {w:'Le',f:'sujet'},{w:'professeur',f:'sujet'},
+      {w:'explique',f:'verbe'},
+      {w:'la',f:'cod'},{w:'leçon',f:'cod'},
+      {w:'clairement',f:'cc_maniere'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Le professeur". Verbe = "explique". COD = "la leçon". CC Manière = "clairement"'
+  },
+  {
+    words:[
+      {w:'Ils',f:'sujet'},
+      {w:'pensent',f:'verbe'},
+      {w:'à',f:'coi'},{w:'leurs',f:'coi'},{w:'vacances',f:'coi'},
+      {w:'souvent',f:'cc_temps'},
+      {w:'.',f:null}
+    ],
+    expl:'Sujet = "Ils". Verbe = "pensent". COI = "à leurs vacances" (pensent à quoi ?). CC Temps = "souvent"'
+  },
+];
+
+let selMode='identifier', questions=[], qIdx=0, correct=0, wrong=0, qLocked=false;
+let colorActive=null, colorMap={};
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+function pickMode(el){document.querySelectorAll('.mode-row').forEach(r=>r.classList.remove('sel'));el.classList.add('sel');selMode=el.dataset.mode;}
+function startGame(){
+  questions=[...PHRASES].sort(()=>Math.random()-.5).slice(0,10);
+  qIdx=0;correct=0;wrong=0;qLocked=false;
+  showScreen('sc-game');showQ();
+}
+
+function showQ(){
+  if(qIdx>=questions.length){endGame();return;}
+  const q=questions[qIdx];qLocked=false;colorMap={};colorActive=null;
+  document.getElementById('pfill').style.width=(qIdx/questions.length*100)+'%';
+  document.getElementById('q-prog').textContent=(qIdx+1)+'/'+questions.length;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('expl').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+
+  if(selMode==='identifier') showIdentifyQ(q);
+  else showColorierQ(q);
+}
+
+// ── MODE IDENTIFIER ──
+let identifyTarget=null, selectedWords=new Set();
+
+function showIdentifyQ(q){
+  document.getElementById('zone-identify').style.display='';
+  document.getElementById('zone-colorier').style.display='none';
+  document.getElementById('gnav-mode').textContent='👆 Identifier';
+
+  // Pick a random function present in this phrase
+  const presentFuncs=[...new Set(q.words.filter(w=>w.f).map(w=>w.f))];
+  identifyTarget=presentFuncs[Math.floor(Math.random()*presentFuncs.length)];
+  selectedWords=new Set();
+
+  const f=FONCTIONS[identifyTarget];
+  const el=document.getElementById('target-function');
+  el.textContent=f.label;el.style.color=f.color;
+
+  const row=document.getElementById('words-row');row.innerHTML='';
+  q.words.filter(w=>w.w!=='.').forEach((w,i)=>{
+    const btn=document.createElement('button');btn.className='word-btn';
+    btn.textContent=w.w;btn.dataset.idx=i;
+    btn.onclick=()=>toggleWord(btn,i,q);
+    row.appendChild(btn);
+  });
+
+  document.getElementById('identify-hint').textContent=f.astuce;
+}
+
+function toggleWord(btn,idx,q){
+  if(qLocked)return;
+  if(selectedWords.has(idx)){selectedWords.delete(idx);btn.classList.remove('selected');btn.style.background='';btn.style.borderColor='';}
+  else{selectedWords.add(idx);btn.classList.add('selected');btn.style.background='#F0F0FF';btn.style.borderColor='#C77DFF';}
+  // Auto-validate as soon as the number of selected words matches the correct count
+  const correctIdxs=new Set(q.words.map((w,i)=>w.f===identifyTarget?i:null).filter(x=>x!==null));
+  if(selectedWords.size===correctIdxs.size) validateIdentify(q);
+}
+
+function validateIdentify(q){
+  if(qLocked)return;qLocked=true;
+  const f=FONCTIONS[identifyTarget];
+  const correctIdxs=new Set(q.words.map((w,i)=>w.f===identifyTarget?i:null).filter(x=>x!==null));
+  let allOk=true;
+  // Check selected
+  selectedWords.forEach(i=>{
+    const btn=document.querySelector(`[data-idx="${i}"]`);
+    if(correctIdxs.has(i)){if(btn){btn.className='word-btn correct';btn.style.background=f.color;btn.style.borderColor=f.color;btn.style.color='#fff';}}
+    else{if(btn){btn.className='word-btn wrong';}allOk=false;}
+  });
+  // Show missed
+  correctIdxs.forEach(i=>{
+    if(!selectedWords.has(i)){
+      const btn=document.querySelector(`[data-idx="${i}"]`);
+      if(btn){btn.style.background=f.color;btn.style.opacity='.6';btn.style.color='#fff';btn.style.borderColor=f.color;}
+      allOk=false;
+    }
+  });
+  if(allOk&&selectedWords.size===correctIdxs.size)correct++;else wrong++;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  const fb=document.getElementById('fb-bar');fb.style.display='block';fb.className='fb-bar '+(allOk&&selectedWords.size===correctIdxs.size?'ok':'ko');
+  fb.textContent=(allOk&&selectedWords.size===correctIdxs.size)?'✅ Parfait !':'❌ Pas tout à fait...';
+  document.getElementById('expl').style.display='block';document.getElementById('expl').textContent='💡 '+q.expl;
+  // Auto-advance to next question after a short pause
+  setTimeout(()=>{ qIdx++; showQ(); }, 1800);
+}
+
+// ── MODE COLORIER ──
+function showColorierQ(q){
+  document.getElementById('zone-colorier').style.display='';
+  document.getElementById('zone-identify').style.display='none';
+  document.getElementById('gnav-mode').textContent='🎨 Coloriage';
+
+  const row=document.getElementById('color-words-row');row.innerHTML='';
+  const totalToColor=q.words.filter(w=>w.f&&w.w!=='.').length;
+  q.words.filter(w=>w.w!=='.').forEach((w,i)=>{
+    const btn=document.createElement('button');btn.className='word-btn';btn.textContent=w.w;btn.dataset.idx=i;
+    btn.onclick=()=>{
+      if(qLocked||!colorActive)return;
+      colorMap[i]=colorActive;
+      const f=FONCTIONS[colorActive];
+      btn.style.background=f.color;btn.style.color='#fff';btn.style.borderColor=f.color;
+      // Auto-validate once every function-word has been colored
+      if(Object.keys(colorMap).length>=totalToColor) validateColorier();
+    };
+    row.appendChild(btn);
+  });
+
+  // Build palette
+  const pal=document.getElementById('palette-row');pal.innerHTML='';
+  const funcsInPhrase=[...new Set(q.words.filter(w=>w.f).map(w=>w.f))];
+  funcsInPhrase.forEach(fid=>{
+    const f=FONCTIONS[fid];
+    const btn=document.createElement('button');btn.className='pal-btn';
+    btn.style.background=f.color;btn.dataset.fid=fid;
+    btn.innerHTML=`<span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.8)"></span>${f.label}`;
+    btn.onclick=()=>{
+      colorActive=fid;
+      document.querySelectorAll('.pal-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    pal.appendChild(btn);
+  });
+}
+
+function validateColorier(){
+  if(qLocked)return;qLocked=true;
+  const q=questions[qIdx];
+  let ok=0,total=0;
+  q.words.forEach((w,i)=>{
+    if(!w.f||w.w==='.') return;
+    total++;
+    const btn=document.querySelector(`[data-idx="${i}"]`);
+    if(!btn)return;
+    const isOk=colorMap[i]===w.f;
+    if(isOk)ok++;
+    const f=FONCTIONS[w.f];
+    btn.style.background=f.color;btn.style.color='#fff';btn.style.borderColor=f.color;
+    if(!isOk)btn.style.opacity='.5';
+  });
+  const allOk=ok===total;
+  if(allOk)correct++;else wrong++;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  const fb=document.getElementById('fb-bar');fb.style.display='block';fb.className='fb-bar '+(allOk?'ok':'ko');
+  fb.textContent=allOk?`✅ Parfait ! ${ok}/${total} corrects`:`${ok}/${total} corrects`;
+  document.getElementById('expl').style.display='block';document.getElementById('expl').textContent='💡 '+q.expl;
+  setTimeout(()=>{ qIdx++; showQ(); }, 1800);
+}
+
+function nextQ(){qIdx++;showQ();}
+function quitGame(){backHome();}
+function backHome(){showScreen('sc-home');}
+function endGame(){
+  const pct=Math.round(correct/(correct+wrong)*100)||0;
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;document.getElementById('rs-ko').textContent=wrong;document.getElementById('rs-pct').textContent=pct+'%';
+  if(pct>=70)launchConfetti();showScreen('sc-result');
+}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){const colors=['#C77DFF','#4D96FF','#6BCB77','#FF6B9D','#FFD93D'];for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}}
+</script>
+</body>
+</html>
+

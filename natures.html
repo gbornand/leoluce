@@ -1,0 +1,707 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Natures des mots 🌈</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nom:#8B4513;--verbe:#E63946;--adjectif:#2D6A4F;--determinant:#74C69D;
+  --pronom:#F4A261;--preposition:#6B4226;--conjonction:#1B4FCC;--adverbe:#333333;--interjection:#48CAE4;
+  --bg:#FFFBF0;--dark:#1a1a2e;--gray:#9CA3AF;--white:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ HOME ══ */
+#sc-home{background:linear-gradient(160deg,#1a1a2e 0%,#16213e 100%);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 24px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-icon{font-size:52px;display:block;animation:float 3s ease-in-out infinite;}
+.home-title{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#FFD93D,#FF6B9D,#C77DFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px;}
+.home-sub{color:rgba(255,255,255,.5);font-size:13px;margin-top:3px;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+
+/* Level pills */
+.levels-card{background:rgba(255,255,255,.07);border-radius:18px;padding:16px;}
+.levels-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+.levels-grid{display:flex;flex-direction:column;gap:8px;}
+.level-row{border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;}
+.level-row.unlocked{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.05);}
+.level-row.sel{border-color:var(--determinant);background:rgba(255,211,61,.12);}
+.level-row.locked{opacity:.4;cursor:default;}
+.level-icon{font-size:24px;min-width:32px;text-align:center;}
+.level-info{flex:1;}
+.level-name{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;color:#fff;}
+.level-natures{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;}
+.level-stars{font-size:13px;}
+.level-lock{font-size:16px;}
+
+/* Mode cards */
+.modes-card{background:rgba(255,255,255,.07);border-radius:18px;padding:16px;}
+.modes-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+.modes-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.mode-btn{border:2px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);border-radius:14px;padding:12px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;font-family:'Nunito',sans-serif;}
+.mode-btn.sel{border-color:var(--determinant);background:rgba(255,211,61,.12);}
+.mode-icon{font-size:22px;}
+.mode-name{font-size:11px;font-weight:800;color:#fff;text-align:center;}
+
+/* Nature legend */
+.legend-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.legend-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.legend-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.legend-pill{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;color:#fff;}
+
+.start-btn{background:linear-gradient(135deg,#FFD93D,#FF6B9D);color:#1a1a2e;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(255,107,157,.3);transition:transform .15s;margin:0 16px;}
+.start-btn:active{transform:scale(.97);}
+.start-btn:disabled{opacity:.35;}
+
+/* ══ GAME HEADER ══ */
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.gnav-score{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);}
+.gnav-prog{font-size:12px;font-weight:700;color:var(--gray);}
+.pbar{height:6px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;border-radius:999px;transition:width .4s;}
+
+/* ══ MODE 1: CHASSE AUX MOTS ══ */
+#sc-chasse{background:var(--bg);}
+.phrase-card{background:#fff;border-radius:22px;margin:8px 16px 0;padding:18px;box-shadow:0 4px 18px rgba(0,0,0,.07);line-height:1.8;}
+.phrase-hint{font-size:12px;font-weight:700;color:var(--gray);margin-bottom:10px;text-align:center;}
+.word-span{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--dark);cursor:pointer;padding:2px 4px;border-radius:6px;transition:all .2s;display:inline-block;}
+.word-span.target{background:rgba(255,211,61,.35);border-bottom:3px solid var(--determinant);animation:pop .3s ease;}
+.word-span.correct{color:#fff;animation:pop .3s ease;}
+.word-span.wrong{animation:shake .3s ease;}
+.question-bar{background:#fff;border-radius:18px;margin:10px 16px 0;padding:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);text-align:center;}
+.question-text{font-size:13px;font-weight:700;color:var(--gray);margin-bottom:10px;}
+.question-word{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;color:var(--dark);margin-bottom:6px;}
+.natures-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 16px 0;}
+.nature-btn{border:2px solid #E5E7EB;background:#fff;border-radius:14px;padding:11px 8px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:var(--dark);text-align:center;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.nature-btn:active{transform:scale(.95);}
+.nature-btn.correct{color:#fff;border-color:transparent;}
+.nature-btn.wrong{background:#FEE2E2;border-color:var(--nom);color:var(--nom);}
+.nature-btn.reveal{color:#fff;border-color:transparent;}
+.fb-bar{border-radius:14px;padding:11px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--nom);}
+.next-btn{background:linear-gradient(135deg,#FFD93D,#FF6B9D);color:#1a1a2e;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+
+/* ══ MODE 2: TRIER ══ */
+#sc-trier{background:var(--bg);}
+.falling-area{position:relative;height:220px;overflow:hidden;margin:0 16px;border-radius:16px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.07);}
+.falling-word{position:absolute;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:#fff;border-radius:12px;padding:8px 16px;cursor:pointer;user-select:none;transition:transform .1s;box-shadow:0 3px 10px rgba(0,0,0,.2);}
+.falling-word:active{transform:scale(.93);}
+.boxes-row{display:flex;gap:6px;margin:10px 16px 0;flex-wrap:wrap;justify-content:center;}
+.nature-box{border-radius:14px;padding:10px 8px;text-align:center;min-width:80px;flex:1;max-width:100px;cursor:pointer;border:2px solid transparent;transition:all .2s;font-family:'Nunito',sans-serif;}
+.nature-box:active{transform:scale(.95);}
+.nb-icon{font-size:18px;margin-bottom:3px;}
+.nb-name{font-size:11px;font-weight:800;color:#fff;}
+.nb-count{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;}
+.trier-hint{font-size:13px;font-weight:700;color:var(--gray);text-align:center;margin:8px 16px 0;}
+
+/* ══ MODE 3: COLORIAGE ══ */
+#sc-coloriage{background:var(--bg);}
+.color-text-card{background:#fff;border-radius:22px;margin:8px 16px 0;padding:18px;box-shadow:0 4px 18px rgba(0,0,0,.07);line-height:2.2;}
+.color-hint{font-size:12px;font-weight:700;color:var(--gray);margin-bottom:10px;text-align:center;}
+.cword{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;cursor:pointer;padding:3px 6px;border-radius:8px;display:inline-block;margin:2px;border:2px solid transparent;transition:all .2s;}
+.cword:hover{transform:scale(1.05);}
+.cword.colored{border-color:rgba(0,0,0,.1);}
+.color-palette{display:flex;gap:6px;margin:10px 16px 0;flex-wrap:wrap;justify-content:center;}
+.palette-btn{border-radius:12px;padding:8px 12px;border:3px solid transparent;cursor:pointer;font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;color:#fff;transition:all .2s;display:flex;align-items:center;gap:5px;}
+.palette-btn.active{border-color:#fff;transform:scale(1.08);box-shadow:0 3px 10px rgba(0,0,0,.2);}
+.validate-btn{background:linear-gradient(135deg,var(--verbe),var(--conjonction));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:10px 16px 0;}
+.coloriage-result{background:#fff;border-radius:16px;margin:8px 16px 0;padding:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);display:none;}
+.cr-title{font-size:13px;font-weight:800;color:var(--gray);margin-bottom:8px;text-align:center;}
+.cr-word-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F3F4F6;font-size:13px;}
+.cr-word-row:last-child{border:none;}
+
+/* ══ RESULT ══ */
+#sc-result{padding:20px 16px;gap:12px;overflow-y:auto;align-items:center;padding-bottom:40px;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,#FFD93D,#FF6B9D);color:#1a1a2e;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid #FFD93D;color:#1a1a2e;border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes fall{from{top:-60px}to{top:110%}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ HOME ══ -->
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span class="home-icon">🌈</span>
+    <div class="home-title">Natures des mots</div>
+    <div class="home-sub">Nom · Verbe · Adjectif · et plus !</div>
+  </div>
+  <div class="home-body">
+
+    <!-- Niveaux -->
+    <div class="levels-card">
+      <div class="levels-title">🎯 Mon niveau</div>
+      <div class="levels-grid" id="levels-grid"></div>
+    </div>
+
+    <!-- Modes -->
+    <div class="modes-card">
+      <div class="modes-title">🎮 Mode de jeu</div>
+      <div class="modes-grid">
+        <button class="mode-btn sel" data-mode="chasse" onclick="pickMode(this)">
+          <span class="mode-icon">🔍</span>
+          <span class="mode-name">Chasse aux mots</span>
+        </button>
+        <button class="mode-btn" data-mode="trier" onclick="pickMode(this)">
+          <span class="mode-icon">📦</span>
+          <span class="mode-name">Trier</span>
+        </button>
+        <button class="mode-btn" data-mode="coloriage" onclick="pickMode(this)">
+          <span class="mode-icon">🎨</span>
+          <span class="mode-name">Coloriage</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Légende couleurs -->
+    <div class="legend-card">
+      <div class="legend-title">🎨 Les couleurs</div>
+      <div class="legend-grid" id="legend-grid"></div>
+    </div>
+
+    <button class="start-btn" id="start-btn" onclick="startGame()">🚀 C'est parti !</button>
+  </div>
+</div>
+
+<!-- ══ CHASSE AUX MOTS ══ -->
+<div id="sc-chasse" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-score" id="ch-score">0</span>
+    <span class="gnav-prog" id="ch-prog">1/10</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="ch-fill" style="width:0%;background:linear-gradient(90deg,#FFD93D,#FF6B9D)"></div></div>
+  <div class="phrase-card">
+    <div class="phrase-hint">Quelle est la nature du mot en jaune ?</div>
+    <div id="phrase-display" style="text-align:center;line-height:2"></div>
+  </div>
+  <div class="question-bar">
+    <div class="question-text">Le mot</div>
+    <div class="question-word" id="ch-word">—</div>
+    <div class="question-text">est un(e)...</div>
+  </div>
+  <div class="natures-grid" id="ch-natures"></div>
+  <div class="fb-bar" id="ch-fb"></div>
+  <button class="next-btn" id="ch-next" onclick="nextChasse()">Mot suivant →</button>
+</div>
+
+<!-- ══ TRIER ══ -->
+<div id="sc-trier" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-score" id="tr-score">0</span>
+    <span class="gnav-prog" id="tr-prog">0 triés</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="tr-fill" style="width:0%;background:linear-gradient(90deg,#FFD93D,#FF6B9D)"></div></div>
+  <div class="trier-hint" id="tr-hint">Clique sur le mot puis sur sa nature !</div>
+  <div class="falling-area" id="falling-area"></div>
+  <div class="boxes-row" id="boxes-row"></div>
+</div>
+
+<!-- ══ COLORIAGE ══ -->
+<div id="sc-coloriage" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span style="font-size:12px;font-weight:700;color:var(--gray)" id="col-hint">Choisis une couleur puis clique sur les mots</span>
+    <span class="gnav-prog" id="col-prog">0/0</span>
+  </div>
+  <div class="color-text-card">
+    <div class="color-hint" id="col-text-hint">Colorie chaque mot selon sa nature</div>
+    <div id="col-text-display" style="text-align:center"></div>
+  </div>
+  <div class="color-palette" id="color-palette"></div>
+  <button class="validate-btn" onclick="validateColoriage()">✅ Vérifier mon coloriage</button>
+  <div class="coloriage-result" id="coloriage-result"></div>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--verbe)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--nom)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--pronom)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="replayGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="showScreen('sc-home');buildHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+const NATURES = {
+  nom:        { label:'Nom',         color:'var(--nom)',         emoji:'●', ex:'chien, maison, soleil' },
+  verbe:      { label:'Verbe',       color:'var(--verbe)',       emoji:'●', ex:'courir, manger, être' },
+  adjectif:   { label:'Adjectif',    color:'var(--adjectif)',    emoji:'●', ex:'grand, beau, rouge' },
+  determinant:{ label:'Déterminant', color:'var(--determinant)', emoji:'●', ex:'le, la, un, des, mon' },
+  pronom:     { label:'Pronom',      color:'var(--pronom)',      emoji:'●', ex:'il, elle, je, nous' },
+  preposition:{ label:'Préposition', color:'var(--preposition)', emoji:'●', ex:'de, à, dans, sur, avec' },
+  conjonction:{ label:'Conjonction', color:'var(--conjonction)', emoji:'●', ex:'et, mais, car, parce que' },
+  adverbe:    { label:'Adverbe',     color:'var(--adverbe)',     emoji:'●', ex:'très, bien, vite, jamais' },
+  interjection:{ label:'Interjection',color:'var(--interjection)',emoji:'●', ex:'oh, ah, bravo, zut' },
+};
+
+const LEVELS = [
+  { id:1, name:'Niveau 1', natures:['nom','verbe','adjectif'], icon:'🌱', desc:'Nom · Verbe · Adjectif', minScore:0 },
+  { id:2, name:'Niveau 2', natures:['nom','verbe','adjectif','determinant','pronom'], icon:'🌿', desc:'+ Déterminant · Pronom', minScore:10 },
+  { id:3, name:'Niveau 3', natures:['nom','verbe','adjectif','determinant','pronom','preposition','adverbe'], icon:'🌳', desc:'+ Préposition · Adverbe', minScore:25 },
+  { id:4, name:'Expert', natures:['nom','verbe','adjectif','determinant','pronom','preposition','adverbe','conjonction','interjection'], icon:'⭐', desc:'Toutes les natures !', minScore:50 },
+];
+
+// Phrases with tagged words — each word has: text, nature
+const PHRASES = [
+  { text:[{w:'Le',n:'determinant'},{w:'petit',n:'adjectif'},{w:'chat',n:'nom'},{w:'mange',n:'verbe'},{w:'du',n:'determinant'},{w:'poisson',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'Elle',n:'pronom'},{w:'court',n:'verbe'},{w:'très',n:'adverbe'},{w:'vite',n:'adverbe'},{w:'dans',n:'preposition'},{w:'le',n:'determinant'},{w:'jardin',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'Les',n:'determinant'},{w:'fleurs',n:'nom'},{w:'sont',n:'verbe'},{w:'belles',n:'adjectif'},{w:'et',n:'conjonction'},{w:'parfumées',n:'adjectif'},{w:'.',n:null}] },
+  { text:[{w:'Mon',n:'determinant'},{w:'chien',n:'nom'},{w:'est',n:'verbe'},{w:'grand',n:'adjectif'},{w:'et',n:'conjonction'},{w:'gentil',n:'adjectif'},{w:'.',n:null}] },
+  { text:[{w:'Il',n:'pronom'},{w:'joue',n:'verbe'},{w:'souvent',n:'adverbe'},{w:'avec',n:'preposition'},{w:'ses',n:'determinant'},{w:'amis',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'La',n:'determinant'},{w:'belle',n:'adjectif'},{w:'princesse',n:'nom'},{w:'chante',n:'verbe'},{w:'doucement',n:'adverbe'},{w:'.',n:null}] },
+  { text:[{w:'Nous',n:'pronom'},{w:'aimons',n:'verbe'},{w:'les',n:'determinant'},{w:'gâteaux',n:'nom'},{w:'au',n:'determinant'},{w:'chocolat',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'Oh',n:'interjection'},{w:'!',n:null},{w:'Ce',n:'determinant'},{w:'livre',n:'nom'},{w:'est',n:'verbe'},{w:'passionnant',n:'adjectif'},{w:'.',n:null}] },
+  { text:[{w:'Le',n:'determinant'},{w:'soleil',n:'nom'},{w:'brille',n:'verbe'},{w:'mais',n:'conjonction'},{w:'il',n:'pronom'},{w:'fait',n:'verbe'},{w:'froid',n:'adjectif'},{w:'.',n:null}] },
+  { text:[{w:'Je',n:'pronom'},{w:'lis',n:'verbe'},{w:'un',n:'determinant'},{w:'bon',n:'adjectif'},{w:'livre',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'Les',n:'determinant'},{w:'enfants',n:'nom'},{w:'rient',n:'verbe'},{w:'joyeusement',n:'adverbe'},{w:'.',n:null}] },
+  { text:[{w:'Elle',n:'pronom'},{w:'met',n:'verbe'},{w:'sa',n:'determinant'},{w:'belle',n:'adjectif'},{w:'robe',n:'nom'},{w:'rouge',n:'adjectif'},{w:'.',n:null}] },
+  { text:[{w:'Le',n:'determinant'},{w:'cheval',n:'nom'},{w:'galope',n:'verbe'},{w:'rapidement',n:'adverbe'},{w:'sur',n:'preposition'},{w:'la',n:'determinant'},{w:'plage',n:'nom'},{w:'.',n:null}] },
+  { text:[{w:'Bravo',n:'interjection'},{w:'!',n:null},{w:'Tu',n:'pronom'},{w:'as',n:'verbe'},{w:'réussi',n:'verbe'},{w:'.',n:null}] },
+  { text:[{w:'Il',n:'pronom'},{w:'mange',n:'verbe'},{w:'une',n:'determinant'},{w:'pomme',n:'nom'},{w:'verte',n:'adjectif'},{w:'.',n:null}] },
+];
+
+// Words for trier mode
+const TRIER_WORDS = [
+  {w:'chien',n:'nom'},{w:'saute',n:'verbe'},{w:'grand',n:'adjectif'},{w:'le',n:'determinant'},
+  {w:'elle',n:'pronom'},{w:'mange',n:'verbe'},{w:'belle',n:'adjectif'},{w:'la',n:'determinant'},
+  {w:'maison',n:'nom'},{w:'court',n:'verbe'},{w:'petit',n:'adjectif'},{w:'un',n:'determinant'},
+  {w:'chat',n:'nom'},{w:'dort',n:'verbe'},{w:'rouge',n:'adjectif'},{w:'les',n:'determinant'},
+  {w:'soleil',n:'nom'},{w:'joue',n:'verbe'},{w:'heureux',n:'adjectif'},{w:'il',n:'pronom'},
+  {w:'jardin',n:'nom'},{w:'chante',n:'verbe'},{w:'vite',n:'adverbe'},{w:'dans',n:'preposition'},
+  {w:'nous',n:'pronom'},{w:'rions',n:'verbe'},{w:'très',n:'adverbe'},{w:'sur',n:'preposition'},
+  {w:'fleur',n:'nom'},{w:'danse',n:'verbe'},{w:'bien',n:'adverbe'},{w:'avec',n:'preposition'},
+  {w:'ami',n:'nom'},{w:'parle',n:'verbe'},{w:'souvent',n:'adverbe'},{w:'et',n:'conjonction'},
+  {w:'ah',n:'interjection'},{w:'oh',n:'interjection'},{w:'zut',n:'interjection'},{w:'bravo',n:'interjection'},
+];
+
+// ══════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════
+function getDB(){ try{return JSON.parse(localStorage.getItem('natures_db')||'{}')}catch(e){return{}} }
+function saveDB(db){ localStorage.setItem('natures_db',JSON.stringify(db)); }
+function getTotalScore(){ return getDB().totalScore||0; }
+function addScore(n){ const db=getDB(); db.totalScore=(db.totalScore||0)+n; saveDB(db); }
+
+function getCurrentLevel(){
+  const score=getTotalScore();
+  let level=LEVELS[0];
+  for(const l of LEVELS){ if(score>=l.minScore) level=l; }
+  return level;
+}
+
+// ══════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════
+let selectedLevelId=1, selectedMode='chasse';
+
+function goHub(){
+  const base=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);
+  window.location.href=base+'index.html';
+}
+
+function buildHome(){
+  const score=getTotalScore();
+  const curLevel=getCurrentLevel();
+  selectedLevelId=curLevel.id;
+
+  // Levels grid
+  const grid=document.getElementById('levels-grid');
+  grid.innerHTML='';
+  LEVELS.forEach(l=>{
+    const unlocked=score>=l.minScore;
+    const sel=selectedLevelId===l.id;
+    const row=document.createElement('div');
+    row.className='level-row'+(sel?' sel':unlocked?' unlocked':' locked');
+    row.innerHTML=`<span class="level-icon">${l.icon}</span>
+      <div class="level-info"><div class="level-name">${l.name}</div><div class="level-natures">${l.desc}</div></div>
+      <span>${unlocked?`<span class="level-stars">${score>=l.minScore+20?'⭐⭐⭐':score>=l.minScore+10?'⭐⭐':'⭐'}</span>`:'<span class="level-lock">🔒</span>'}</span>`;
+    if(unlocked) row.onclick=()=>selectLevel(l.id);
+    grid.appendChild(row);
+  });
+
+  // Legend
+  const legend=document.getElementById('legend-grid');
+  legend.innerHTML='';
+  const curNatures=LEVELS.find(l=>l.id===selectedLevelId)?.natures||LEVELS[0].natures;
+  curNatures.forEach(n=>{
+    const nat=NATURES[n];
+    const pill=document.createElement('span');
+    pill.className='legend-pill';
+    pill.style.background=nat.color;
+    pill.textContent=nat.label;
+    legend.appendChild(pill);
+  });
+}
+
+function selectLevel(id){
+  selectedLevelId=id;
+  buildHome();
+}
+
+function pickMode(btn){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  selectedMode=btn.dataset.mode;
+}
+
+// ══════════════════════════════════════════
+// GAME INIT
+// ══════════════════════════════════════════
+let gameCorrect=0, gameWrong=0, sessionMode='', sessionNatures=[];
+
+function startGame(){
+  const level=LEVELS.find(l=>l.id===selectedLevelId)||LEVELS[0];
+  sessionNatures=level.natures;
+  sessionMode=selectedMode;
+  gameCorrect=0; gameWrong=0;
+
+  if(selectedMode==='chasse') startChasse();
+  else if(selectedMode==='trier') startTrier();
+  else if(selectedMode==='coloriage') startColoriage();
+}
+
+function replayGame(){
+  gameCorrect=0; gameWrong=0;
+  if(sessionMode==='chasse') startChasse();
+  else if(sessionMode==='trier') startTrier();
+  else if(sessionMode==='coloriage') startColoriage();
+}
+
+function quitGame(){
+  showScreen('sc-home'); buildHome();
+}
+
+function endGame(){
+  const total=gameCorrect+gameWrong;
+  const pct=total>0?Math.round(gameCorrect/total*100):0;
+  addScore(gameCorrect);
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=gameCorrect;
+  document.getElementById('rs-ko').textContent=gameWrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  if(pct>=70) launchConfetti();
+  showScreen('sc-result');
+}
+
+// ══════════════════════════════════════════
+// MODE 1: CHASSE AUX MOTS
+// ══════════════════════════════════════════
+let chasseQ=[], chasseIdx=0, chasseLocked=false;
+
+function startChasse(){
+  // Build question list: pick words that match sessionNatures from phrases
+  chasseQ=[];
+  const shuffledPhrases=[...PHRASES].sort(()=>Math.random()-.5);
+  for(const phrase of shuffledPhrases){
+    const eligible=phrase.text.filter(t=>t.n&&sessionNatures.includes(t.n));
+    if(eligible.length>0){
+      const target=eligible[Math.floor(Math.random()*eligible.length)];
+      chasseQ.push({phrase:phrase.text, target});
+    }
+    if(chasseQ.length>=10) break;
+  }
+  chasseIdx=0; chasseLocked=false;
+  showScreen('sc-chasse');
+  showChasseQ();
+}
+
+function showChasseQ(){
+  if(chasseIdx>=chasseQ.length){endGame();return;}
+  chasseLocked=false;
+  const q=chasseQ[chasseIdx];
+  const pct=chasseIdx/chasseQ.length*100;
+  document.getElementById('ch-fill').style.width=pct+'%';
+  document.getElementById('ch-prog').textContent=`${chasseIdx+1}/${chasseQ.length}`;
+  document.getElementById('ch-fb').style.display='none';
+  document.getElementById('ch-next').style.display='none';
+
+  // Render phrase
+  const display=document.getElementById('phrase-display');
+  display.innerHTML='';
+  q.phrase.forEach(tok=>{
+    if(!tok.n||tok.w==='.'||tok.w==='!'||tok.w===','){ 
+      const s=document.createElement('span'); s.textContent=' '+tok.w; display.appendChild(s); return;
+    }
+    const s=document.createElement('span');
+    s.className='word-span'+(tok===q.target?' target':'');
+    s.textContent=' '+tok.w;
+    if(tok===q.target){
+      s.style.background='rgba(255,211,61,.35)';
+      s.style.borderBottom='3px solid var(--determinant)';
+    }
+    display.appendChild(s);
+  });
+
+  document.getElementById('ch-word').textContent=q.target.w;
+
+  // Build nature buttons (correct + 2-3 distractors)
+  const grid=document.getElementById('ch-natures');
+  grid.innerHTML='';
+  const distractors=sessionNatures.filter(n=>n!==q.target.n).sort(()=>Math.random()-.5).slice(0,3);
+  const choices=[q.target.n,...distractors].sort(()=>Math.random()-.5);
+  choices.forEach(nat=>{
+    const n=NATURES[nat];
+    const btn=document.createElement('button');
+    btn.className='nature-btn';
+    btn.style.borderColor=n.color;
+    btn.style.borderWidth='3px';
+    btn.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${n.color};margin-right:5px;flex-shrink:0"></span>${n.label}`;
+    btn.onclick=()=>checkChasse(nat,q.target.n,btn,grid);
+    grid.appendChild(btn);
+  });
+}
+
+function checkChasse(chosen,correct,btn,grid){
+  if(chasseLocked)return; chasseLocked=true;
+  const ok=chosen===correct;
+  const cn=NATURES[correct];
+  btn.classList.add(ok?'correct':'wrong');
+  if(ok){ btn.style.background=cn.color; btn.style.borderColor=cn.color; }
+  if(!ok){
+    grid.querySelectorAll('.nature-btn').forEach(b=>{
+      if(b.textContent.includes(cn.label)){ b.classList.add('reveal'); b.style.background=cn.color; b.style.borderColor=cn.color; }
+    });
+  }
+  // Color the word in phrase
+  const target=chasseQ[chasseIdx].target;
+  document.querySelectorAll('.word-span.target').forEach(s=>{
+    s.style.background=ok?cn.color:'#FEE2E2';
+    s.style.color=ok?'#fff':'var(--nom)';
+    s.style.borderBottom='none';
+  });
+  const fb=document.getElementById('ch-fb');
+  fb.style.display='block'; fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?`✅ Oui ! "${target.w}" est bien un ${cn.label.toLowerCase()} !`:`❌ "${target.w}" est un ${cn.label.toLowerCase()}, pas un ${NATURES[chosen].label.toLowerCase()}`;
+  if(ok) gameCorrect++; else gameWrong++;
+  document.getElementById('ch-next').style.display='block';
+  document.getElementById('ch-score').textContent=gameCorrect;
+}
+
+function nextChasse(){ chasseIdx++; showChasseQ(); }
+
+// ══════════════════════════════════════════
+// MODE 2: TRIER
+// ══════════════════════════════════════════
+let trierWords=[], trierSorted=0, selectedWord=null, trierTimer=null;
+
+function startTrier(){
+  // Filter words to current level natures
+  trierWords=[...TRIER_WORDS].filter(w=>sessionNatures.includes(w.n)).sort(()=>Math.random()-.5).slice(0,15);
+  trierSorted=0; selectedWord=null; gameCorrect=0; gameWrong=0;
+  showScreen('sc-trier');
+  buildTrierBoxes();
+  showNextTrierWord();
+}
+
+function buildTrierBoxes(){
+  const row=document.getElementById('boxes-row'); row.innerHTML='';
+  sessionNatures.forEach(nat=>{
+    const n=NATURES[nat];
+    const box=document.createElement('div');
+    box.className='nature-box';
+    box.style.background=n.color;
+    box.style.opacity='.7';
+    box.id='box-'+nat;
+    box.innerHTML=`<div class="nb-icon">${n.emoji}</div><div class="nb-name">${n.label}</div><div class="nb-count" id="cnt-${nat}">0</div>`;
+    box.onclick=()=>dropWord(nat);
+    row.appendChild(box);
+  });
+}
+
+function showNextTrierWord(){
+  const area=document.getElementById('falling-area'); area.innerHTML='';
+  if(trierSorted>=trierWords.length){endGame();return;}
+  const w=trierWords[trierSorted];
+  document.getElementById('tr-prog').textContent=`${trierSorted}/${trierWords.length} triés`;
+  document.getElementById('tr-fill').style.width=(trierSorted/trierWords.length*100)+'%';
+
+  const el=document.createElement('div');
+  el.className='falling-word';
+  el.id='current-falling';
+  el.textContent=w.w;
+  el.style.background='var(--dark)';
+  el.style.left='50%'; el.style.transform='translateX(-50%)';
+  el.style.top='80px';
+  el.style.cursor='default';
+  area.appendChild(el);
+  selectedWord=w;
+  document.getElementById('tr-hint').textContent=`Clique sur la bonne nature pour "${w.w}"`;
+}
+
+function dropWord(chosenNat){
+  if(!selectedWord)return;
+  const ok=chosenNat===selectedWord.n;
+  const cn=NATURES[selectedWord.n];
+  const el=document.getElementById('current-falling');
+  if(el){
+    el.style.background=ok?cn.color:'#FF4757';
+    el.style.transition='all .4s';
+    el.style.top=ok?'160px':'200px';
+    el.style.opacity='0';
+  }
+  if(ok){
+    gameCorrect++;
+    const cnt=document.getElementById('cnt-'+chosenNat);
+    if(cnt) cnt.textContent=parseInt(cnt.textContent||0)+1;
+    const box=document.getElementById('box-'+chosenNat);
+    if(box){ box.style.transform='scale(1.1)'; setTimeout(()=>box.style.transform='',300); }
+  } else {
+    gameWrong++;
+    document.getElementById('tr-hint').textContent=`❌ "${selectedWord.w}" est un ${cn.label.toLowerCase()} !`;
+  }
+  document.getElementById('tr-score').textContent=gameCorrect;
+  trierSorted++;
+  setTimeout(()=>showNextTrierWord(), ok?500:1200);
+}
+
+// ══════════════════════════════════════════
+// MODE 3: COLORIAGE
+// ══════════════════════════════════════════
+let colPhrase=[], colColors={}, colActivePalette=null;
+
+function startColoriage(){
+  // Pick a phrase with many words from current level natures
+  const eligible=PHRASES.filter(p=>p.text.filter(t=>t.n&&sessionNatures.includes(t.n)).length>=3);
+  colPhrase=eligible[Math.floor(Math.random()*eligible.length)]?.text||PHRASES[0].text;
+  colColors={}; colActivePalette=sessionNatures[0];
+  showScreen('sc-coloriage');
+  buildColPalette();
+  renderColText();
+  updateColProgress();
+}
+
+function buildColPalette(){
+  const pal=document.getElementById('color-palette'); pal.innerHTML='';
+  sessionNatures.forEach(nat=>{
+    const n=NATURES[nat];
+    const btn=document.createElement('button');
+    btn.className='palette-btn'+(nat===colActivePalette?' active':'');
+    btn.id='pal-'+nat;
+    btn.style.background=n.color;
+    btn.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.8);margin-right:4px"></span>${n.label}`;
+    btn.onclick=()=>selectPalette(nat);
+    pal.appendChild(btn);
+  });
+}
+
+function selectPalette(nat){
+  colActivePalette=nat;
+  document.querySelectorAll('.palette-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pal-'+nat)?.classList.add('active');
+}
+
+function renderColText(){
+  const disp=document.getElementById('col-text-display'); disp.innerHTML='';
+  colPhrase.forEach((tok,i)=>{
+    if(!tok.n||tok.w==='.'||tok.w==='!'||tok.w===','){ 
+      const s=document.createElement('span'); s.textContent=' '+tok.w; disp.appendChild(s); return;
+    }
+    const s=document.createElement('span');
+    s.className='cword'+(colColors[i]?' colored':'');
+    s.textContent=' '+tok.w;
+    if(colColors[i]){ s.style.background=NATURES[colColors[i]]?.color||''; s.style.color='#fff'; s.style.borderColor='rgba(0,0,0,.1)'; }
+    s.onclick=()=>colorWord(i,s);
+    disp.appendChild(s);
+  });
+}
+
+function colorWord(idx,el){
+  if(!colActivePalette)return;
+  colColors[idx]=colActivePalette;
+  el.style.background=NATURES[colActivePalette]?.color||'';
+  el.style.color='#fff'; el.style.borderColor='rgba(0,0,0,.1)';
+  el.classList.add('colored');
+  updateColProgress();
+}
+
+function updateColProgress(){
+  const colorable=colPhrase.filter(t=>t.n&&sessionNatures.includes(t.n)).length;
+  const colored=Object.keys(colColors).length;
+  document.getElementById('col-prog').textContent=`${colored}/${colorable}`;
+}
+
+function validateColoriage(){
+  let ok=0, ko=0;
+  const result=document.getElementById('coloriage-result');
+  result.style.display='block';
+  result.innerHTML='<div class="cr-title">Résultat du coloriage</div>';
+  colPhrase.forEach((tok,i)=>{
+    if(!tok.n||!sessionNatures.includes(tok.n)) return;
+    const chosen=colColors[i];
+    const correct=tok.n;
+    const isOk=chosen===correct;
+    if(isOk) ok++; else ko++;
+    const cn=NATURES[correct];
+    const row=document.createElement('div'); row.className='cr-word-row';
+    row.innerHTML=`<span style="font-weight:900;color:${cn.color}">${tok.w}</span>
+      <span style="font-size:11px;color:var(--gray)">${cn.emoji} ${cn.label}</span>
+      <span>${isOk?'✅':'❌'}</span>`;
+    result.appendChild(row);
+  });
+  gameCorrect=ok; gameWrong=ko;
+  // Color text correctly
+  colPhrase.forEach((tok,i)=>{ if(tok.n&&sessionNatures.includes(tok.n)) colColors[i]=tok.n; });
+  renderColText();
+  setTimeout(()=>endGame(),2000);
+}
+
+// ══ UTILS ══
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function launchConfetti(){
+  const colors=['#FFD93D','#FF6B9D','#6BCB77','#4D96FF','#C77DFF'];
+  for(let i=0;i<30;i++){
+    const el=document.createElement('div');el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),2500);
+  }
+}
+
+// INIT
+buildHome();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Leoluce 🦁</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦁</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --pink:#FF6B9D;--purple:#C77DFF;--blue:#4D96FF;--green:#6BCB77;
+  --yellow:#FFD93D;--orange:#FF9F1C;--red:#FF4757;--teal:#26de81;
+  --bg:#FFF8FF;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--dark);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;}
+#app{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;}
+@media (min-width:768px){
+  #app{max-width:900px;}
+  .app-grid{grid-template-columns:repeat(3,1fr)!important;}
+}
+@media (min-width:1100px){
+  #app{max-width:1100px;}
+  .app-grid{grid-template-columns:repeat(4,1fr)!important;}
+}
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ LOADING ══ */
+#sc-loading{background:var(--dark);align-items:center;justify-content:center;gap:16px;cursor:pointer;}
+#loading-tap-hint{animation:showHint 0s 3s forwards;opacity:0;}
+@keyframes showHint{to{opacity:1;display:block;}}
+.loading-lion{font-size:72px;animation:float 2s ease-in-out infinite;}
+.loading-title{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--orange),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.loading-dots{display:flex;gap:8px;}
+.ld{width:10px;height:10px;border-radius:50%;background:var(--purple);animation:bounce 1.2s ease-in-out infinite;}
+.ld:nth-child(2){animation-delay:.2s;}
+.ld:nth-child(3){animation-delay:.4s;}
+
+/* ══ AUTH ══ */
+#sc-auth{background:linear-gradient(145deg,#0d0d1a 0%,#1a1a2e 50%,#0f3460 100%);align-items:center;justify-content:center;padding:32px 24px;gap:0;}
+.auth-lion{font-size:64px;margin-bottom:8px;animation:float 3s ease-in-out infinite;}
+.auth-title{font-family:'Baloo 2',sans-serif;font-size:34px;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;text-align:center;}
+.auth-sub{color:#8892b0;font-size:14px;margin-bottom:28px;text-align:center;}
+.auth-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:24px;width:100%;backdrop-filter:blur(10px);}
+.auth-tabs{display:flex;gap:6px;margin-bottom:20px;}
+.auth-tab{flex:1;padding:10px;border:none;border-radius:11px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.07);color:#8892b0;}
+.auth-tab.active{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;}
+.auth-label{color:#8892b0;font-size:12px;font-weight:700;margin-bottom:5px;display:block;}
+.auth-input{width:100%;padding:13px 15px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:11px;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;margin-bottom:12px;outline:none;transition:border .2s;}
+.auth-input:focus{border-color:var(--purple);}
+.auth-input::placeholder{color:#4a5568;}
+.role-select{width:100%;padding:13px 15px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:11px;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;margin-bottom:12px;outline:none;cursor:pointer;}
+.role-select option{background:#1a1a2e;color:#fff;}
+.avatar-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.av-btn{width:42px;height:42px;border-radius:11px;border:2px solid transparent;background:rgba(255,255,255,.07);font-size:20px;cursor:pointer;transition:all .15s;}
+.av-btn.sel{border-color:var(--pink);background:rgba(255,107,157,.2);transform:scale(1.15);}
+.auth-btn{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;cursor:pointer;margin-top:4px;}
+.auth-google-btn{width:100%;padding:13px;border:1px solid rgba(255,255,255,.2);border-radius:13px;background:rgba(255,255,255,.06);color:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;}
+.auth-divider{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.auth-divider-line{flex:1;height:1px;background:rgba(255,255,255,.1);}
+.auth-divider-text{color:#8892b0;font-size:12px;}
+.auth-error{color:#FF6B6B;font-size:12px;text-align:center;margin-top:8px;min-height:18px;}
+.auth-code-section{display:none;flex-direction:column;gap:8px;}
+.code-label{color:#8892b0;font-size:13px;text-align:center;}
+
+/* ══ HUB ══ */
+#sc-hub{background:var(--bg);overflow-y:auto;}
+.hub-header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:56px 20px 28px;position:relative;overflow:hidden;}
+.hub-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(199,125,255,.25) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(255,107,157,.15) 0%,transparent 50%);}
+.hub-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;}
+.hub-greeting{}.hub-hello{color:#8892b0;font-size:13px;font-weight:600;}
+.hub-name{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hub-avatar{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,var(--pink),var(--purple));display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 14px rgba(199,125,255,.4);}
+.hub-role-badge{display:inline-block;background:rgba(255,211,61,.15);border:1px solid rgba(255,211,61,.3);color:var(--yellow);font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;margin-top:6px;}
+.hub-logout{position:absolute;bottom:12px;right:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8892b0;border-radius:10px;padding:6px 12px;font-size:11px;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;}
+.prog-view-tab{background:rgba(255,255,255,.08);border:2px solid transparent;color:rgba(255,255,255,.6);border-radius:12px;padding:8px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+.prog-view-tab.active{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff;}
+.ps-badge{background:rgba(255,255,255,.1);border-radius:14px;padding:10px 14px;text-align:center;min-width:70px;}
+.ps-badge-emoji{font-size:24px;}
+.ps-badge-label{font-size:9px;color:rgba(255,255,255,.6);font-weight:700;margin-top:2px;}
+.ps-badge.locked{opacity:.25;}
+.pd-app-row{background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;}
+.pd-app-bar-bg{background:rgba(255,255,255,.1);border-radius:6px;height:6px;overflow:hidden;margin-top:6px;}
+.pd-app-bar-fill{height:100%;border-radius:6px;}
+.activity-bar{flex:1;background:rgba(255,255,255,.1);border-radius:4px 4px 0 0;min-height:3px;position:relative;}
+.activity-bar.has-activity{background:linear-gradient(180deg,#FFD93D,#FF9F1C);}
+.hub-content{padding:0 16px 40px;margin-top:8px;}
+.hub-section-title{font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;color:var(--dark);margin:18px 0 10px;}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.app-card{background:#fff;border-radius:20px;padding:18px 14px;box-shadow:0 4px 18px rgba(0,0,0,.06);cursor:pointer;transition:all .2s;position:relative;overflow:hidden;border:2px solid transparent;}
+.app-card:active{transform:scale(.97);}
+.app-card.locked{opacity:.5;cursor:default;}
+.app-card-emoji{font-size:36px;margin-bottom:6px;display:block;}
+.app-card-name{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;color:var(--dark);}
+.app-card-desc{font-size:10px;color:var(--gray);margin-top:2px;}
+.app-card-score{margin-top:8px;padding-top:8px;border-top:1px solid #F3F4F6;font-size:11px;color:var(--gray);font-weight:700;}
+.app-card-stats{display:flex;flex-direction:column;gap:2px;margin-top:4px;}
+.app-stat-row{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--gray);}
+.app-stat-val{color:var(--dark);}
+.app-card-soon{position:absolute;top:10px;right:10px;background:#F3F4F6;color:var(--gray);font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;}
+.app-card-stats-css{position:absolute;inset:0;border-radius:18px;pointer-events:none;}
+
+/* ══ TEACHER DASHBOARD ══ */
+#sc-teacher{background:var(--bg);overflow-y:auto;padding-bottom:40px;}
+.teacher-header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:44px 20px 20px;position:relative;}
+.th-back{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:11px;padding:7px 12px;color:#fff;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.th-title{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;text-align:center;}
+.th-sub{color:rgba(255,255,255,.5);font-size:13px;text-align:center;margin-top:3px;}
+.teacher-body{padding:16px;display:flex;flex-direction:column;gap:12px;}
+.tcard{background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.tcard-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+.code-display{background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:14px;padding:16px;text-align:center;}
+.code-big{font-family:'Baloo 2',sans-serif;font-size:42px;font-weight:900;color:#fff;letter-spacing:6px;}
+.code-label{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;}
+.code-copy-btn{background:rgba(255,255,255,.2);border:none;border-radius:10px;padding:8px 16px;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;}
+.new-list-form{display:flex;flex-direction:column;gap:8px;}
+.tinput{border:2px solid #E5E7EB;border-radius:11px;padding:10px 12px;font-family:'Nunito',sans-serif;font-size:14px;width:100%;outline:none;}
+.tinput:focus{border-color:var(--blue);}
+textarea.tinput{resize:none;min-height:80px;}
+.tsave-btn{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+.students-list{display:flex;flex-direction:column;gap:6px;}
+.student-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F9FAFB;border-radius:12px;}
+.sr-info{display:flex;flex-direction:column;gap:1px;}
+.sr-name{font-size:14px;font-weight:800;color:var(--dark);}
+.sr-stats{font-size:11px;color:var(--gray);}
+.sr-avatar{font-size:22px;}
+.lists-display{display:flex;flex-direction:column;gap:8px;}
+.list-row{border:2px solid #E5E7EB;border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.lr-info{}.lr-name{font-size:14px;font-weight:800;color:var(--dark);}
+.lr-count{font-size:11px;color:var(--gray);}
+.lr-active{background:rgba(107,203,119,.15);border-color:var(--green);}
+.lr-set-btn{background:linear-gradient(135deg,var(--green),var(--teal));border:none;border-radius:10px;padding:7px 12px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+
+/* ══ ADMIN ══ */
+#sc-admin{background:var(--bg);overflow-y:auto;padding-bottom:40px;}
+.admin-header{background:linear-gradient(135deg,#0d0d1a,#1a1a2e);padding:44px 20px 20px;position:relative;}
+.admin-title{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;text-align:center;}
+.admin-body{padding:16px;display:flex;flex-direction:column;gap:12px;}
+.acard{background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.acard-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+.admin-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.admin-stat{background:#F9FAFB;border-radius:12px;padding:12px;text-align:center;}
+.as-val{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;color:var(--dark);}
+.as-lbl{font-size:11px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.users-table{display:flex;flex-direction:column;gap:6px;}
+.user-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F9FAFB;border-radius:12px;font-size:13px;}
+.ur-left{display:flex;flex-direction:column;gap:2px;}
+.ur-name{font-weight:800;color:var(--dark);}
+.ur-email{font-size:11px;color:var(--gray);}
+.ur-role{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;}
+.ur-role.student{background:rgba(77,150,255,.15);color:var(--blue);}
+.ur-role.teacher{background:rgba(107,203,119,.15);color:#059669;}
+.ur-role.admin{background:rgba(255,71,87,.15);color:var(--red);}
+
+/* MISC */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes pulse-glow{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:14px;font-size:14px;font-weight:700;z-index:1000;animation:slideUp .3s ease;white-space:nowrap;}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- LOADING -->
+<div id="sc-loading" class="screen active" onclick="forceOpenHub()">
+  <div style="position:relative;height:110px;width:140px;display:flex;align-items:center;justify-content:center;margin-bottom:8px">
+    <div style="position:absolute;width:120px;height:120px;background:radial-gradient(circle,rgba(255,211,61,.2) 0%,transparent 70%);border-radius:50%;animation:pulse-glow 2s ease-in-out infinite"></div>
+    <span style="font-size:64px;filter:drop-shadow(0 4px 16px rgba(255,159,28,.6));animation:float 2s ease-in-out infinite;transform:translateX(-16px)">🦁</span>
+    <span style="font-size:52px;filter:drop-shadow(0 4px 16px rgba(255,211,61,.7));animation:float 2s ease-in-out infinite;animation-delay:.5s;transform:translateX(16px)">💡</span>
+    <div style="position:absolute;top:10px;right:10px;width:22px;height:22px;background:linear-gradient(135deg,#FFD93D,#FF9F1C);border-radius:50%;box-shadow:0 0 14px rgba(255,211,61,.9);animation:pulse-glow 1.5s ease-in-out infinite"></div>
+  </div>
+  <div class="loading-title">Leoluce</div>
+  <div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+</div>
+
+<!-- AUTH -->
+<div id="sc-auth" class="screen">
+  <div style="background:linear-gradient(145deg,#0d0d1a,#1a1a2e,#0f3460);align-items:center;justify-content:center;padding:32px 24px;gap:0;display:flex;flex-direction:column;min-height:100vh;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">
+      <span style="font-size:52px;animation:float 3s ease-in-out infinite">🦁</span>
+      <span style="font-size:52px;animation:float 3s ease-in-out infinite;animation-delay:.5s">💡</span>
+    </div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:34px;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;text-align:center">Leoluce</div>
+    <div style="color:#8892b0;font-size:14px;margin-bottom:28px;text-align:center">Sauvegarde tes résultats !</div>
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:24px;width:100%;backdrop-filter:blur(10px)">
+      <div style="display:flex;gap:4px;margin-bottom:20px">
+        <button class="auth-tab active" onclick="switchTab('login')" style="flex:1">Se connecter</button>
+        <button class="auth-tab" onclick="switchTab('register')" style="flex:1">Créer un compte</button>
+        <button class="auth-tab" onclick="switchTab('patient')" style="flex:1">Patient</button>
+      </div>
+      <div id="tab-login">
+        <button class="auth-google-btn" onclick="signInGoogle()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continuer avec Google
+        </button>
+        <div class="auth-divider"><div class="auth-divider-line"></div><div class="auth-divider-text">ou</div><div class="auth-divider-line"></div></div>
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="login-email" type="email" placeholder="ton@email.com">
+        <label class="auth-label">Mot de passe</label>
+        <input class="auth-input" id="login-pwd" type="password" placeholder="••••••">
+        <button class="auth-btn" onclick="signInEmail()">🚀 Connexion</button>
+      </div>
+      <div id="tab-register" style="display:none">
+        <label class="auth-label">Ton rôle</label>
+        <select class="role-select" id="reg-role" onchange="onRoleChange()">
+          <option value="student">👦 Élève / Enfant</option>
+          <option value="parent">👨‍👩‍👧 Parent</option>
+          <option value="teacher">👩‍🏫 Enseignant·e</option>
+          <option value="ortho">🩺 Orthophoniste</option>
+        </select>
+        <label class="auth-label">Choisis ton avatar</label>
+        <div class="avatar-grid" id="avatar-grid"></div>
+        <label class="auth-label">Prénom / Pseudo</label>
+        <input class="auth-input" id="reg-name" placeholder="Léonie...">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="reg-email" type="email" placeholder="ton@email.com">
+        <label class="auth-label">Mot de passe</label>
+        <input class="auth-input" id="reg-pwd" type="password" placeholder="6 caractères min">
+        <div id="reg-code-wrap" style="display:none">
+          <label class="auth-label">Code de classe (optionnel)</label>
+          <input class="auth-input" id="reg-code" type="text" placeholder="Ex: ABC123" style="text-transform:uppercase;letter-spacing:3px">
+        </div>
+        <button class="auth-btn" onclick="registerEmail()">🎉 Créer mon compte</button>
+      </div>
+      <!-- PATIENT LOGIN -->
+      <div id="tab-patient" style="display:none">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:28px;margin-bottom:4px">🩺</div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:#fff">Connexion Patient</div>
+          <div style="font-size:12px;color:#8892b0;margin-top:3px">Demande le code à ton orthophoniste</div>
+        </div>
+        <label class="auth-label">Code du cabinet (ex: ABC123)</label>
+        <input class="auth-input" id="patient-ortho-code" type="text" placeholder="Code cabinet" style="text-transform:uppercase;letter-spacing:3px;text-align:center;font-size:20px;font-weight:800">
+        <label class="auth-label">Ton prénom</label>
+        <input class="auth-input" id="patient-prenom" placeholder="Lucie...">
+        <label class="auth-label">Ton code personnel (ex: LUCIE-AB12)</label>
+        <input class="auth-input" id="patient-code" placeholder="Ton code" style="text-transform:uppercase;letter-spacing:2px;font-weight:800">
+        <button class="auth-btn" onclick="loginPatient()" style="background:linear-gradient(135deg,var(--purple),var(--blue))">🚀 Connexion</button>
+      </div>
+
+      <div class="auth-error" id="auth-error"></div>
+      <button onclick="showScreen('sc-hub')" style="width:100%;margin-top:12px;background:none;border:none;color:#8892b0;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;padding:8px">
+        Continuer sans compte →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- HUB -->
+<div id="sc-hub" class="screen">
+  <div class="hub-header">
+    <div class="hub-top">
+      <div class="hub-greeting">
+        <div class="hub-hello">Bonjour 👋</div>
+        <div class="hub-name" id="hub-name">Léonie</div>
+        <div class="hub-role-badge" id="hub-role-badge">Élève</div>
+      </div>
+      <div class="hub-avatar" id="hub-avatar">🌟</div>
+    </div>
+    <button class="hub-logout" id="hub-auth-btn" onclick="currentUser?doLogout():showScreen('sc-auth')">
+      🔐 Se connecter
+    </button>
+  </div>
+
+  <div class="hub-content">
+    <!-- Student progress dashboard -->
+    <div id="hub-progress-btn" style="display:none;margin-top:14px">
+      <button onclick="openProgressDashboard()" style="width:100%;background:linear-gradient(135deg,#FFD93D,#FF9F1C);color:#1a1a2e;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer">
+        📊 Mes progrès
+      </button>
+    </div>
+    <!-- Teacher/Admin shortcut -->
+    <div id="hub-teacher-btn" style="display:none;margin-top:14px">
+      <button id="hub-teacher-btn-inner" onclick="openProfDashboard()" style="width:100%;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer">
+        👩‍🏫 Tableau de bord
+      </button>
+    </div>
+    <div id="hub-admin-btn" style="display:none;margin-top:8px">
+      <button onclick="showScreen('sc-admin');loadAdminData()" style="width:100%;background:linear-gradient(135deg,var(--red),var(--orange));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer">
+        ⚙️ Vue Admin
+      </button>
+    </div>
+
+    <!-- Parent quick message -->
+    <div id="hub-parent-msg" style="display:none;margin-top:14px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:13px;font-weight:700;color:var(--gray);margin-bottom:6px">👨‍👩‍👧 Accès rapide aux applis de vos enfants</div>
+      <div style="font-size:12px;color:var(--gray)">Connectez-vous avec le même compte que votre enfant pour voir ses stats, ou créez un compte enfant avec votre code.</div>
+    </div>
+    <div class="hub-section-title">Mes applications</div>
+    <div class="app-grid" id="app-grid">
+
+      <div class="app-card" onclick="openApp('calcul')" style="border-color:rgba(77,150,255,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(77,150,255,.07),rgba(107,203,119,.07))"></div>
+        <span class="app-card-emoji">🔢</span>
+        <div class="app-card-name">Calcul Mental</div>
+        <div class="app-card-desc">Opérations en chute</div>
+        <div class="app-card-score" id="score-calcul">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('dictee')" style="border-color:rgba(255,159,28,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(255,159,28,.07),rgba(255,107,157,.07))"></div>
+        <span class="app-card-emoji">✏️</span>
+        <div class="app-card-name">Dictée</div>
+        <div class="app-card-desc">Copie · Anagramme</div>
+        <div class="app-card-score" id="score-dictee">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('sons')" style="border-color:rgba(107,203,119,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(107,203,119,.07),rgba(77,150,255,.07))"></div>
+        <span class="app-card-emoji">📚</span>
+        <div class="app-card-name">Sons & Lecture</div>
+        <div class="app-card-desc">Syllabes · Dictée</div>
+        <div class="app-card-score" id="score-sons">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('lecture')" style="border-color:rgba(255,159,28,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(255,159,28,.07),rgba(255,107,157,.07))"></div>
+        <span class="app-card-emoji">🎙️</span>
+        <div class="app-card-name">Lecture & Fluence</div>
+        <div class="app-card-desc">Lire à voix haute</div>
+        <div class="app-card-score" id="score-lecture">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('natures')" style="border-color:rgba(255,211,61,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(255,211,61,.07),rgba(107,203,119,.07))"></div>
+        <span class="app-card-emoji">🌈</span>
+        <div class="app-card-name">Natures des mots</div>
+        <div class="app-card-desc">Nom · Verbe · Adjectif...</div>
+        <div class="app-card-score" id="score-natures">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('adjectifs')" style="border-color:rgba(199,125,255,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(199,125,255,.07),rgba(255,107,157,.07));pointer-events:none"></div>
+        <span class="app-card-emoji">🎨</span>
+        <div class="app-card-name">Adjectifs</div>
+        <div class="app-card-desc">Pluriel · Accord · -al/-eau</div>
+        <div class="app-card-score" id="score-adjectifs">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('fractions')" style="border-color:rgba(255,159,28,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(255,159,28,.07),rgba(255,107,157,.07));pointer-events:none"></div>
+        <span class="app-card-emoji">🍕</span>
+        <div class="app-card-name">Fractions</div>
+        <div class="app-card-desc">+ − × ÷ Réduction</div>
+        <div class="app-card-score" id="score-fractions">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('verbes')" style="border-color:rgba(77,150,255,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(77,150,255,.07),rgba(38,222,129,.07));pointer-events:none"></div>
+        <span class="app-card-emoji"><b style="font-size:14px;letter-spacing:-1px">EN</b></span>
+        <div class="app-card-name">Verbes Anglais</div>
+        <div class="app-card-desc">Irréguliers · Past Simple</div>
+        <div class="app-card-score" id="score-verbes">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('conjugaison')" style="border-color:rgba(38,222,129,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(38,222,129,.07),rgba(77,150,255,.07));pointer-events:none"></div>
+        <span class="app-card-emoji">📝</span>
+        <div class="app-card-name">Conjugaison</div>
+        <div class="app-card-desc">Présent · Imparfait · Futur...</div>
+        <div class="app-card-score" id="score-conjugaison">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('homophones')" style="border-color:rgba(255,211,61,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(255,211,61,.07),rgba(255,159,28,.07));pointer-events:none"></div>
+        <span class="app-card-emoji">🔤</span>
+        <div class="app-card-name">Homophones</div>
+        <div class="app-card-desc">a/à · on/ont · ou/où...</div>
+        <div class="app-card-score" id="score-homophones">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('fonctions')" style="border-color:rgba(199,125,255,.3)">
+        <div class="app-card-stats-css" style="background:linear-gradient(135deg,rgba(199,125,255,.07),rgba(77,150,255,.07));pointer-events:none"></div>
+        <span class="app-card-emoji">🔍</span>
+        <div class="app-card-name">Fonctions</div>
+        <div class="app-card-desc">Sujet · Verbe · COD · COI · CC</div>
+        <div class="app-card-score" id="score-fonctions">Pas encore joué</div>
+      </div>
+      <div class="app-card" onclick="openApp('japonais')" style="border-color:rgba(230,57,70,.3)">
+        <div class="app-card-stats-css" style="pointer-events:none;background:linear-gradient(135deg,rgba(230,57,70,.07),rgba(255,159,28,.07))"></div>
+        <span class="app-card-emoji"><b style="font-size:14px">JP</b></span>
+        <div class="app-card-name">Japonais</div>
+        <div class="app-card-desc">Hiragana · Expressions</div>
+        <div class="app-card-score" id="score-japonais">Pas encore joué</div>
+      </div>
+    </div>
+
+    <!-- Guest banner -->
+    <div id="guest-banner" style="display:none;margin:16px 16px 0;background:linear-gradient(135deg,rgba(199,125,255,.15),rgba(77,150,255,.15));border:2px solid rgba(199,125,255,.3);border-radius:18px;padding:16px;text-align:center">
+      <div style="font-size:22px;margin-bottom:6px">🌟</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--dark);margin-bottom:4px">Sauvegarde tes résultats !</div>
+      <div style="font-size:12px;color:var(--gray);margin-bottom:12px">Crée un compte gratuit pour garder tes scores, suivre ta progression et avoir tes listes de mots personnalisées.</div>
+      <button onclick="showScreen('sc-auth')" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:12px;padding:12px 24px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer">Créer mon compte gratuit →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TEACHER DASHBOARD -->
+<div id="sc-teacher" class="screen">
+  <div class="teacher-header">
+    <button class="th-back" onclick="showScreen('sc-hub')">← Retour</button>
+    <div class="th-title">Tableau de bord</div>
+    <div class="th-sub" id="th-sub">Chargement...</div>
+  </div>
+  <div class="teacher-body">
+    <!-- Class code -->
+    <div class="tcard">
+      <div class="tcard-title">🔑 Code de ta classe</div>
+      <div class="code-display">
+        <div class="code-big" id="teacher-code">------</div>
+        <div class="code-label">Partage ce code avec tes élèves</div>
+        <button class="code-copy-btn" onclick="copyCode()">📋 Copier le code</button>
+      </div>
+    </div>
+
+    <!-- Weekly word list -->
+    <div class="tcard">
+      <div class="tcard-title">📋 Liste de mots de la semaine</div>
+      <div class="new-list-form">
+        <input class="tinput" id="list-title" placeholder="Ex: Semaine 25 — Dictée">
+        <textarea class="tinput" id="list-words" placeholder="Un mot par ligne :&#10;maison&#10;jardin&#10;papillon..."></textarea>
+        <button class="tsave-btn" onclick="saveWordList()">💾 Publier cette liste</button>
+      </div>
+      <div class="lists-display" id="lists-display" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Students -->
+    <div class="tcard">
+      <div class="tcard-title">👦 Mes élèves / patients</div>
+      <div class="students-list" id="students-list">
+        <div style="color:var(--gray);font-size:13px;text-align:center;padding:16px">Chargement...</div>
+      </div>
+    </div>
+
+    <!-- Connection logs -->
+    <div class="tcard">
+      <div class="tcard-title">🕐 Dernières connexions</div>
+      <div id="conn-logs" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORTHO DASHBOARD -->
+<div id="sc-ortho" class="screen" style="background:#F8F9FF;overflow-y:auto;padding-bottom:40px">
+  <div style="background:linear-gradient(135deg,#1a1a2e,#2d1b4e);padding:44px 20px 20px;position:relative">
+    <button onclick="showScreen('sc-hub')" style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">← Retour</button>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;text-align:center">🩺 Tableau de bord</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px;text-align:center;margin-top:3px" id="ortho-name-display">Orthophoniste</div>
+  </div>
+
+  <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+    <!-- Code cabinet -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔑 Code de connexion cabinet</div>
+      <div style="background:linear-gradient(135deg,var(--purple),var(--blue));border-radius:14px;padding:14px;text-align:center">
+        <div style="font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:900;color:#fff;letter-spacing:4px" id="ortho-code-display">------</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px">Les patients utilisent ce code + leur prénom</div>
+        <button onclick="copyOrthoCode()" style="background:rgba(255,255,255,.2);border:none;border-radius:10px;padding:8px 16px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;margin-top:8px">📋 Copier</button>
+      </div>
+    </div>
+
+    <!-- Ajouter patient -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">➕ Nouveau patient</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="new-patient-name" placeholder="Prénom du patient" style="border:2px solid #E5E7EB;border-radius:11px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:15px;outline:none" oninput="generatePatientCode()">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="new-patient-code" placeholder="Code généré" style="border:2px solid #E5E7EB;border-radius:11px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:15px;outline:none;flex:1;font-weight:800;letter-spacing:2px" readonly>
+          <button onclick="generatePatientCode()" style="background:#F3F4F6;border:none;border-radius:11px;padding:11px;font-size:16px;cursor:pointer">🔄</button>
+        </div>
+        <input id="new-patient-notes" placeholder="Notes (optionnel)" style="border:2px solid #E5E7EB;border-radius:11px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:14px;outline:none">
+        <button onclick="createPatient()" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:12px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer">Créer ce patient</button>
+      </div>
+    </div>
+
+    <!-- Liste patients -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">👥 Mes patients</div>
+      <div id="patients-list">
+        <div style="text-align:center;color:var(--gray);font-size:13px;padding:16px">Chargement...</div>
+      </div>
+    </div>
+
+    <!-- Inviter un collègue -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📨 Inviter un·e collègue</div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:12px">Ton collègue recevra un lien pour créer son compte ortho sur Leoluce.</div>
+      <input id="invite-email" type="email" placeholder="email@collègue.fr" style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;margin-bottom:8px">
+      <button onclick="sendInvite()" style="width:100%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:12px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer">📨 Envoyer l'invitation</button>
+    </div>
+
+    <!-- Mes collègues -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🤝 Mon réseau de collègues</div>
+      <div id="colleagues-list">
+        <div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Chargement...</div>
+      </div>
+      <div style="margin-top:12px;border-top:1px solid #F3F4F6;padding-top:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--gray);margin-bottom:8px">Rejoindre le réseau d'un collègue</div>
+        <div style="display:flex;gap:8px">
+          <input id="colleague-code" placeholder="Code collègue (ex: ABC123)" style="flex:1;border:2px solid #E5E7EB;border-radius:11px;padding:10px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;text-transform:uppercase;letter-spacing:2px;font-weight:800">
+          <button onclick="addColleague()" style="background:var(--purple);color:#fff;border:none;border-radius:11px;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer">Rejoindre</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configs réseau privé -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🤝 Configs de mes collègues</div>
+      <div id="shared-configs-list">
+        <div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Chargement...</div>
+      </div>
+    </div>
+
+    <!-- Bibliothèque publique -->
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(59,130,246,.07));border:2px solid rgba(16,185,129,.2);border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#065F46;text-transform:uppercase;letter-spacing:.5px">🌍 Bibliothèque publique</div>
+        <span style="font-size:10px;font-weight:700;background:rgba(16,185,129,.15);color:#065F46;padding:3px 8px;border-radius:20px">Communauté</span>
+      </div>
+      <div style="font-size:12px;color:#065F46;margin-bottom:10px">Configs partagées librement par la communauté des orthos Leoluce 🦁</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input id="public-search" placeholder="Rechercher..." style="flex:1;border:1.5px solid rgba(16,185,129,.3);border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="searchPublicConfigs()">
+      </div>
+      <div id="public-configs-list">
+        <div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Chargement...</div>
+      </div>
+      <button onclick="loadMorePublicConfigs()" id="load-more-btn" style="width:100%;margin-top:8px;background:#F0FDF4;border:1.5px solid rgba(16,185,129,.3);color:#065F46;border-radius:10px;padding:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:none">Voir plus →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT PICKER MODAL -->
+<div id="patient-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:20px;max-width:380px;width:100%;max-height:70vh;overflow-y:auto">
+    <div style="font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;color:var(--dark);margin-bottom:14px;text-align:center">Appliquer à quel patient ?</div>
+    <div id="patient-picker-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button onclick="closePatientPicker()" style="width:100%;margin-top:14px;background:#F3F4F6;border:none;border-radius:12px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--gray);cursor:pointer">Annuler</button>
+  </div>
+</div>
+
+<!-- PATIENT CONFIG -->
+<div id="sc-patient-config" class="screen" style="background:#F8F9FF;overflow-y:auto;padding-bottom:40px">
+  <div style="background:linear-gradient(135deg,#1a1a2e,#2d1b4e);padding:44px 20px 20px;position:relative">
+    <button onclick="showScreen('sc-ortho');loadOrthoData()" style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">← Patients</button>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:#fff;text-align:center" id="config-patient-name">Patient</div>
+    <div style="color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-top:2px" id="config-patient-code-display"></div>
+  </div>
+
+  <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+
+    <!-- Stats rapides -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Dernière activité</div>
+      <div id="patient-stats" style="color:var(--gray);font-size:13px">Aucune session enregistrée</div>
+    </div>
+
+    <!-- Apps actives -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📱 Applications actives</div>
+      <div id="apps-toggles" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Sons à travailler -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🔊 Sons & Lecture — Sons prioritaires</div>
+      <div id="sons-config" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
+    <!-- Listes de mots dictée -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">✏️ Dictée — Liste de mots personnalisée</div>
+      <textarea id="patient-words" placeholder="Un mot par ligne..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:100px"></textarea>
+    </div>
+
+    <!-- Textes lecture -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🎙️ Lecture & Fluence — Texte personnalisé</div>
+      <input id="patient-text-title" placeholder="Titre du texte" style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;margin-bottom:8px">
+      <textarea id="patient-text-body" placeholder="Colle ici le texte à lire..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:120px"></textarea>
+    </div>
+
+    <!-- Notes -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📝 Notes de suivi</div>
+      <textarea id="patient-notes-config" placeholder="Notes cliniques..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:80px"></textarea>
+    </div>
+
+    <button onclick="savePatientConfig()" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:16px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(199,125,255,.3)">💾 Enregistrer la configuration</button>
+
+    <!-- Partager cette config -->
+    <div style="background:#F0FDF4;border:2px solid #86EFAC;border-radius:16px;padding:14px">
+      <div style="font-size:12px;font-weight:800;color:#166534;margin-bottom:10px">🔗 Partager cette configuration avec mes collègues</div>
+      <input id="share-config-name" placeholder="Nom de la config (ex: Protocole bégaiement CE1)" style="width:100%;border:2px solid #86EFAC;border-radius:11px;padding:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:6px">Que partager ?</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><input type="checkbox" id="share-sons" checked> Sons à travailler</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><input type="checkbox" id="share-apps" checked> Applications actives</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><input type="checkbox" id="share-words"> Liste de mots (dictée)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><input type="checkbox" id="share-text"> Texte de lecture</label>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px;color:#166534">
+        <input type="checkbox" id="share-public"> 🌍 Rendre publique (visible par tous les orthos)
+      </label>
+      <button onclick="shareConfig()" style="width:100%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:12px;padding:11px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer">🔗 Partager</button>
+    </div>
+
+    <button onclick="deletePatient()" style="background:#fff;border:2px solid var(--red);color:var(--red);border-radius:14px;padding:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer">🗑️ Supprimer ce patient</button>
+  </div>
+</div>
+
+<!-- STUDENT PROGRESS DASHBOARD -->
+<div id="sc-progress" class="screen" style="background:linear-gradient(160deg,#1a1530,#2d1f4e);overflow-y:auto;padding-bottom:40px">
+  <div style="padding:44px 20px 16px;position:relative">
+    <button onclick="showScreen('sc-hub')" style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">← Accueil</button>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:#fff;text-align:center">📊 Mes progrès</div>
+    <div style="display:flex;justify-content:center;gap:6px;margin-top:14px">
+      <button id="prog-tab-simple" class="prog-view-tab active" onclick="switchProgressView('simple')">🌟 Simple</button>
+      <button id="prog-tab-detail" class="prog-view-tab" onclick="switchProgressView('detail')">📈 Détaillé</button>
+    </div>
+  </div>
+
+  <!-- SIMPLE VIEW -->
+  <div id="progress-simple-view" style="padding:0 16px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+        <div style="font-size:32px" id="ps-streak-emoji">🔥</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:#fff" id="ps-streak">0</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">jours de suite</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+        <div style="font-size:32px">⭐</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:#fff" id="ps-stars">0</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">étoiles gagnées</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+        <div style="font-size:32px">⏱️</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:#fff" id="ps-time">0 min</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">temps de jeu total</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+        <div style="font-size:32px">🎮</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:#fff" id="ps-sessions">0</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">parties jouées</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏆 Mes badges</div>
+      <div id="ps-badges" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 Mes jeux préférés</div>
+      <div id="ps-top-games" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- DETAILED VIEW -->
+  <div id="progress-detail-view" style="padding:0 16px;display:none;flex-direction:column;gap:14px">
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📅 Activité des 14 derniers jours</div>
+      <div id="pd-activity-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px"></div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📚 Détail par application</div>
+      <div id="pd-apps-detail" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📈 Évolution du score moyen</div>
+      <div id="pd-evolution" style="font-size:13px;color:rgba(255,255,255,.6)">Joue à plusieurs reprises pour voir ton évolution apparaître ici !</div>
+    </div>
+  </div>
+</div>
+
+<!-- ORTHO PROGRESS DASHBOARD -->
+<div id="sc-ortho-progress" class="screen" style="background:linear-gradient(160deg,#1a1530,#2d1f4e);overflow-y:auto;padding-bottom:40px">
+  <div style="padding:44px 20px 16px;position:relative">
+    <button onclick="showScreen('sc-hub')" style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">← Accueil</button>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;text-align:center">📊 Progrès de mes patients</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px;text-align:center;margin-top:6px" id="ortho-prog-subtitle"></div>
+  </div>
+  <div id="ortho-progress-body" style="padding:0 16px;display:flex;flex-direction:column;gap:12px">
+    <div style="color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:20px">Chargement...</div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="sc-admin" class="screen">
+  <div class="admin-header">
+    <button class="th-back" onclick="showScreen('sc-hub')">← Retour</button>
+    <div class="admin-title">⚙️ Vue Admin</div>
+  </div>
+  <div class="admin-body">
+    <div class="acard">
+      <div class="acard-title">📊 Statistiques globales</div>
+      <div class="admin-stats-grid">
+        <div class="admin-stat"><div class="as-val" id="adm-users">-</div><div class="as-lbl">Utilisateurs</div></div>
+        <div class="admin-stat"><div class="as-val" id="adm-teachers">-</div><div class="as-lbl">Enseignants</div></div>
+        <div class="admin-stat"><div class="as-val" id="adm-students">-</div><div class="as-lbl">Élèves</div></div>
+        <div class="admin-stat"><div class="as-val" id="adm-sessions">-</div><div class="as-lbl">Sessions totales</div></div>
+      </div>
+    </div>
+    <div class="acard">
+      <div class="acard-title">👥 Tous les utilisateurs <span style="font-size:10px;color:var(--gray);font-weight:600">(clic sur le rôle pour modifier)</span></div>
+      <div class="users-table" id="users-table">Chargement...</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE INIT
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBpKc6h0mjkTff5KJBD0_A4IBePsR4cU3w",
+  authDomain: "leoluce-edu.firebaseapp.com",
+  projectId: "leoluce-edu",
+  storageBucket: "leoluce-edu.firebasestorage.app",
+  messagingSenderId: "334537788019",
+  appId: "1:334537788019:web:f53426f0c480bfd771f806"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ADMIN emails (toi)
+const ADMIN_EMAILS = ['geraldine@leoluce.com', 'leoluce@gmail.com'];
+// Add your real email here:
+const ADMIN_EMAIL = 'gbornand@gmail.com';
+
+const AVATARS = ['🦄','🐉','🦊','🐸','🐼','🦁','🐨','🦋','🐬','🦅','⭐','🌈','🐯','🦒','🦓'];
+let currentUser = null;
+let currentUserData = null;
+
+// ══ AUTH LISTENER ══
+// Fallback: force exit loading after 4 seconds no matter what
+setTimeout(() => {
+  const loading = document.getElementById('sc-loading');
+  if(loading && loading.classList.contains('active')){
+    console.log('Firebase timeout - opening as guest');
+    currentUser = null;
+    currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+    try { openHub(); } catch(e) { showScreen('sc-hub'); }
+  }
+}, 4000);
+const firebaseTimeout = { clear: ()=>{} }; // dummy
+
+function forceOpenHub(){
+  currentUser = null;
+  currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+  try { openHub(); } catch(e) { showScreen('sc-hub'); }
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    currentUser = user;
+    const userRef = db.collection('users').doc(user.uid);
+    const snap = await userRef.get();
+    if (!snap.exists) {
+      const newProfile = {
+        name: user.displayName || user.email.split('@')[0],
+        email: user.email,
+        avatar: '🦁',
+        role: ADMIN_EMAIL && user.email === ADMIN_EMAIL ? 'admin' : 'student',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        sessions: 0, scores: {}
+      };
+      await userRef.set(newProfile);
+      currentUserData = newProfile;
+    } else {
+      currentUserData = snap.data();
+    }
+    if (ADMIN_EMAIL && user.email === ADMIN_EMAIL) currentUserData.role = 'admin';
+    openHub();
+  } else {
+    // Check for patient session
+    if(!checkPatientSession()){
+      currentUser = null;
+      currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+      openHub();
+    }
+  }
+});
+
+// ══ UI HELPERS ══
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function showErr(msg){ document.getElementById('auth-error').textContent=msg; }
+function showToast(msg, dur=2500){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),dur); }
+
+// ══ AUTH UI ══
+const AVATARS_LIST = AVATARS;
+(function(){
+  const g=document.getElementById('avatar-grid');
+  AVATARS_LIST.forEach(a=>{
+    const b=document.createElement('button'); b.className='av-btn'; b.textContent=a;
+    b.onclick=()=>{ g.querySelectorAll('.av-btn').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); };
+    g.appendChild(b);
+  });
+  g.children[0].classList.add('sel');
+})();
+
+function switchTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',
+    (i===0&&tab==='login')||(i===1&&tab==='register')||(i===2&&tab==='patient')));
+  document.getElementById('tab-login').style.display=tab==='login'?'':'none';
+  document.getElementById('tab-register').style.display=tab==='register'?'':'none';
+  const patEl=document.getElementById('tab-patient');
+  if(patEl) patEl.style.display=tab==='patient'?'':'none';
+  document.getElementById('auth-error').textContent='';
+}
+
+function onRoleChange(){
+  const role=document.getElementById('reg-role').value;
+  document.getElementById('reg-code-wrap').style.display=role==='student'?'':'none';
+}
+
+async function loginPatient(){
+  const orthoCode = document.getElementById('patient-ortho-code')?.value?.trim().toUpperCase();
+  const prenom = document.getElementById('patient-prenom')?.value?.trim();
+  const patientCode = document.getElementById('patient-code')?.value?.trim().toUpperCase();
+  if(!orthoCode||!prenom||!patientCode){ showErr('Remplis tous les champs !'); return; }
+  
+  try {
+    // Find ortho with this code
+    const orthoSnap = await db.collection('users').where('orthoCode','==',orthoCode).limit(1).get();
+    if(orthoSnap.empty){ showErr('Code cabinet introuvable'); return; }
+    const orthoId = orthoSnap.docs[0].id;
+    
+    // Find patient
+    const patientSnap = await db.collection('patients')
+      .where('orthoId','==',orthoId)
+      .where('code','==',patientCode)
+      .limit(1).get();
+    if(patientSnap.empty){ showErr('Code patient introuvable'); return; }
+    
+    const patientDoc = patientSnap.docs[0];
+    const patientData = patientDoc.data();
+    
+    // Update last login
+    await db.collection('patients').doc(patientDoc.id).update({
+      lastLogin: new Date().toISOString()
+    });
+    
+    // Set session as patient (no Firebase auth, use localStorage)
+    const session = {
+      type: 'patient',
+      patientId: patientDoc.id,
+      name: patientData.name,
+      orthoId,
+      activeApps: patientData.activeApps || ['calcul','dictee','sons','lecture'],
+      activeSons: patientData.activeSons || [],
+      customWords: patientData.customWords || '',
+      customTextTitle: patientData.customTextTitle || '',
+      customTextBody: patientData.customTextBody || '',
+    };
+    localStorage.setItem('patient_session', JSON.stringify(session));
+    
+    // Open hub as patient
+    currentUser = null;
+    currentUserData = { name: patientData.name, avatar: '🎯', role: 'patient_linked', session };
+    applyPatientConfig(session);
+    openHub();
+  } catch(e) { showErr('Erreur : '+e.message); }
+}
+
+function applyPatientConfig(session){
+  // Hide apps not active for this patient
+  const allApps = ['calcul','dictee','sons','lecture','natures','adjectifs','fractions','verbes','japonais'];
+  allApps.forEach(app => {
+    const card = document.querySelector(`[onclick="openApp('${app}')"]`);
+    if(card){
+      card.style.display = session.activeApps.includes(app) ? '' : 'none';
+    }
+  });
+}
+
+function checkPatientSession(){
+  const sess = localStorage.getItem('patient_session');
+  if(!sess) return false;
+  try {
+    const session = JSON.parse(sess);
+    currentUser = null;
+    currentUserData = { name: session.name, avatar: '🎯', role: 'patient_linked', session };
+    applyPatientConfig(session);
+    openHub();
+    return true;
+  } catch(e) { return false; }
+}
+
+async function signInGoogle(){
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+  } catch(e){ showErr('Erreur Google : '+e.message); }
+}
+
+async function signInEmail(){
+  const email=document.getElementById('login-email').value.trim();
+  const pwd=document.getElementById('login-pwd').value;
+  if(!email||!pwd){ showErr('Remplis tous les champs !'); return; }
+  try {
+    await auth.signInWithEmailAndPassword(email,pwd);
+  } catch(e){ showErr('Erreur : '+e.code+' — '+e.message); console.error(e); }
+}
+
+async function registerEmail(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pwd=document.getElementById('reg-pwd').value;
+  const role=document.getElementById('reg-role').value;
+  const avatar=document.querySelector('.av-btn.sel')?.textContent||'🦁';
+  const code=(document.getElementById('reg-code')?.value||'').trim().toUpperCase();
+  if(!name||!email||!pwd){ showErr('Remplis tous les champs !'); return; }
+  if(pwd.length<6){ showErr('Mot de passe trop court (6 min)'); return; }
+  try {
+    const cred=await auth.createUserWithEmailAndPassword(email,pwd);
+    const uid=cred.user.uid;
+    const profile={
+      name, email, avatar, role,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      sessions:0, scores:{}
+    };
+    // If teacher, generate a class code
+    if(role==='teacher'||role==='ortho'){
+      profile.classCode=generateCode();
+      profile.wordLists=[];
+    }
+    // If student with code, link to teacher
+    if((role==='student'||role==='parent')&&code){
+      const teacherSnap=await db.collection('users').where('classCode','==',code).limit(1).get();
+      if(!teacherSnap.empty){
+        profile.teacherId=teacherSnap.docs[0].id;
+        profile.teacherCode=code;
+      }
+    }
+    await db.collection('users').doc(uid).set(profile);
+    // Increment global stats
+    await db.collection('meta').doc('stats').set({
+      totalUsers: firebase.firestore.FieldValue.increment(1),
+      [`total_${role}s`]: firebase.firestore.FieldValue.increment(1)
+    },{merge:true});
+  } catch(e){ showErr(e.message); }
+}
+
+function generateCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function doLogout(){
+  if(window._connLogRef && window._sessionStart){
+    const dur = Math.round((Date.now() - window._sessionStart) / 60000);
+    db.collection('connLogs').doc(window._connLogRef).update({durationMin: dur}).catch(()=>{});
+  }
+  localStorage.removeItem('patient_session');
+  auth.signOut();
+}
+
+// ══ HUB ══
+function openHub(){
+  // Log connection
+  if(currentUser && currentUserData){
+    const uid = currentUser.uid;
+    const u = currentUserData;
+    // Save session start time
+    window._sessionStart = Date.now();
+    // Log to Firestore if user has a teacher
+    if(u.teacherId){
+      db.collection('connLogs').add({
+        userId: uid,
+        userName: u.name||u.email||'?',
+        teacherId: u.teacherId,
+        connectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        durationMin: 0
+      }).then(ref=>{ window._connLogRef = ref.id; });
+    }
+  }
+  const u=currentUserData;
+  document.getElementById('hub-name').textContent=u.name||'';
+  document.getElementById('hub-avatar').textContent=u.avatar||'🦁';
+  const roleBadges = {
+    admin:'⚙️ Admin', teacher:'👩‍🏫 Enseignant·e',
+    ortho:'🩺 Orthophoniste', parent:'👨‍👩‍👧 Parent', student:'👦 Élève'
+  };
+  document.getElementById('hub-role-badge').textContent = roleBadges[u.role]||'👦 Élève';
+  document.getElementById('hub-teacher-btn').style.display=
+    (u.role==='teacher'||u.role==='ortho'||u.role==='admin')?'':'none';
+  document.getElementById('hub-teacher-btn').querySelector('button').textContent=
+    u.role==='ortho'?'🩺 Tableau de bord orthophoniste':
+    u.role==='admin'?'👩‍🏫 Tableau de bord enseignant':
+    '👩‍🏫 Tableau de bord enseignant';
+  document.getElementById('hub-admin-btn').style.display=
+    u.role==='admin'?'':'none';
+  document.getElementById('hub-progress-btn').style.display=
+    (currentUser && u.role!=='patient_linked')?'':'none';
+  const _progBtn = document.getElementById('hub-progress-btn')?.querySelector('button');
+  if(_progBtn) _progBtn.textContent = u.role==='ortho' ? '📊 Progrès de mes patients' : '📊 Mes progrès';
+
+  // Load scores from Firestore
+  loadHubScores();
+
+  // Load teacher data if teacher
+  if(u.role==='teacher'||u.role==='admin') loadTeacherData();
+
+  document.getElementById('hub-parent-msg').style.display=u.role==='parent'?'':'none';
+  const authBtn = document.getElementById('hub-auth-btn');
+  if(authBtn) authBtn.textContent = currentUser ? 'Déconnexion' : '🔐 Se connecter';
+  const profBtn = document.getElementById('hub-teacher-btn-inner');
+  if(profBtn){
+    if(u.role==='ortho') profBtn.textContent='🩺 Tableau de bord orthophoniste';
+    else if(u.role==='teacher') profBtn.textContent='👩‍🏫 Tableau de bord enseignant';
+    else profBtn.textContent='👩‍🏫 Tableau de bord';
+  }
+  const guestBanner = document.getElementById('guest-banner');
+  if(guestBanner) guestBanner.style.display = currentUser ? 'none' : '';
+  // Hide teacher/admin buttons for guests
+  if(!currentUser){
+    document.getElementById('hub-teacher-btn').style.display='none';
+    document.getElementById('hub-admin-btn').style.display='none';
+    document.getElementById('hub-progress-btn').style.display='none';
+  }
+  showScreen('sc-hub');
+}
+
+async function loadHubScores(){
+  if(!currentUser) return;
+  const snap=await db.collection('users').doc(currentUser.uid).get();
+  const data=snap.data()||{};
+  const scores=data.scores||{};
+  const apps=['tables','calcul','dictee','sons','lecture','japonais'];
+  apps.forEach(app=>{
+    const el=document.getElementById('score-'+app);
+    if(!el)return;
+    const s=scores[app];
+    if(s){
+      el.textContent=`⭐ ${s.best||0} pts · ${s.sessions||0} parties`;
+    } else {
+      el.textContent='Pas encore joué';
+    }
+  });
+}
+
+function openApp(app){
+  const urls={
+    calcul:'calcul-chute.html',
+    dictee:'dictee.html',
+    sons:'sons-lecture.html',
+    lecture:'lecture-voix.html',
+    japonais:'japonais.html',
+    natures:'natures.html',
+    verbes:'verbes-anglais.html',
+    fractions:'fractions.html',
+    adjectifs:'adjectifs.html',
+    conjugaison:'conjugaison.html',
+    homophones:'homophones.html',
+    fonctions:'fonctions.html'
+  };
+  const url=urls[app];
+  if(!url){ console.log('URL not found for app:', app); alert('Appli introuvable : '+app); return; }
+  const uid=currentUser?.uid||'guest';
+  const name=encodeURIComponent(currentUserData?.name||'');
+  // Navigate with full path to avoid any base URL issues
+  const base=window.location.href.replace(/[^/]*$/, '');
+  window.location.href=base+url+'?uid='+uid+'&user='+name;
+}
+
+// ══ TEACHER DASHBOARD ══
+function openProfDashboard(){
+  if(currentUserData?.role==='ortho'){
+    showScreen('sc-ortho');
+    loadOrthoData();
+  } else {
+    showScreen('sc-teacher');
+    loadTeacherData();
+  }
+}
+
+// ══ ORTHO FUNCTIONS ══
+const APPS_LIST = [
+  {id:'calcul', name:'🔢 Calcul Mental', desc:'Opérations en chute'},
+  {id:'dictee', name:'✏️ Dictée', desc:'Copie · Anagramme · Dictée'},
+  {id:'sons', name:'📚 Sons & Lecture', desc:'Syllabes et sons'},
+  {id:'lecture', name:'🎙️ Lecture & Fluence', desc:'Lire à voix haute'},
+  {id:'natures', name:'🌈 Natures des mots', desc:'Grammaire'},
+  {id:'adjectifs', name:'🎨 Adjectifs', desc:'Pluriel et accord'},
+  {id:'fractions', name:'🍕 Fractions', desc:'Opérations sur fractions'},
+  {id:'verbes', name:'<b style="font-size:14px;letter-spacing:-1px">EN</b> Verbes Anglais', desc:'Irréguliers'},
+  {id:'japonais', name:'<b style="font-size:14px">JP</b> Japonais', desc:'Hiragana'},
+];
+
+const SONS_FAMILLES = [
+  'IEN/EIN/OIN','AILLE/EILLE','GE/GI/GN','CE/CI/CA','Y','Lettre S','Lettre C','IEN (2 voyelles)'
+];
+
+let currentPatientId = null;
+
+function generatePatientCode(){
+  const name = document.getElementById('new-patient-name')?.value?.trim() || '';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const code = Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  const display = name ? name.toUpperCase().slice(0,5).replace(/[^A-Z]/g,'') + '-' + code : code;
+  const el = document.getElementById('new-patient-code');
+  if(el) el.value = display;
+}
+
+async function loadOrthoData(){
+  if(!currentUser) return;
+  const snap = await db.collection('users').doc(currentUser.uid).get();
+  const data = snap.data() || {};
+  document.getElementById('ortho-name-display').textContent = data.name || '';
+  
+  // Generate code if not exists
+  if(!data.orthoCode){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const code = Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+    await db.collection('users').doc(currentUser.uid).update({orthoCode: code});
+    document.getElementById('ortho-code-display').textContent = code;
+  } else {
+    document.getElementById('ortho-code-display').textContent = data.orthoCode;
+  }
+
+  // Load patients
+  await loadPatientsList();
+  await loadColleaguesAndSharedConfigs();
+  await loadPublicConfigs();
+}
+
+async function loadPatientsList(){
+  const patientsSnap = await db.collection('patients')
+    .where('orthoId', '==', currentUser.uid)
+    .orderBy('createdAt', 'desc').get();
+  
+  const list = document.getElementById('patients-list');
+  if(patientsSnap.empty){
+    list.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:13px;padding:16px">Aucun patient encore — créez-en un !</div>';
+    return;
+  }
+  list.innerHTML = '';
+  patientsSnap.forEach(doc => {
+    const p = doc.data();
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px;background:#F9FAFB;border-radius:14px;margin-bottom:8px;cursor:pointer';
+    div.innerHTML = `
+      <div>
+        <div style="font-weight:800;font-size:15px;color:var(--dark)">${p.name}</div>
+        <div style="font-size:11px;color:var(--gray);font-family:monospace;margin-top:2px">${p.code}</div>
+        ${p.lastLogin ? `<div style="font-size:11px;color:var(--gray)">Dernière connexion : ${new Date(p.lastLogin).toLocaleDateString('fr-FR')}</div>` : '<div style="font-size:11px;color:var(--gray)">Jamais connecté</div>'}
+      </div>
+      <button onclick="openPatientConfig('${doc.id}')" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer">⚙️ Config</button>`;
+    list.appendChild(div);
+  });
+}
+
+async function createPatient(){
+  const name = document.getElementById('new-patient-name')?.value?.trim();
+  const code = document.getElementById('new-patient-code')?.value?.trim();
+  const notes = document.getElementById('new-patient-notes')?.value?.trim() || '';
+  if(!name || !code){ showToast('⚠️ Remplis le prénom et le code'); return; }
+  
+  // Check code uniqueness
+  const existing = await db.collection('patients').where('code','==',code).get();
+  if(!existing.empty){ showToast('⚠️ Ce code existe déjà, génères-en un autre'); return; }
+  
+  await db.collection('patients').add({
+    name, code, notes,
+    orthoId: currentUser.uid,
+    orthoCode: document.getElementById('ortho-code-display').textContent,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    lastLogin: null,
+    activeApps: ['calcul','dictee','sons','lecture'],
+    activeSons: [],
+    customWords: '',
+    customTextTitle: '',
+    customTextBody: '',
+    scores: {}
+  });
+  document.getElementById('new-patient-name').value = '';
+  document.getElementById('new-patient-code').value = '';
+  document.getElementById('new-patient-notes').value = '';
+  showToast('✅ Patient créé !');
+  loadPatientsList();
+}
+
+function copyOrthoCode(){
+  const code = document.getElementById('ortho-code-display').textContent;
+  navigator.clipboard.writeText(code).then(() => showToast('📋 Code copié !'));
+}
+
+async function openPatientConfig(patientId){
+  currentPatientId = patientId;
+  const snap = await db.collection('patients').doc(patientId).get();
+  const p = snap.data();
+  
+  document.getElementById('config-patient-name').textContent = p.name;
+  document.getElementById('config-patient-code-display').textContent = 'Code : ' + p.code;
+  
+  // Stats
+  const statsEl = document.getElementById('patient-stats');
+  if(p.lastLogin){
+    const scores = p.scores || {};
+    const appLines = Object.entries(scores).map(([app, s]) => 
+      `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #F3F4F6;font-size:13px">
+        <span style="font-weight:700">${APPS_LIST.find(a=>a.id===app)?.name||app}</span>
+        <span style="color:var(--gray)">${s.sessions||0} sessions · meilleur : ${s.best||0}</span>
+      </div>`).join('');
+    statsEl.innerHTML = `<div style="font-size:12px;color:var(--gray);margin-bottom:8px">Dernière connexion : ${new Date(p.lastLogin).toLocaleDateString('fr-FR')}</div>${appLines||'<div style="color:var(--gray);font-size:13px">Pas encore de données</div>'}`;
+  } else {
+    statsEl.textContent = 'Jamais connecté';
+  }
+  
+  // Apps toggles
+  const appsEl = document.getElementById('apps-toggles');
+  appsEl.innerHTML = '';
+  const activeApps = p.activeApps || ['calcul','dictee','sons','lecture'];
+  APPS_LIST.forEach(app => {
+    const active = activeApps.includes(app.id);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F9FAFB;border-radius:12px';
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:800;font-size:14px">${app.name}</div>
+        <div style="font-size:11px;color:var(--gray)">${app.desc}</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+        <input type="checkbox" id="app-toggle-${app.id}" ${active?'checked':''} style="opacity:0;width:0;height:0">
+        <span style="position:absolute;inset:0;border-radius:12px;background:${active?'var(--purple)':'#E5E7EB'};transition:.2s" id="app-toggle-bg-${app.id}"></span>
+        <span style="position:absolute;top:2px;left:${active?'22':'2'}px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)" id="app-toggle-knob-${app.id}"></span>
+      </label>`;
+    row.querySelector('input').addEventListener('change', e => {
+      const bg = document.getElementById('app-toggle-bg-'+app.id);
+      const knob = document.getElementById('app-toggle-knob-'+app.id);
+      if(e.target.checked){ bg.style.background='var(--purple)'; knob.style.left='22px'; }
+      else { bg.style.background='#E5E7EB'; knob.style.left='2px'; }
+    });
+    appsEl.appendChild(row);
+  });
+  
+  // Sons
+  const sonsEl = document.getElementById('sons-config');
+  sonsEl.innerHTML = '';
+  const activeSons = p.activeSons || [];
+  SONS_FAMILLES.forEach((son, i) => {
+    const active = activeSons.includes(son);
+    const btn = document.createElement('button');
+    btn.id = 'son-btn-'+i;
+    btn.style.cssText = `padding:8px 12px;border-radius:20px;border:2px solid ${active?'var(--purple)':'#E5E7EB'};background:${active?'rgba(199,125,255,.1)':'#fff'};font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:${active?'var(--purple)':'var(--gray)'};cursor:pointer;transition:all .2s`;
+    btn.textContent = son;
+    btn.onclick = () => {
+      const isActive = btn.style.borderColor.includes('purple') || btn.style.color.includes('purple');
+      if(isActive){ btn.style.cssText = btn.style.cssText.replace(/border:2px solid [^;]+/,'border:2px solid #E5E7EB').replace(/background:[^;]+/,'background:#fff').replace(/color:[^;]+/,'color:var(--gray)'); }
+      else { btn.style.borderColor='var(--purple)'; btn.style.background='rgba(199,125,255,.1)'; btn.style.color='var(--purple)'; }
+    };
+    sonsEl.appendChild(btn);
+  });
+  
+  // Words & texts
+  document.getElementById('patient-words').value = p.customWords || '';
+  document.getElementById('patient-text-title').value = p.customTextTitle || '';
+  document.getElementById('patient-text-body').value = p.customTextBody || '';
+  document.getElementById('patient-notes-config').value = p.notes || '';
+  
+  showScreen('sc-patient-config');
+}
+
+async function savePatientConfig(){
+  if(!currentPatientId) return;
+  
+  // Collect active apps
+  const activeApps = APPS_LIST.filter(app => {
+    const el = document.getElementById('app-toggle-'+app.id);
+    return el && el.checked;
+  }).map(a => a.id);
+  
+  // Collect active sons
+  const activeSons = [];
+  SONS_FAMILLES.forEach((son, i) => {
+    const btn = document.getElementById('son-btn-'+i);
+    if(btn && (btn.style.color.includes('purple') || btn.style.borderColor.includes('purple'))){
+      activeSons.push(son);
+    }
+  });
+  
+  await db.collection('patients').doc(currentPatientId).update({
+    activeApps,
+    activeSons,
+    customWords: document.getElementById('patient-words').value,
+    customTextTitle: document.getElementById('patient-text-title').value,
+    customTextBody: document.getElementById('patient-text-body').value,
+    notes: document.getElementById('patient-notes-config').value,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('✅ Configuration enregistrée !');
+}
+
+async function deletePatient(){
+  if(!currentPatientId) return;
+  if(!confirm('Supprimer ce patient ? Cette action est irréversible.')) return;
+  await db.collection('patients').doc(currentPatientId).delete();
+  currentPatientId = null;
+  showToast('Patient supprimé');
+  showScreen('sc-ortho');
+  loadPatientsList();
+}
+
+async function loadTeacherData(){
+  if(!currentUser)return;
+  const snap=await db.collection('users').doc(currentUser.uid).get();
+  const data=snap.data()||{};
+  document.getElementById('th-sub').textContent=data.name||'';
+  // Update dashboard title based on role
+  if(currentUserData.role==='ortho'){
+    document.querySelector('.th-title').textContent='🩺 Mes patients';
+    document.querySelector('.tcard-title').textContent='🔑 Code de ton cabinet';
+  }
+  document.getElementById('teacher-code').textContent=data.classCode||'------';
+
+  // Load students
+  const studentsSnap=await db.collection('users')
+    .where('teacherId','==',currentUser.uid).get();
+  const studentsList=document.getElementById('students-list');
+  if(studentsSnap.empty){
+    studentsList.innerHTML='<div style="color:var(--gray);font-size:13px;text-align:center;padding:16px">Aucun élève encore — partage ton code !</div>';
+  } else {
+    studentsList.innerHTML='';
+    studentsSnap.forEach(doc=>{
+      const s=doc.data();
+      const sessions=(s.scores&&Object.values(s.scores).reduce((a,b)=>a+(b.sessions||0),0))||0;
+      const row=document.createElement('div'); row.className='student-row';
+      row.innerHTML=`<div class="sr-info"><div class="sr-name">${s.avatar||'👦'} ${s.name}</div><div class="sr-stats">${sessions} sessions</div></div>`;
+      studentsList.appendChild(row);
+    });
+  }
+
+  // Load connection logs for this teacher's students
+  if(!studentsSnap.empty){
+    const studentIds = studentsSnap.docs.map(d=>d.id);
+    const logsSnap = await db.collection('connLogs')
+      .where('teacherId','==',currentUser.uid)
+      .orderBy('connectedAt','desc').limit(20).get();
+    const logsEl = document.getElementById('conn-logs');
+    if(logsSnap.empty){
+      logsEl.innerHTML='<div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Aucune connexion enregistrée</div>';
+    } else {
+      logsEl.innerHTML='';
+      logsSnap.forEach(doc=>{
+        const l=doc.data();
+        const dt=l.connectedAt?.toDate();
+        const dateStr=dt?dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+        const dur=l.durationMin?`${l.durationMin} min`:'—';
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#F9FAFB;border-radius:10px;font-size:12px;';
+        row.innerHTML=`<div><span style="font-weight:800;color:var(--dark)">${l.userName||'?'}</span><span style="color:var(--gray);margin-left:6px">${dateStr}</span></div><span style="font-weight:700;color:var(--blue)">${dur}</span>`;
+        logsEl.appendChild(row);
+      });
+    }
+  }
+
+  // Load word lists
+  const listsSnap=await db.collection('wordLists')
+    .where('teacherId','==',currentUser.uid)
+    .orderBy('createdAt','desc').limit(5).get();
+  const listsDisplay=document.getElementById('lists-display');
+  listsDisplay.innerHTML='';
+  listsSnap.forEach(doc=>{
+    const l=doc.data();
+    const row=document.createElement('div');
+    row.className='list-row'+(l.active?' lr-active':'');
+    row.innerHTML=`<div class="lr-info"><div class="lr-name">${l.title}</div><div class="lr-count">${l.words.length} mots${l.active?' — ✅ Active':''}</div></div>
+      ${!l.active?`<button class="lr-set-btn" onclick="setActiveList('${doc.id}')">Activer</button>`:''}`;
+    listsDisplay.appendChild(row);
+  });
+}
+
+async function saveWordList(){
+  const title=document.getElementById('list-title').value.trim();
+  const raw=document.getElementById('list-words').value.trim();
+  if(!title||!raw){ showToast('⚠️ Remplis le titre et les mots'); return; }
+  const words=raw.split(/[\n,;]+/).map(w=>w.trim().toLowerCase()).filter(w=>w);
+  await db.collection('wordLists').add({
+    teacherId: currentUser.uid,
+    title, words,
+    active: false,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById('list-title').value='';
+  document.getElementById('list-words').value='';
+  showToast('✅ Liste publiée !');
+  loadTeacherData();
+}
+
+async function setActiveList(listId){
+  // Deactivate all lists from this teacher
+  const batch=db.batch();
+  const snap=await db.collection('wordLists').where('teacherId','==',currentUser.uid).get();
+  snap.forEach(doc=>batch.update(doc.ref,{active:false}));
+  batch.update(db.collection('wordLists').doc(listId),{active:true});
+  await batch.commit();
+  showToast('✅ Liste activée pour tes élèves !');
+  loadTeacherData();
+}
+
+function copyCode(){
+  const code=document.getElementById('teacher-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>showToast('📋 Code copié !'));
+}
+
+// ══ ADMIN ══
+async function loadAdminData(){
+  // Stats
+  const metaSnap=await db.collection('meta').doc('stats').get();
+  const meta=metaSnap.data()||{};
+  document.getElementById('adm-users').textContent=meta.totalUsers||0;
+  document.getElementById('adm-teachers').textContent=meta.total_teachers||0;
+  document.getElementById('adm-students').textContent=meta.total_students||0;
+
+  // All users
+  const usersSnap=await db.collection('users').orderBy('createdAt','desc').limit(50).get();
+  const table=document.getElementById('users-table');
+  table.innerHTML='';
+  let totalSessions=0;
+  usersSnap.forEach(doc=>{
+    const u=doc.data();
+    const sessions=u.scores?Object.values(u.scores).reduce((a,b)=>a+(b.sessions||0),0):0;
+    totalSessions+=sessions;
+    const roleLabels={student:'👦 Élève',parent:'👨‍👩‍👧 Parent',teacher:'👩‍🏫 Enseignant',ortho:'🩺 Ortho',admin:'⚙️ Admin'};
+    const row=document.createElement('div'); row.className='user-row';
+    const uid2=doc.id;
+    row.innerHTML=`<div class="ur-left">
+      <div class="ur-name">${u.avatar||'👤'} ${u.name||'—'}</div>
+      <div class="ur-email">${u.email||'—'} · ${sessions} sessions</div>
+    </div>
+    <select onchange="changeUserRole('${uid2}',this.value)" style="border:none;border-radius:10px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer;background:#F3F4F6">
+      ${['student','parent','teacher','ortho','admin'].map(r=>`<option value="${r}" ${(u.role||'student')===r?'selected':''}>${roleLabels[r]}</option>`).join('')}
+    </select>`;
+    table.appendChild(row);
+  });
+  document.getElementById('adm-sessions').textContent=totalSessions;
+}
+
+// ════════════════════════════════════════
+// SHARING FUNCTIONS
+// ════════════════════════════════════════
+
+async function sendInvite(){
+  const email=document.getElementById('invite-email')?.value?.trim();
+  if(!email||!email.includes('@')){showToast('⚠️ Email invalide');return;}
+  const s=await db.collection('users').doc(currentUser.uid).get();
+  const d=s.data()||{};
+  const link=`${location.origin}${location.pathname}?invite=${d.orthoCode||''}&from=${encodeURIComponent(d.name||'')}`;
+  const sub=encodeURIComponent(`${d.name||'Un collègue'} t'invite sur Leoluce`);
+  const body=encodeURIComponent(`Bonjour,
+
+${d.name||'Un collègue'} t'invite à utiliser Leoluce.
+
+Clique ici pour créer ton compte :
+${link}
+
+Ou utilise le code collègue : ${d.orthoCode||''}
+
+À bientôt ! 🦁💡`);
+  window.open(`mailto:${email}?subject=${sub}&body=${body}`);
+  await db.collection('invitations').add({fromOrthoId:currentUser.uid,fromName:d.name,fromCode:d.orthoCode,toEmail:email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),status:'pending'});
+  document.getElementById('invite-email').value='';
+  showToast("✅ Email d'invitation préparé !");
+}
+
+async function addColleague(){
+  const code=document.getElementById('colleague-code')?.value?.trim().toUpperCase();
+  if(!code){showToast('⚠️ Entre le code collègue');return;}
+  const snap=await db.collection('users').where('orthoCode','==',code).limit(1).get();
+  if(snap.empty){showToast('⚠️ Code introuvable');return;}
+  const cId=snap.docs[0].id;
+  const cData=snap.docs[0].data();
+  if(cId===currentUser.uid){showToast("⚠️ C'est ton propre code !");return;}
+  await db.collection('users').doc(currentUser.uid).update({colleagues:firebase.firestore.FieldValue.arrayUnion(cId)});
+  document.getElementById('colleague-code').value='';
+  showToast('✅ '+cData.name+' ajouté à ton réseau !');
+  loadColleaguesAndSharedConfigs();
+}
+
+async function loadColleaguesAndSharedConfigs(){
+  const mySnap=await db.collection('users').doc(currentUser.uid).get();
+  const myData=mySnap.data()||{};
+  const colleagues=myData.colleagues||[];
+  const collEl=document.getElementById('colleagues-list');
+  if(collEl){
+    if(colleagues.length===0){
+      collEl.innerHTML='<div style="color:var(--gray);font-size:13px;text-align:center">Aucun collègue encore — partage ton code !</div>';
+    } else {
+      collEl.innerHTML='';
+      for(const cId of colleagues){
+        const cSnap=await db.collection('users').doc(cId).get();
+        const cData=cSnap.data()||{};
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;font-size:13px';
+        row.innerHTML=`<div><b>${cData.name||'—'}</b><br><span style="font-size:11px;color:var(--gray)">${cData.email||''}</span></div><span style="font-size:11px;font-weight:700;color:var(--purple);font-family:monospace">${cData.orthoCode||''}</span>`;
+        collEl.appendChild(row);
+      }
+    }
+  }
+  const sharedEl=document.getElementById('shared-configs-list');
+  if(!sharedEl) return;
+  if(colleagues.length===0){sharedEl.innerHTML='<div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Ajoute des collègues pour voir leurs configs</div>';return;}
+  const configsSnap=await db.collection('sharedConfigs').where('orthoId','in',colleagues.slice(0,10)).orderBy('createdAt','desc').limit(20).get();
+  if(configsSnap.empty){sharedEl.innerHTML='<div style="color:var(--gray);font-size:13px;text-align:center;padding:12px">Aucune config partagée par tes collègues</div>';return;}
+  sharedEl.innerHTML='';
+  configsSnap.forEach(doc=>{
+    const cfg=doc.data();
+    const tags=[cfg.sharesSons&&'<span style="background:rgba(199,125,255,.2);color:var(--purple);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:800">Sons</span>',cfg.sharesApps&&'<span style="background:rgba(77,150,255,.2);color:var(--blue);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:800">Apps</span>',cfg.sharesWords&&'<span style="background:rgba(107,203,119,.2);color:#059669;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:800">Mots</span>',cfg.sharesText&&'<span style="background:rgba(255,159,28,.2);color:var(--orange);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:800">Texte</span>'].filter(Boolean).join(' ');
+    const div=document.createElement('div');
+    div.style.cssText='padding:12px;background:#F9FAFB;border-radius:14px;margin-bottom:8px;border:1px solid #E5E7EB';
+    div.innerHTML=`<div style="font-weight:800;font-size:14px;margin-bottom:4px">${cfg.name}</div><div style="font-size:11px;color:var(--gray);margin-bottom:6px">Par ${cfg.orthoName}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${tags}</div>${cfg.activeSons?.length?`<div style="font-size:11px;color:var(--gray)">Sons : ${cfg.activeSons.join(', ')}</div>`:''}<button onclick="importConfig('${doc.id}')" style="width:100%;margin-top:8px;background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:10px;padding:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer">⬇️ Importer</button>`;
+    sharedEl.appendChild(div);
+  });
+}
+
+async function shareConfig(){
+  if(!currentPatientId){showToast("⚠️ Ouvre d'abord un patient");return;}
+  const name=document.getElementById('share-config-name')?.value?.trim();
+  if(!name){showToast('⚠️ Donne un nom à ta config');return;}
+  const snap=await db.collection('patients').doc(currentPatientId).get();
+  const p=snap.data();
+  const mySnap=await db.collection('users').doc(currentUser.uid).get();
+  const myData=mySnap.data()||{};
+  const sharesSons=document.getElementById('share-sons')?.checked;
+  const sharesApps=document.getElementById('share-apps')?.checked;
+  const sharesWords=document.getElementById('share-words')?.checked;
+  const sharesText=document.getElementById('share-text')?.checked;
+  const isPublic=document.getElementById('share-public')?.checked||false;
+  const config={
+    name,orthoId:currentUser.uid,orthoName:myData.name||'Anonyme',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    isPublic,sharesSons,sharesApps,sharesWords,sharesText,
+    activeSons:sharesSons?(p.activeSons||[]):[],
+    activeApps:sharesApps?(p.activeApps||[]):[],
+    customWords:sharesWords?(p.customWords||''):'',
+    customTextTitle:sharesText?(p.customTextTitle||''):'',
+    customTextBody:sharesText?(p.customTextBody||''):'',
+    likes:0,imports:0
+  };
+  await db.collection('sharedConfigs').add(config);
+  document.getElementById('share-config-name').value='';
+  if(document.getElementById('share-public')) document.getElementById('share-public').checked=false;
+  showToast(isPublic?'✅ Config partagée publiquement !':'✅ Config partagée avec tes collègues !');
+  if(isPublic) loadPublicConfigs();
+}
+
+function openPatientPicker(docs, onSelect){
+  const modal=document.getElementById('patient-picker-modal');
+  const list=document.getElementById('patient-picker-list');
+  list.innerHTML='';
+  docs.forEach(d=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='width:100%;text-align:left;background:#F9FAFB;border:2px solid #E5E7EB;border-radius:12px;padding:12px 14px;font-family:"Nunito",sans-serif;font-size:14px;font-weight:700;color:var(--dark);cursor:pointer';
+    btn.textContent=d.data().name;
+    btn.onclick=()=>{ closePatientPicker(); onSelect(d); };
+    list.appendChild(btn);
+  });
+  modal.style.display='flex';
+}
+function closePatientPicker(){
+  document.getElementById('patient-picker-modal').style.display='none';
+}
+
+async function importConfig(configId){
+  const patientsSnap=await db.collection('patients').where('orthoId','==',currentUser.uid).get();
+  if(patientsSnap.empty){showToast("⚠️ Crée d'abord un patient");return;}
+  openPatientPicker(patientsSnap.docs, async (patDoc)=>{
+    const cfgSnap=await db.collection('sharedConfigs').doc(configId).get();
+    const cfg=cfgSnap.data();
+    const update={};
+    if(cfg.sharesSons&&cfg.activeSons?.length)update.activeSons=cfg.activeSons;
+    if(cfg.sharesApps&&cfg.activeApps?.length)update.activeApps=cfg.activeApps;
+    if(cfg.sharesWords&&cfg.customWords)update.customWords=cfg.customWords;
+    if(cfg.sharesText&&cfg.customTextBody){update.customTextTitle=cfg.customTextTitle;update.customTextBody=cfg.customTextBody;}
+    await db.collection('patients').doc(patDoc.id).update(update);
+    showToast('✅ Config appliquée à '+patDoc.data().name+' !');
+  });
+}
+
+let publicConfigsLastDoc = null;
+let publicConfigsAll = [];
+
+async function loadPublicConfigs(reset=true){
+  if(reset){ publicConfigsLastDoc=null; publicConfigsAll=[]; }
+  let query = db.collection('sharedConfigs')
+    .where('isPublic','==',true)
+    .orderBy('createdAt','desc')
+    .limit(10);
+  if(publicConfigsLastDoc) query = query.startAfter(publicConfigsLastDoc);
+  const snap = await query.get();
+  if(!snap.empty) publicConfigsLastDoc = snap.docs[snap.docs.length-1];
+  snap.forEach(doc => publicConfigsAll.push({id:doc.id,...doc.data()}));
+  renderPublicConfigs(publicConfigsAll);
+  document.getElementById('load-more-btn').style.display = snap.docs.length===10?'':'none';
+}
+
+async function loadMorePublicConfigs(){
+  await loadPublicConfigs(false);
+}
+
+function searchPublicConfigs(){
+  const q = document.getElementById('public-search')?.value?.toLowerCase().trim()||'';
+  const filtered = q ? publicConfigsAll.filter(c =>
+    c.name?.toLowerCase().includes(q) ||
+    c.orthoName?.toLowerCase().includes(q) ||
+    c.activeSons?.some(s=>s.toLowerCase().includes(q))
+  ) : publicConfigsAll;
+  renderPublicConfigs(filtered);
+}
+
+function renderPublicConfigs(configs){
+  const el = document.getElementById('public-configs-list');
+  if(!el) return;
+  if(!configs.length){
+    el.innerHTML="<div style='color:var(--gray);font-size:13px;text-align:center;padding:16px'>Aucune config publique pour l'instant<br><span style='font-size:11px'>Sois le premier à contribuer ! 🌱</span></div>";
+    return;
+  }
+  el.innerHTML='';
+  configs.forEach(cfg => {
+    const tags=[
+      cfg.sharesSons&&'<span style="background:rgba(199,125,255,.2);color:var(--purple);padding:2px 6px;border-radius:20px;font-size:10px;font-weight:800">Sons</span>',
+      cfg.sharesApps&&'<span style="background:rgba(77,150,255,.2);color:var(--blue);padding:2px 6px;border-radius:20px;font-size:10px;font-weight:800">Apps</span>',
+      cfg.sharesWords&&'<span style="background:rgba(107,203,119,.2);color:#059669;padding:2px 6px;border-radius:20px;font-size:10px;font-weight:800">Mots</span>',
+      cfg.sharesText&&'<span style="background:rgba(255,159,28,.2);color:var(--orange);padding:2px 6px;border-radius:20px;font-size:10px;font-weight:800">Texte</span>',
+    ].filter(Boolean).join(' ');
+    const div=document.createElement('div');
+    div.style.cssText='padding:12px;background:#fff;border-radius:14px;margin-bottom:8px;border:1px solid rgba(16,185,129,.2)';
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div style="font-weight:800;font-size:14px;color:var(--dark)">${cfg.name}</div>
+        <span style="font-size:11px;color:#065F46;font-weight:700">⬇️ ${cfg.imports||0}</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:6px">Par ${cfg.orthoName}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${tags}</div>
+      ${cfg.activeSons?.length?`<div style="font-size:11px;color:var(--gray);margin-bottom:6px">Sons : ${cfg.activeSons.join(', ')}</div>`:''}
+      <button onclick="importPublicConfig('${cfg.id}')" style="width:100%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:10px;padding:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer">⬇️ Importer pour un patient</button>`;
+    el.appendChild(div);
+  });
+}
+
+async function importPublicConfig(configId){
+  // Same as importConfig but also increments imports counter
+  const patientsSnap=await db.collection('patients').where('orthoId','==',currentUser.uid).get();
+  if(patientsSnap.empty){showToast("⚠️ Crée d'abord un patient");return;}
+  openPatientPicker(patientsSnap.docs, async (patDoc)=>{
+    const cfgSnap=await db.collection('sharedConfigs').doc(configId).get();
+    const cfg=cfgSnap.data();
+    const update={};
+    if(cfg.sharesSons&&cfg.activeSons?.length)update.activeSons=cfg.activeSons;
+    if(cfg.sharesApps&&cfg.activeApps?.length)update.activeApps=cfg.activeApps;
+    if(cfg.sharesWords&&cfg.customWords)update.customWords=cfg.customWords;
+    if(cfg.sharesText&&cfg.customTextBody){update.customTextTitle=cfg.customTextTitle;update.customTextBody=cfg.customTextBody;}
+    await db.collection('patients').doc(patDoc.id).update(update);
+    // Increment import counter
+    await db.collection('sharedConfigs').doc(configId).update({imports:firebase.firestore.FieldValue.increment(1)});
+    showToast('✅ Config appliquée à '+patDoc.data().name+' !');
+    loadPublicConfigs();
+  });
+}
+
+function checkInviteCode(){
+  const params=new URLSearchParams(location.search);
+  const inviteCode=params.get('invite');
+  const fromName=params.get('from');
+  if(inviteCode&&fromName){
+    setTimeout(()=>{
+      showToast('🎉 Invitation de '+decodeURIComponent(fromName)+' ! Crée ton compte ortho.');
+      switchTab('register');
+      const roleEl=document.getElementById('reg-role');
+      if(roleEl)roleEl.value='ortho';
+      const codeEl=document.getElementById('colleague-code');
+      if(codeEl)codeEl.value=inviteCode;
+    },2000);
+  }
+}
+
+// ════════════════════════════════════════
+// STUDENT PROGRESS DASHBOARD
+// ════════════════════════════════════════
+
+const PROGRESS_APP_LABELS = {
+  tables:'🔢 Tables', calcul:'🔢 Calcul Mental', dictee:'✏️ Dictée', sons:'📚 Sons & Lecture',
+  lecture:'🎙️ Lecture & Fluence', japonais:'🇯🇵 Japonais', natures:'🌈 Natures des mots',
+  verbes:'EN Verbes Anglais', fractions:'🍕 Fractions', adjectifs:'🎨 Adjectifs',
+  conjugaison:'📝 Conjugaison', homophones:'🔤 Homophones', fonctions:'🔍 Fonctions'
+};
+const PROGRESS_APP_COLORS = {
+  tables:'#4D96FF', calcul:'#4D96FF', dictee:'#FF9F1C', sons:'#6BCB77', lecture:'#FF6B9D',
+  japonais:'#E63946', natures:'#C77DFF', verbes:'#26de81', fractions:'#FFD93D',
+  adjectifs:'#FF6B9D', conjugaison:'#26de81', homophones:'#FFD93D', fonctions:'#C77DFF'
+};
+
+function openProgressDashboard(){
+  if(currentUserData?.role === 'ortho'){
+    showScreen('sc-ortho-progress');
+    loadOrthoProgressData();
+  } else {
+    showScreen('sc-progress');
+    loadProgressData();
+  }
+}
+
+async function loadOrthoProgressData(){
+  if(!currentUser) return;
+  const body = document.getElementById('ortho-progress-body');
+  const subtitle = document.getElementById('ortho-prog-subtitle');
+
+  const patientsSnap = await db.collection('patients')
+    .where('orthoId','==',currentUser.uid)
+    .orderBy('createdAt','desc').get();
+
+  if(patientsSnap.empty){
+    body.innerHTML = '<div style="color:rgba(255,255,255,.5);text-align:center;padding:32px;font-size:14px">Aucun patient encore.<br>Créez-en un depuis votre tableau de bord !</div>';
+    subtitle.textContent = '0 patient';
+    return;
+  }
+
+  const patients = patientsSnap.docs.map(d=>({id:d.id,...d.data()}));
+  subtitle.textContent = patients.length + ' patient' + (patients.length>1?'s':'');
+
+  const totalSessions = patients.reduce((sum,p)=>{
+    return sum + Object.values(p.scores||{}).reduce((s,v)=>s+(v.sessions||0),0);
+  },0);
+  const activeThisWeek = patients.filter(p=>{
+    if(!p.lastLogin) return false;
+    return (Date.now()-new Date(p.lastLogin).getTime()) < 7*24*3600*1000;
+  }).length;
+
+  body.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+      <div style="font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:#fff">${patients.length}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">patients total</div>
+    </div>
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+      <div style="font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:#6BCB77">${activeThisWeek}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">actifs cette semaine</div>
+    </div>
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+      <div style="font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:#C77DFF">${totalSessions}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">sessions totales</div>
+    </div>
+    <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px;text-align:center">
+      <div style="font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:#FFD93D">${patients.filter(p=>p.lastLogin).length}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700">ont déjà joué</div>
+    </div>
+  </div>
+
+  <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
+    <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📋 Détail par patient</div>
+    ${patients.map(p => {
+      const scores = p.scores || {};
+      const sessions = Object.values(scores).reduce((s,v)=>s+(v.sessions||0),0);
+      const topApp = Object.entries(scores).sort((a,b)=>(b[1].sessions||0)-(a[1].sessions||0))[0];
+      const activeApps = (p.activeApps||[]).length;
+      const daysSince = p.lastLogin ? Math.round((Date.now()-new Date(p.lastLogin).getTime())/(1000*3600*24)) : null;
+      const statusColor = daysSince===null?'rgba(255,255,255,.3)':daysSince<=7?'#6BCB77':daysSince<=30?'#FFD93D':'#FF4757';
+      const lastLabel = daysSince===null?'Jamais connecté':daysSince===0?'Aujourd\'hui':daysSince===1?'Hier':daysSince+'j sans connexion';
+      return \`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-weight:800;font-size:15px;color:#fff">\${p.name}</div>
+            <div style="font-size:10px;font-family:monospace;color:rgba(255,255,255,.35);margin-top:2px">\${p.code}</div>
+          </div>
+          <div style="font-size:11px;font-weight:800;color:\${statusColor};text-align:right">\${lastLabel}</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:rgba(255,255,255,.6)">
+          <span>🎮 \${sessions} session\${sessions>1?'s':''}</span>
+          \${topApp?\`<span>🏆 \${PROGRESS_APP_LABELS[topApp[0]]||topApp[0]} (\${topApp[1].sessions}×)</span>\`:'<span style="color:rgba(255,255,255,.3)">Pas encore joué</span>'}
+          <span>📱 \${activeApps} app\${activeApps>1?'s':''} actives</span>
+        </div>
+        \${sessions>0?\`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">\${Object.entries(scores).map(([app,s])=>\`<span style="font-size:10px;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:20px;color:rgba(255,255,255,.7)">\${PROGRESS_APP_LABELS[app]||app} \${s.sessions}× ⭐\${s.best||0}</span>\`).join('')}</div>\`:''}
+      </div>\`;
+    }).join('')}
+  </div>`;
+}
+
+function switchProgressView(view){
+  document.getElementById('prog-tab-simple').classList.toggle('active', view==='simple');
+  document.getElementById('prog-tab-detail').classList.toggle('active', view==='detail');
+  document.getElementById('progress-simple-view').style.display = view==='simple'?'flex':'none';
+  document.getElementById('progress-detail-view').style.display = view==='detail'?'flex':'none';
+}
+
+async function loadProgressData(){
+  if(!currentUser) return;
+  const snap = await db.collection('users').doc(currentUser.uid).get();
+  const data = snap.data() || {};
+  const scores = data.scores || {};
+
+  // ── SIMPLE VIEW ──
+  let totalStars=0, totalSessions=0;
+  Object.values(scores).forEach(s=>{
+    totalStars += s.best||0;
+    totalSessions += s.sessions||0;
+  });
+
+  // Fetch connection logs for time spent (best-effort, may be empty for guest play)
+  let totalMinutes = 0;
+  try{
+    const logsSnap = await db.collection('connLogs').where('userId','==',currentUser.uid).get();
+    logsSnap.forEach(doc=>{ totalMinutes += doc.data().durationMin||0; });
+  } catch(e){}
+
+  document.getElementById('ps-stars').textContent = totalStars;
+  document.getElementById('ps-sessions').textContent = totalSessions;
+  document.getElementById('ps-time').textContent = totalMinutes>=60 ? Math.round(totalMinutes/60*10)/10+' h' : totalMinutes+' min';
+
+  // Streak (consecutive days with at least one lastPlay)
+  const streak = computeStreak(scores);
+  document.getElementById('ps-streak').textContent = streak;
+  document.getElementById('ps-streak-emoji').textContent = streak>=7?'🔥🔥':streak>=3?'🔥':'✨';
+
+  // Badges
+  renderBadges(totalStars, totalSessions, streak, scores);
+
+  // Top games (by sessions played)
+  const topGames = Object.entries(scores)
+    .sort((a,b)=>(b[1].sessions||0)-(a[1].sessions||0))
+    .slice(0,4);
+  const topEl = document.getElementById('ps-top-games');
+  topEl.innerHTML = topGames.length ? '' : '<div style="color:rgba(255,255,255,.4);font-size:13px">Joue à quelques jeux pour voir tes favoris ici !</div>';
+  topGames.forEach(([app,s])=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,.06);border-radius:10px';
+    row.innerHTML=`<span style="color:#fff;font-size:13px;font-weight:700">${PROGRESS_APP_LABELS[app]||app}</span><span style="color:rgba(255,255,255,.5);font-size:12px">${s.sessions||0} parties · ⭐${s.best||0}</span>`;
+    topEl.appendChild(row);
+  });
+
+  // ── DETAILED VIEW ──
+  renderActivityChart(scores);
+  renderAppsDetail(scores);
+}
+
+function computeStreak(scores){
+  const dates = new Set();
+  Object.values(scores).forEach(s=>{
+    if(s.lastPlay){
+      const d = new Date(s.lastPlay);
+      dates.add(d.toISOString().slice(0,10));
+    }
+  });
+  let streak=0;
+  let cursor = new Date();
+  while(true){
+    const key = cursor.toISOString().slice(0,10);
+    if(dates.has(key)){ streak++; cursor.setDate(cursor.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderBadges(totalStars, totalSessions, streak, scores){
+  const appsPlayed = Object.keys(scores).length;
+  const badges = [
+    {emoji:'🎮', label:'1ère partie', unlocked: totalSessions>=1},
+    {emoji:'🌟', label:'100 étoiles', unlocked: totalStars>=100},
+    {emoji:'🔥', label:'3 jours', unlocked: streak>=3},
+    {emoji:'🏆', label:'7 jours', unlocked: streak>=7},
+    {emoji:'🎯', label:'5 jeux essayés', unlocked: appsPlayed>=5},
+    {emoji:'💪', label:'50 parties', unlocked: totalSessions>=50},
+    {emoji:'🚀', label:'Tous les jeux', unlocked: appsPlayed>=Object.keys(PROGRESS_APP_LABELS).length},
+    {emoji:'👑', label:'500 étoiles', unlocked: totalStars>=500},
+  ];
+  const el = document.getElementById('ps-badges');
+  el.innerHTML='';
+  badges.forEach(b=>{
+    const div=document.createElement('div');
+    div.className='ps-badge'+(b.unlocked?'':' locked');
+    div.innerHTML=`<div class="ps-badge-emoji">${b.emoji}</div><div class="ps-badge-label">${b.label}</div>`;
+    el.appendChild(div);
+  });
+}
+
+function renderActivityChart(scores){
+  // Build a map of date -> activity count from lastPlay timestamps (approximation: one entry per app's last play)
+  const days = [];
+  for(let i=13; i>=0; i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const activityByDay = {};
+  days.forEach(d=>activityByDay[d]=0);
+  Object.values(scores).forEach(s=>{
+    if(s.lastPlay){
+      const key = new Date(s.lastPlay).toISOString().slice(0,10);
+      if(activityByDay[key]!==undefined) activityByDay[key] += (s.sessions||1);
+    }
+  });
+  const maxVal = Math.max(1, ...Object.values(activityByDay));
+  const el = document.getElementById('pd-activity-chart');
+  el.innerHTML='';
+  days.forEach(d=>{
+    const val = activityByDay[d];
+    const bar=document.createElement('div');
+    bar.className='activity-bar'+(val>0?' has-activity':'');
+    bar.style.height = Math.max(8, (val/maxVal)*100)+'%';
+    bar.title = d+': '+val+' partie(s)';
+    el.appendChild(bar);
+  });
+}
+
+function renderAppsDetail(scores){
+  const el = document.getElementById('pd-apps-detail');
+  const entries = Object.entries(scores);
+  if(!entries.length){
+    el.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:13px">Aucune donnée encore — commence à jouer !</div>';
+    return;
+  }
+  el.innerHTML='';
+  entries.sort((a,b)=>(b[1].sessions||0)-(a[1].sessions||0)).forEach(([app,s])=>{
+    const pct = s.pct||0;
+    const color = PROGRESS_APP_COLORS[app]||'#4D96FF';
+    const row=document.createElement('div');
+    row.className='pd-app-row';
+    row.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#fff;font-size:13px;font-weight:800">${PROGRESS_APP_LABELS[app]||app}</span>
+        <span style="color:rgba(255,255,255,.5);font-size:11px">${s.sessions||0} parties · meilleur ${s.best||0}</span>
+      </div>
+      <div class="pd-app-bar-bg"><div class="pd-app-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+    el.appendChild(row);
+  });
+}
+
+checkInviteCode();
+</script>
+</body>
+</html>

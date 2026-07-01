@@ -1,0 +1,1179 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lecture & Fluence 🎙️</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--pink:#FF6B9D;--purple:#C77DFF;--blue:#4D96FF;--green:#6BCB77;--yellow:#FFD93D;--orange:#FF9F1C;--red:#FF4757;--teal:#26de81;--bg:#F0F7FF;--dark:#1a1a2e;--gray:#9CA3AF;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;display:flex;justify-content:center;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* SETUP */
+#sc-setup{padding:16px;gap:12px;overflow-y:auto;padding-bottom:40px;}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.back-btn{background:rgba(0,0,0,.07);border:none;border-radius:12px;padding:8px 14px;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;color:#555;}
+.page-icon{font-size:48px;display:block;text-align:center;animation:float 3s ease-in-out infinite;}
+.page-title{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;text-align:center;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.page-sub{font-size:13px;color:var(--gray);text-align:center;}
+
+/* Mode tabs */
+.mode-tabs{display:flex;gap:8px;background:#fff;border-radius:16px;padding:5px;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+.mtab{flex:1;border:none;border-radius:12px;padding:11px 6px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;color:var(--gray);}
+.mtab.active{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;box-shadow:0 3px 10px rgba(77,150,255,.3);}
+.mtab-icon{font-size:22px;}
+
+.card{background:#fff;border-radius:18px;padding:14px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.card-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+
+/* Duration */
+.dur-row{display:flex;gap:8px;}
+.dur-btn{flex:1;border:2px solid #E5E7EB;background:#fff;border-radius:12px;padding:10px 6px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#555;cursor:pointer;transition:all .2s;text-align:center;}
+.dur-btn.sel{border-color:var(--orange);background:rgba(255,159,28,.1);color:var(--orange);}
+
+/* Text list */
+.text-list{display:flex;flex-direction:column;gap:8px;}
+.text-item{border:2px solid #E5E7EB;border-radius:14px;padding:11px 13px;cursor:pointer;transition:all .2s;}
+.text-item.sel{border-color:var(--blue);background:rgba(77,150,255,.05);}
+.text-item-header{display:flex;justify-content:space-between;align-items:center;}
+.text-item-title{font-size:14px;font-weight:800;color:var(--dark);}
+.text-item-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:#F3F4F6;color:var(--gray);}
+.text-item.sel .text-item-title{color:var(--blue);}
+.text-item-preview{font-size:12px;color:#777;margin-top:4px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+
+/* Custom text */
+.add-btn{border:2px dashed var(--blue);background:rgba(77,150,255,.04);border-radius:14px;padding:11px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);font-family:'Nunito',sans-serif;width:100%;}
+#custom-form{display:none;flex-direction:column;gap:8px;margin-top:8px;}
+.cinput{border:2px solid #E5E7EB;border-radius:11px;padding:10px 12px;font-family:'Nunito',sans-serif;font-size:14px;width:100%;outline:none;}
+.cinput:focus{border-color:var(--blue);}
+textarea.cinput{resize:none;min-height:90px;}
+.csave-btn{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:11px;padding:10px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+
+.start-btn{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:18px;padding:17px;font-family:'Baloo 2',sans-serif;font-size:19px;font-weight:800;cursor:pointer;box-shadow:0 5px 20px rgba(255,107,157,.4);transition:transform .15s;}
+.start-btn:disabled{opacity:.35;}
+.start-btn:active:not(:disabled){transform:scale(.97);}
+
+/* READ SCREEN */
+#sc-read{background:var(--bg);overflow-y:auto;}
+.read-hud{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:center;}
+.read-badge{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;}
+.read-quit{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+
+/* Chrono bar */
+.chrono-bar{margin:0 16px 8px;background:#fff;border-radius:14px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+.chrono-time{font-family:'Baloo 2',sans-serif;font-size:38px;font-weight:900;color:var(--dark);line-height:1;}
+.chrono-time.urgent{color:var(--red);animation:blink .6s step-end infinite;}
+.chrono-info{text-align:right;}
+.words-count{font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:var(--blue);}
+.words-label{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;}
+.chrono-bar.hidden{display:none;}
+
+/* Text zone */
+.text-zone{margin:0 16px;background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 4px 16px rgba(0,0,0,.06);overflow-y:auto;flex:1;max-height:calc(100vh - 300px);}
+.text-zone.fluence-mode{max-height:calc(100vh - 260px);}
+.reading-text{font-size:21px;font-family:'Nunito',sans-serif;font-weight:700;line-height:2;color:var(--dark);}
+.w{display:inline;border-radius:4px;padding:1px 3px;cursor:pointer;transition:background .1s;}
+.w.current{background:rgba(255,211,61,.5);border-radius:4px;}
+.w.done{color:#059669;}
+.w.error{background:rgba(255,71,87,.18);color:var(--red);border-radius:4px;text-decoration:underline wavy var(--red);}
+.w.skipped{color:#ccc;text-decoration:line-through;}
+
+/* Rec zone */
+.rec-zone{padding:10px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.rec-row{display:flex;align-items:center;gap:16px;}
+.rec-btn{width:72px;height:72px;border-radius:50%;border:none;font-size:28px;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;}
+.rec-btn.idle{background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 4px 18px rgba(255,107,157,.45);}
+.rec-btn.recording{background:linear-gradient(135deg,var(--red),var(--orange));animation:pulse-rec 1s ease-in-out infinite;box-shadow:0 4px 18px rgba(255,71,87,.5);}
+.rec-btn.done{background:linear-gradient(135deg,var(--green),var(--teal));box-shadow:0 4px 18px rgba(107,203,119,.4);}
+.rec-btn.analyzing{background:linear-gradient(135deg,var(--blue),var(--purple));pointer-events:none;}
+.rec-info{display:flex;flex-direction:column;gap:3px;}
+.rec-status{font-size:13px;font-weight:800;color:var(--gray);}
+.rec-timer{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--red);min-height:26px;}
+.ai-status{font-size:12px;font-weight:700;color:var(--purple);text-align:center;min-height:18px;}
+
+/* Fluence progress */
+.fluence-prog-wrap{margin:0 16px 6px;height:6px;background:#E5E7EB;border-radius:999px;overflow:hidden;}
+.fluence-prog-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));border-radius:999px;transition:width .3s;}
+
+/* Replay bar */
+.replay-bar{margin:0 16px;background:#fff;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:none;}
+.replay-btn{background:linear-gradient(135deg,var(--blue),var(--purple));border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;}
+.replay-label{font-size:12px;font-weight:700;color:var(--gray);}
+
+/* RESULT */
+#sc-result{padding:20px 16px;gap:12px;overflow-y:auto;padding-bottom:40px;}
+.res-center{text-align:center;}
+.res-emoji{font-size:64px;display:block;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);margin-top:6px;}
+.res-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.res-card{background:#fff;border-radius:16px;padding:14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.res-val{font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:900;color:var(--dark);}
+.res-val.highlight{color:var(--blue);}
+.res-lbl{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-top:3px;}
+.res-text-review{background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.res-text-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;margin-bottom:10px;}
+.res-text-body{font-size:18px;font-family:'Nunito',sans-serif;font-weight:700;line-height:2;}
+.legend{display:flex;gap:12px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gray);}
+.legend-dot{width:12px;height:12px;border-radius:50%;}
+.res-fluence-big{background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:20px;padding:20px;text-align:center;color:#fff;}
+.res-fluence-num{font-family:'Baloo 2',sans-serif;font-size:64px;font-weight:900;line-height:1;}
+.res-fluence-lbl{font-size:14px;font-weight:700;opacity:.85;margin-top:4px;}
+.res-fluence-comment{font-size:13px;opacity:.75;margin-top:6px;}
+.res-btns{display:flex;gap:8px;}
+.btn-replay{flex:1;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-home{flex:1;background:#fff;border:2px solid var(--blue);color:var(--blue);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes pulse-rec{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cffall 1.8s ease-in forwards;}
+@keyframes cffall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ SETUP ══ -->
+<div id="sc-setup" class="screen active">
+  <div style="position:sticky;top:0;z-index:50;background:var(--bg);padding:10px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #E5E7EB">
+    <button class="back-btn" onclick="goHome()" style="flex-shrink:0">← Accueil</button>
+    <button id="start-btn-top" onclick="startReading()" disabled
+      style="flex:1;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:12px;padding:11px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;opacity:.35;transition:all .2s">
+      🚀 Lancer la lecture !
+    </button>
+  </div>
+  <span class="page-icon">🎙️</span>
+  <div class="page-title">Lecture & Fluence</div>
+  <div class="page-sub">Lis à voix haute — mesure tes progrès !</div>
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mtab active" data-mode="libre" onclick="pickMode(this)">
+      <span class="mtab-icon">📖</span><span>Lecture libre</span>
+    </button>
+    <button class="mtab" data-mode="fluence" onclick="pickMode(this)">
+      <span class="mtab-icon">⏱️</span><span>Fluence</span>
+    </button>
+  </div>
+
+  <!-- Fluence duration (hidden by default) -->
+  <div class="card" id="dur-card" style="display:none">
+    <div class="card-title">Durée du chrono</div>
+    <div class="dur-row">
+      <button class="dur-btn" data-d="30" onclick="pickDur(this)">30 sec</button>
+      <button class="dur-btn sel" data-d="60" onclick="pickDur(this)">1 min</button>
+      <button class="dur-btn" data-d="120" onclick="pickDur(this)">2 min</button>
+    </div>
+  </div>
+
+  <!-- Texts -->
+  <div class="card">
+    <div class="card-title">Choisis un texte</div>
+    <div class="text-list" id="text-list"></div>
+    <button class="add-btn" onclick="toggleCustomForm()" style="margin-top:10px">✏️ Ajouter mon propre texte</button>
+    <div id="custom-form" style="display:none;flex-direction:column;gap:8px;margin-top:8px">
+      <input class="cinput" id="custom-title" placeholder="Titre du texte…">
+      <textarea class="cinput" id="custom-body" placeholder="Colle ou écris le texte ici…"></textarea>
+      <button class="csave-btn" onclick="saveCustomText()">💾 Enregistrer</button>
+    </div>
+  </div>
+
+  <!-- Sticky start button shown when text selected -->
+  <div id="sticky-start" style="display:none;position:sticky;top:0;z-index:100;padding:8px 16px;background:var(--bg);">
+    <button onclick="startReading()" style="width:100%;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(255,107,157,.35)">🚀 Lancer la lecture !</button>
+  </div>
+  <button class="start-btn" id="start-btn" onclick="startReading()" disabled>🚀 Lancer la lecture !</button>
+</div>
+
+<!-- ══ READ ══ -->
+<div id="sc-read" class="screen">
+  <div class="read-hud">
+    <div class="read-badge" id="mode-badge">📖 Lecture libre</div>
+    <button class="read-quit" onclick="quitReading()">🏠 Quitter</button>
+  </div>
+
+  <!-- Chrono (fluence only) -->
+  <div class="chrono-bar hidden" id="chrono-bar">
+    <div>
+      <div style="font-size:10px;font-weight:800;color:var(--gray);text-transform:uppercase">Temps</div>
+      <div class="chrono-time" id="chrono-display">1:00</div>
+    </div>
+    <div class="chrono-info">
+      <div class="words-count" id="words-count">0</div>
+      <div class="words-label">mots lus</div>
+    </div>
+  </div>
+  <div class="fluence-prog-wrap hidden" id="fluence-prog-wrap">
+    <div class="fluence-prog-fill" id="fluence-prog-fill" style="width:100%"></div>
+  </div>
+
+  <!-- Text display -->
+  <div class="text-zone" id="text-zone">
+    <div class="reading-text" id="reading-text"></div>
+  </div>
+
+  <!-- Replay audio bar -->
+  <div class="replay-bar" id="replay-bar">
+    <button class="replay-btn" onclick="playRecording()">▶ Réécouter</button>
+    <span class="replay-label">Vérifie ton enregistrement</span>
+  </div>
+
+  <!-- Rec controls -->
+  <div class="rec-zone">
+    <div class="rec-row">
+      <button class="rec-btn idle" id="rec-btn" onclick="toggleRec()">🎙️</button>
+      <div class="rec-info">
+        <div class="rec-status" id="rec-status">Appuie pour commencer</div>
+        <div class="rec-timer" id="rec-timer"></div>
+      </div>
+    </div>
+    <div class="ai-status" id="ai-status"></div>
+  </div>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div id="sc-result" class="screen">
+  <div class="res-center">
+    <span class="res-emoji" id="res-emoji">🌟</span>
+    <div class="res-title" id="res-title">Super lecture !</div>
+  </div>
+
+  <!-- Fluence result -->
+  <div class="res-fluence-big" id="res-fluence-block" style="display:none">
+    <div class="res-fluence-num" id="res-wpm">0</div>
+    <div class="res-fluence-lbl">mots / minute</div>
+    <div class="res-fluence-comment" id="res-fluence-comment"></div>
+  </div>
+
+  <!-- Stats grid -->
+  <div class="res-grid" id="res-grid"></div>
+
+  <!-- Text with errors highlighted -->
+  <div class="res-text-review" id="res-text-review" style="display:none">
+    <div class="res-text-title">Texte relu — erreurs surlignées</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#6BCB77"></div>Lu correctement</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Erreur / hésitation</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ccc"></div>Non lu</div>
+    </div>
+    <div class="res-text-body" id="res-text-body" style="margin-top:10px"></div>
+  </div>
+
+  <div class="res-btns">
+    <button class="btn-replay" onclick="replay()">🔄 Relire</button>
+    <button class="btn-replay" onclick="chooseOtherText()" style="background:var(--blue);color:#fff;border-color:var(--blue)">📖 Autre texte</button>
+    <button class="btn-home" onclick="goHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div>
+<script>
+
+// Firebase score sync helper
+async function syncScore(appName, scoreData) {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid');
+    if (!uid || uid === 'undefined') return;
+    if(typeof firebase === 'undefined') return;
+    const fdb = firebase.firestore();
+    await fdb.collection('users').doc(uid).update({
+      [`scores.${appName}`]: {
+        best: scoreData.best || 0,
+        sessions: firebase.firestore.FieldValue.increment(1),
+        lastPlay: new Date().toISOString(),
+        pct: scoreData.pct || 0
+      }
+    });
+  } catch(e) { /* silent fail */ }
+}
+// ══════════════════════════════════════════
+// TEXTS
+// ══════════════════════════════════════════
+const BUILTIN_TEXTS = [
+  {
+    id:'t1', title:'Le petit chat', level:'CP',
+    words:72,
+    body:`Il était une fois un petit chat roux qui vivait dans une ferme. Chaque matin, il se levait tôt pour jouer dans le jardin. Il aimait courir après les papillons et grimper dans les arbres. Un jour, il trouva un ami : un lapin blanc caché sous un buisson. Les deux animaux jouèrent ensemble toute la journée. Le soir, la fermière les appela pour le repas. Ils rentrèrent vite à la maison, fatigués mais très heureux.`
+  },
+  {
+    id:'t2', title:'La pluie et le soleil', level:'CP',
+    words:65,
+    body:`Ce matin, le ciel était tout gris. La pluie tombait sur les toits et les jardins. Léa regardait par la fenêtre. Elle voulait sortir jouer mais sa maman lui dit d'attendre. Après le déjeuner, un rayon de soleil apparut. Les nuages partirent doucement. Léa mit ses bottes et courut dehors. Elle sauta dans les flaques d'eau avec son frère. Ils rirent beaucoup et revinrent tout mouillés à la maison.`
+  },
+  {
+    id:'t3', title:'Au marché', level:'CE1',
+    words:80,
+    body:`Le samedi matin, toute la famille allait au marché du village. Papa achetait des légumes : des carottes, des poireaux et des pommes de terre. Maman choisissait les fruits les plus beaux. Lucas, lui, regardait les poissons dans leurs bacs remplis de glace. Sa sœur Emma préférait s'arrêter devant le marchand de fleurs. Les couleurs et les parfums étaient magnifiques. Avant de partir, ils achetaient toujours du pain frais et un gâteau aux pommes pour le goûter du soir.`
+  },
+  {
+    id:'t4', title:'Mon école', level:'CE1',
+    words:85,
+    body:`Mon école s'appelle l'école des Lilas. Elle est grande avec une belle cour entourée d'arbres. Le matin, j'arrive avec mon sac sur le dos. Dans ma classe, il y a vingt-deux élèves. Notre maîtresse s'appelle Madame Bernard. Elle est gentille et nous explique bien les leçons. J'aime surtout les cours de lecture et les arts plastiques. À la récréation, je joue au ballon avec mes amis Tom et Ines. Le vendredi après-midi, nous avons éducation physique dans le gymnase. C'est mon cours préféré de la semaine.`
+  },
+  {
+    id:'t5', title:'La forêt magique', level:'CE1',
+    words:90,
+    body:`Derrière la maison de grand-mère, il y avait une grande forêt. Lucas et Emma aimaient s'y promener le dimanche. Les arbres étaient si hauts qu'on ne voyait plus le ciel. La lumière filtrait à travers les feuilles et faisait des taches dorées sur le sol. Un écureuil roux sauta d'une branche à l'autre. Plus loin, un ruisseau chantait entre les pierres. Les enfants s'assirent sur un rocher pour écouter le bruit de l'eau. Grand-mère dit que cette forêt était magique. Lucas voulait y revenir le lendemain, et Emma aussi.`
+  },
+  {
+    id:'t6', title:'Mots avec GE et GI', level:'Sons',
+    words:55,
+    body:`Le gilet de la girafe est orange. La géographie nous apprend les noms des pays. Le gendarme surveille la route. Dans la vigne, les raisins sont mûrs. Le nageur plonge dans la piscine. Le genou fait partie du corps. La montagne est couverte de neige. Le pigeon mange des miettes de pain. La girafe est l'animal le plus grand. Le champignon pousse sous les arbres.`
+  },
+  {
+    id:'t7', title:'Syllabes ION et IEN', level:'Sons',
+    words:48,
+    body:`Le lion dort dans la savane. Mon chien s'appelle Filou. Le pion avance sur l'échiquier. Le musicien joue du violon. La maison est grande et belle. Le gardien ouvre la porte. Le champion court très vite. La région est magnifique. Le technicien répare la machine. Le quotidien apporte les nouvelles.`
+  },
+  {
+    id:'t8', title:'La noisette d\'or', level:'Conte',
+    words:697,
+    body:`Il y avait une fois un garçon au joli visage, en âge de se marier. C'était l'automne. Il y avait, dans la campagne, des arbres rouges et d'autres tout dorés. Ce garçon attendait sa fiancée sur la terrasse haute de sa maison. Il voit un panier de noisettes, et, pour passer le temps, il se met à lancer des noisettes sur les gens. Ces gens levaient la tête, très en colère.
+
+Vient une vieille qu'on ne connaissait pas, courbée sur un bâton, bossue sous un châle à carreaux. Il relève le bras, et de tout son élan, lui jette une noisette sur le dos. Elle, sans se presser, tourne le cou, le regarde, se penche avec effort, ramasse la noisette, et la lui envoie juste sur le nez. Tous qui avaient vu la scène étaient étonnés de tant d'adresse, et plus étonnés encore, car à l'instant même, la vieille avait disparu.
+
+Cependant le nez du garçon, qu'il avait droit et petit, se met à enfler, à déformer, à grandir sous le coup de la noisette.
+
+Ah ! ma mère, mettez-moi des compresses, de l'arnica, des pommades bien vite.
+
+Rien n'y fait.
+
+Comment revoir ma fiancée avec un nez pareil ? Je ne peux pas me montrer ainsi défiguré !
+
+Le garçon, tout désolé, saute sur son cheval et fuit loin du village. Que faire, que devenir avec le nez ensorcelé ?
+
+Pendant quatre ans, le garçon a cherché la vieille. Il a frappé à toutes les cabanes : en bordure des ruisseaux, en lisière des forêts, au milieu des clairières. Il en a vu des vieilles bossues !
+
+Pardon, Madame, je viens pour une noisette que je regrette bien d'avoir lancée.
+
+Mais ce n'était jamais la vieille qui était passée par son village, courbée sur son bâton de houx.
+
+Enfin, un soir, il arrive au fond d'une vallée, entre des montagnes qui cachaient la lumière du jour. Il frappe à la porte d'une masure branlante.
+
+Qui est là ? Qu'est-ce que vous voulez ?
+
+C'est moi. Pardon, Madame, je viens pour une noisette que je regrette bien d'avoir lancée.
+
+Une vieille est là. Cette fois, c'est bien celle qu'il cherche depuis quatre années. Il se jette à ses pieds.
+
+Ah, rendez-moi mon joli nez, que je puisse épouser ma fiancée et retourner chez mes parents.
+
+Pauvre garçon, tu as été assez puni, et j'aimerais te contenter. Mais pour cela, il faudrait me rapporter la noisette que tu m'as lancée. J'y ai mis ma marque. Elle est maintenant toute dorée. C'est elle qui a les pouvoirs magiques.
+
+Noisette de malheur. Comment la retrouver après quatre années passées ?
+
+Bien triste, le garçon s'est assis sur une pierre. Il se sentait découragé. Tirant son cheval par la bride, le garçon s'avance dans la forêt. Il a faim, et il tire un croûton de sa poche. Crac... Crac... quelque chose gratte à ses pieds. C'est une souris qui ramasse les miettes.
+
+Tiens, pauvre petite bête, voici au moins un gros morceau.
+
+Et il donne à la souris une part de son pain.
+
+Merci, gentil garçon. J'ai entendu ton histoire. Pour te remercier, je vais t'aider à trouver la noisette. La souris part. Elle parle à deux ou trois douzaines de bêtes.
+
+Puis elle revient :
+
+Les enfants du meunier ont trouvé la noisette en cherchant des champignons. Ils l'ont rapportée chez eux, et montrée à leur mère. La mère a enfermé la noisette dans un sac plein de pièces d'or. Le corbeau l'a vue. Le sac est caché sous le matelas dans la chambre du haut.
+
+Les voilà partis dans la nuit. Ils arrivent devant le moulin. Le long des pierres, la souris grimpe jusqu'à la fenêtre de la chambre du haut, et se glisse par une fente. Elle se faufile sous le matelas, trouve le sac et se met à ronger. À minuit, la toile a cédé. La souris a trouvé la noisette d'or. Le garçon remercie la souris et repart chez la vieille.
+
+Voici la noisette, brave vieille. Rendez-moi mon joli nez.
+
+La vieille le touche de son bâton, et efface d'un seul coup le sortilège.
+
+Emporte la noisette d'or, dit-elle. Ce sera un bijou pour ta fiancée.`
+  },
+  {
+    id:'t9', title:'Les trois souhaits', level:'Conte',
+    words:744,
+    body:`Il y avait une fois un bûcheron et une bûcheronne qui habitaient un joli petit village à l'orée d'une forêt. Ils n'étaient pas riches, mais l'ouvrage ne leur manquait pas, et ils possédaient une coquette maisonnette avec un jardin.
+
+Un soir d'hiver, tandis que la femme tricotait des bas et que le mari se chauffait devant le feu, ils s'entretenaient du bonheur de leurs voisins plus riches qu'eux.
+
+Oh ! disait la femme, si je pouvais avoir tout ce que je souhaitais, je serais bientôt plus heureuse que tous ces gens-là.
+
+Et moi aussi, dit le mari, je voudrais être au temps des fées, et qu'il s'en trouvât une assez bonne pour m'accorder tout ce que je voudrais.
+
+Au même instant, ils virent dans leur chambre une très belle dame qui leur dit : Je suis une fée, je vous promets de vous accorder les trois premières choses que vous souhaiterez ; mais prenez-y garde, après avoir souhaité trois choses, je ne vous accorderai plus rien.
+
+La fée ayant disparu, les deux époux furent très embarrassés.
+
+Pour moi, dit la femme, sans le souhaiter encore, il me semble qu'il n'y a rien de si bon que d'être belle, riche et de qualité.
+
+Bah ! répondit le mari, avec ces choses on peut être malade, on peut mourir jeune. Il serait plus sage de souhaiter de la santé, de la force et une longue vie.
+
+Et à quoi servirait une longue vie, si l'on était pauvre ? dit la femme, cela ne servirait qu'à être malheureux plus longtemps. En vérité la fée aurait dû nous accorder une douzaine de dons, car il y a au moins une douzaine de choses dont j'ai besoin.
+
+Cela est vrai, dit le mari, mais prenons du temps, examinons d'ici à demain matin les trois choses qui nous sont les plus nécessaires, et nous les demanderons ensuite.
+
+Je veux y penser toute la nuit, dit la femme. En attendant, chauffons-nous, car il fait froid.
+
+La bûcheronne prit les pincettes et attisa le feu, et comme il y avait beaucoup de charbons bien allumés, elle dit sans y faire attention : Voilà un bon feu ; je voudrais avoir un mètre de boudin pour notre souper ; nous pourrions le faire cuire bien aisément.
+
+À peine eut-elle achevé ces paroles qu'il tomba un mètre de boudin par la cheminée : la fée exauçait ainsi le souhait que la femme venait de faire sans y penser.
+
+Peste soit de la gourmande avec son boudin ! s'écria le mari furieux. Ne voilà-t-il pas un beau souhait ! Nous n'en avons plus que deux à faire maintenant. Maudite femme ! Je suis si en colère que je voudrais que tu eusses le boudin au bout du nez.
+
+Dès qu'il eut dit ces mots, le mari s'aperçut qu'il était encore plus fou que sa femme, car, par ce second souhait, le boudin sauta au bout du nez de cette pauvre femme, qui, malgré tous ses efforts ne put jamais l'arracher.
+
+Que je suis malheureuse ! s'écria-t-elle. Tu es bien méchant d'avoir souhaité ce boudin au bout de mon nez !
+
+Je te jure, ma chère femme, que je n'y pensais pas, répondit le mari : j'étais si fort en colère que j'ai parlé sans savoir ce que je disais. Mais que ferons-nous ? Je vais souhaiter de grandes richesses, et je te ferai faire un étui d'or pour cacher ce boudin.
+
+Ah ! ne fais pas cela, répondit la femme ; je me tuerais s'il me fallait vivre avec ce boudin au bout de mon nez. Il nous reste un souhait à faire : laisse-le-moi, ou je vais me jeter par la fenêtre.
+
+Son mari qui l'aimait bien, lui cria :
+
+Non, ma chère femme, je te donne la permission de souhaiter tout ce que tu voudras.
+
+Eh bien ! dit la femme, je souhaite que ce boudin tombe à terre.
+
+Aussitôt le boudin tomba, et la femme, qui avait de l'esprit, dit à son mari : La fée s'est moquée de nous, et elle a eu raison ; peut-être aurions-nous été plus malheureux étant riches que nous ne le sommes à présent. Crois-moi, mon ami, ne souhaitons rien, et prenons les choses comme elles viennent. En attendant, soupons avec notre boudin, puisqu'il ne nous reste que cela de nos souhaits.
+
+Le mari pensa que sa femme avait raison, et ils soupèrent gaiement, sans plus penser à tout ce qu'ils avaient eu envie de souhaiter.`
+  },
+  {
+    id:'t10', title:'Le renard et le hérisson', level:'Conte',
+    words:467,
+    body:`Un renard invite un hérisson à venir manger chez lui. Le hérisson arrive donc pour dîner. Le renard avait attrapé une oie énorme. Le hérisson tombe presque à la renverse quand il voit cette montagne de chair.
+
+Renard, dit-il, jamais nous n'arriverons à manger tout cela !
+
+Mais ce n'est pas tout, répond le renard fièrement, il y a aussi pour commencer, des œufs, des œufs de pintade ! Et des fruits pour finir !
+
+Le hérisson fait honneur aux œufs de pintade qu'il ne trouve pas mauvais, et goûte même aux fruits. Quant à l'oie, il fait seulement semblant d'y toucher. Mais le renard s'en régale. Tout passe dans son ventre.
+
+Renard, ne craignez-vous pas une indigestion ? interroge le hérisson.
+
+Moi, dit le renard, après un bon somme, je me réveillerai d'aussi bon appétit que tout à l'heure.
+
+Le hérisson connaît les devoirs de la politesse.
+
+Accepteriez-vous que je vous offre à mon tour un modeste repas ?
+
+Volontiers, à demain, dit le renard.
+
+Et voilà notre hérisson qui se démène. Tout ce qu'il connaît de meilleur, il le cherche, il l'entasse. Il court les potagers, il visite les prairies. Il rapporte un gros plat de sauterelles succulentes, des hannetons de quoi remplir un panier, et puis des limaces, de savoureuses limaces !
+
+Le moment du dîner arrive et renard se présente au rendez-vous. Le hérisson présente d'abord les limaces, son plat de résistance.
+
+Ah ! Ah ! dit le renard, les hors-d'œuvre ! Je me rappelle avoir mangé de ça les jours où je ne trouvais rien à me mettre sous la dent ! Et il engloutit toutes les limaces d'une seule bouchée.
+
+La suite, maintenant, fait-il avec brutalité.
+
+Un peu honteux le hérisson pousse devant lui hannetons et sauterelles.
+
+Qu'est-ce donc que cela, crie le renard. Des sauterelles ! Des hannetons ! Tu te moques de moi ? Et moi qui t'ai servi une oie, une douzaine d'œufs, du dessert !
+
+Ah c'est ainsi ! Il ouvre la gueule toute grande et engloutit le hérisson d'un seul coup.
+
+De cette façon au moins, je ne m'en irai pas le ventre vide.
+
+Les hérissons ne peuvent pas fuir, ils ont les pattes trop courtes. Arrivé dans la gueule du renard, notre hérisson se met en boule en hérissant tous ses piquants.
+
+Aïe ! Aïe ! essaie de crier le renard.
+
+Renard tousse, crache. Il se fourre les pattes de devant dans la gorge. Mais tous les piquants le saignent lentement, jusqu'à la mort. Il tombe sur le côté, il remue les pattes, il meurt.
+
+Quand le hérisson sent que le renard ne bouge plus, il sort de sa gorge. Puis il s'en va en répétant :
+
+Le petit est venu à bout du grand ! Le petit est venu à bout du grand !`
+  },
+  {
+    id:'t11', title:'Renard a mangé du poisson', level:'Conte',
+    words:216,
+    body:`La terre est couverte de neige. Renard a grand faim et il ne trouve plus rien à manger.
+
+Il s'en va tristement, par le bois, le ventre vide et la queue basse. Mais bientôt le vent glacé lui apporte un bruit de charrette et une délicieuse odeur de poisson.
+
+C'est sûrement un marchand qui transporte à la ville ses paniers de poissons.
+
+Renard a vite fait d'imaginer une ruse. Il traverse des prés, saute des haies et galope sur la route. Puis il se couche au beau milieu du chemin. Les yeux fermés, la langue pendante, il fait le mort.
+
+La voiture approche.
+
+Le marchand aperçoit l'animal sur la route. Il s'arrête et descend. Mais c'est un renard !
+
+Il le tourne, le retourne, Renard semble bien mort.
+
+Il a une belle fourrure, je le vendrai un bon prix.
+
+Tout heureux, le marchand jette Renard dans sa charrette, au beau milieu des paniers de poissons, et la voiture repart.
+
+Vous pensez si Renard est à son affaire ! Sans bruit, il se glisse dans un panier, puis dans un autre et dévore les poissons.
+
+Quand il est enfin rassasié, il saute à terre et se sauve.
+
+Le marchand l'aperçoit qui court bien loin sur la route et comprend que Renard, le malin, s'est moqué de lui.`
+  },
+  {
+    id:'t12', title:'Les trois sous', level:'Conte',
+    words:549,
+    body:`Quand j'étais jeune, on m'avait placé dans une ferme. À la fin de ma première année de travail, mon maître m'a donné un sou. Je l'ai pris et je l'ai jeté dans le puits en me disant : Si j'ai bien travaillé, que le sou remonte à la surface. Si j'ai mal fait, qu'il tombe au fond du puits.
+
+La pièce est tombée au fond du puits.
+
+Je suis donc resté une deuxième année à la ferme, à l'issue de laquelle j'ai reçu un deuxième sou.
+
+Je l'ai pris et je l'ai jeté dans le puits en me disant : Si j'ai bien travaillé, que le sou remonte à la surface. Si j'ai mal fait, qu'il tombe au fond du puits.
+
+Cette fois encore, la pièce est tombée au fond du puits.
+
+Je suis donc resté une troisième année à la ferme, à l'issue de laquelle j'ai reçu un troisième sou. Je l'ai pris et je l'ai jeté dans le puits en me disant : Si j'ai bien travaillé, que le sou remonte à la surface. Si j'ai mal fait, qu'il tombe au fond du puits.
+
+Et les trois pièces sont remontées à la surface...
+
+Mon argent en poche, je suis parti parcourir le monde, et j'ai rencontré une souris qui m'a dit :
+
+Donne-moi un sou pour que je puisse payer mes impôts. Un jour, je te rendrai service à mon tour.
+
+Pour acheter du pain et du sel, j'ai bien assez de deux sous, pensai-je, je me passerai de vin. Et j'ai donné un sou à la souris.
+
+Peu de temps après, j'ai rencontré une écrevisse qui m'a dit :
+
+Donne-moi un sou pour que je puisse payer mes impôts. Un jour, je te rendrai service à mon tour.
+
+Pour acheter du pain, j'ai bien assez d'un sou, pensai-je, je me passerai de sel. Et j'ai donné un sou à l'écrevisse.
+
+Mais tout de suite après, j'ai rencontré un scarabée qui m'a dit :
+
+Donne-moi un sou pour que je puisse payer mes impôts. Un jour, je te rendrai service à mon tour.
+
+Je trouverai toujours quelqu'un de généreux qui me donnera à manger, pensai-je, je peux me passer d'argent. Et j'ai donné mon troisième et dernier sou au scarabée.
+
+J'ai poursuivi ma route et je suis arrivé aux portes d'un palais.
+
+Le roi de ce pays avait une fille dont la tristesse était si profonde qu'elle ne souriait jamais. Il avait donc fait annoncer que celui qui guérirait la princesse et parviendrait à la faire rire recevrait sa main et la moitié de son royaume.
+
+Je n'ai pas un sou en poche, mais peut-être pourrais-je faire rire la princesse, pensai-je. J'ai appelé mes trois amis : la souris, l'écrevisse et le scarabée.
+
+J'ai demandé à ce dernier de jouer de la musique, et à la souris et à l'écrevisse de danser. Ce fut un spectacle si drôle que la princesse mélancolique rit aux éclats.
+
+Mais elle ne fut pas la seule : le roi rit également, ainsi que toute la cour. Quant à mes amis et moi-même, nous étions, nous aussi, très gais.
+
+J'ai épousé la princesse, sans un sou en poche. J'ai vécu comme un seigneur. J'ai gouverné avec sagesse. J'ai soulagé les pauvres et j'ai aimé mes sujets, du plus humble au plus riche.`
+  },
+  {
+    id:'t13', title:'Conte du soleil et de la lune', level:'Conte',
+    words:366,
+    body:`Il y a très longtemps, il n'y avait pas de lune dans le ciel, la nuit. Il n'y avait qu'un soleil qui brillait tout le temps, jour et nuit. Et ce soleil avait l'air toujours triste.
+
+Un jour, un oiseau alla à sa rencontre :
+
+Pourquoi pleures-tu, soleil ? demanda le petit volatile.
+
+Parce que j'ai beaucoup trop chaud ! répondit le soleil, les larmes aux yeux. Je voudrais me rafraîchir un peu.
+
+Alors, l'oiseau alla chercher de l'eau dans une rivière, la mit dans son bec et arrosa le soleil.
+
+Mais cela n'y fit rien : le soleil avait toujours aussi chaud.
+
+Un autre jour, un papillon vint le voir :
+
+Pourquoi pleures-tu, soleil ? demanda-t-il.
+
+Parce que j'ai beaucoup trop chaud ! Répondit le soleil en gémissant. Je voudrais me rafraîchir un peu.
+
+Alors, le papillon battit des ailes très fort pour envoyer de l'air frais au soleil.
+
+Mais cela n'y fit rien : le soleil avait toujours aussi chaud.
+
+Le soleil pleurait ainsi tout le temps. Rien ne semblait pouvoir le rafraîchir.
+
+Puis un jour, son amie la lune vint le voir :
+
+Pourquoi pleures-tu, soleil ? demanda-t-elle.
+
+Parce que j'ai beaucoup trop chaud ! Répondit le soleil en laissant couler une larme sur sa joue. Je voudrais me rafraîchir un peu.
+
+Alors, la lune, qui était très gentille, lui dit :
+
+Pourquoi ne vas-tu pas te baigner dans l'océan ? Toute cette eau te rafraîchirait sûrement !
+
+C'est vrai, tu as sans doute raison, mais je ne peux pas laisser le ciel tout seul.
+
+Et qui veillerait alors sur la Terre ? s'inquiéta le soleil.
+
+Ne te préoccupe pas de cela ! l'interrompit la lune. Si tu veux, pendant que tu te baignerais dans l'océan, je resterais dans le ciel et je veillerais sur la Terre.
+
+C'est vrai ? Tu ferais ça ? demanda le soleil.
+
+Bien sûr ! Tu es mon ami, répondit la lune.
+
+Alors, le soleil s'en alla dans l'océan pour se rafraîchir. On appela ce moment le coucher du soleil. Et la lune prit sa place dans le ciel.
+
+Et c'est ainsi que, dans le ciel, il y a le soleil le jour et la lune la nuit.`
+  },
+];
+
+let customTexts = JSON.parse(localStorage.getItem('lecture_custom_texts')||'[]');
+let selectedTextId = null;
+let chosenMode = 'libre';
+let fluenceDur = 60;
+let currentText = null;
+let words = [];
+let wordStates = []; // 'unread'|'done'|'error'|'skipped'
+let currentWordIdx = 0;
+
+// Recording
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioUrl = null;
+let isRecording = false;
+let recSeconds = 0;
+let recInterval = null;
+
+// Fluence
+let chronoInterval = null;
+let chronoSeconds = 0;
+let fluenceRunning = false;
+let fluenceWordCount = 0;
+
+// Recognition (for word tracking)
+let recognition = null;
+let recognizing = false;
+
+function goHome(){
+  const base=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);
+  window.location.href=base+'index.html';
+}
+
+function chooseOtherText(){
+  selectedTextId=null;
+  showScreen('sc-setup');
+  buildTextList();
+  document.getElementById('start-btn').disabled=true;
+  const topBtn=document.getElementById('start-btn-top');
+  if(topBtn){ topBtn.disabled=true; topBtn.style.opacity='.35'; }
+  document.getElementById('sticky-start').style.display='none';
+}
+
+// ══ BUILD TEXT LIST ══
+function buildTextList(){
+  const list = document.getElementById('text-list');
+  list.innerHTML = '';
+  const all = [...BUILTIN_TEXTS, ...customTexts];
+  all.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'text-item' + (selectedTextId===t.id?' sel':'');
+    div.innerHTML = `
+      <div class="text-item-header">
+        <span class="text-item-title">${t.title}</span>
+        <span class="text-item-badge">${t.level||'Perso'} · ~${t.words||countWords(t.body)} mots</span>
+      </div>
+      <div class="text-item-preview">${t.body.substring(0,120)}…</div>
+    `;
+    div.onclick = () => selectText(t.id);
+    list.appendChild(div);
+  });
+}
+function countWords(str){ return str.trim().split(/\s+/).length; }
+
+function selectText(id){
+  selectedTextId = id;
+  document.querySelectorAll('.text-item').forEach(el => el.classList.remove('sel'));
+  event.currentTarget.classList.add('sel');
+  const btn = document.getElementById('start-btn');
+  if(btn) { btn.disabled = false; }
+  const topBtn = document.getElementById('start-btn-top');
+  if(topBtn) { topBtn.disabled = false; topBtn.style.opacity='1'; }
+  const sticky = document.getElementById('sticky-start');
+  if(sticky) sticky.style.display='';
+}
+
+function pickMode(btn){
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  chosenMode = btn.dataset.mode;
+  document.getElementById('dur-card').style.display = chosenMode==='fluence' ? '' : 'none';
+}
+function pickDur(btn){
+  document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  fluenceDur = +btn.dataset.d;
+}
+
+function toggleCustomForm(){
+  const f = document.getElementById('custom-form');
+  f.style.display = f.style.display==='none'?'flex':'none';
+}
+function saveCustomText(){
+  const title = document.getElementById('custom-title').value.trim();
+  const body = document.getElementById('custom-body').value.trim();
+  if(!title||!body){ alert('Remplis le titre et le texte !'); return; }
+  const t = { id:'c_'+Date.now(), title, body, level:'Perso', words:countWords(body) };
+  customTexts.push(t);
+  localStorage.setItem('lecture_custom_texts', JSON.stringify(customTexts));
+  document.getElementById('custom-title').value='';
+  document.getElementById('custom-body').value='';
+  document.getElementById('custom-form').style.display='none';
+  buildTextList();
+  selectText(t.id); // auto-select
+}
+
+// ══ START READING ══
+function startReading(){
+  if(!selectedTextId){ 
+    // Show hint
+    document.querySelector('.text-list').scrollIntoView({behavior:'smooth'});
+    return; 
+  }
+  const all = [...BUILTIN_TEXTS, ...customTexts];
+  currentText = all.find(t=>t.id===selectedTextId);
+  if(!currentText) return;
+
+  // Parse words, preserving paragraph breaks as special markers
+  const paragraphs = currentText.body.split(/\n\s*\n/);
+  words = [];
+  paragraphs.forEach((para, pi) => {
+    const paraWords = para.match(/[\wàâäéèêëîïôùûüçœæ''-]+|[.,!?;:…]/gi) || [];
+    words.push(...paraWords);
+    if(pi < paragraphs.length-1) words.push('¶'); // paragraph break marker
+  });
+  wordStates = words.map(()=>'unread');
+  currentWordIdx = 0;
+  fluenceWordCount = 0;
+  audioChunks = []; audioBlob = null; audioUrl = null;
+
+  renderText();
+  document.getElementById('mode-badge').textContent = chosenMode==='fluence'?'⏱️ Fluence':'📖 Lecture libre';
+  document.getElementById('rec-status').textContent = 'Appuie pour commencer';
+  document.getElementById('rec-timer').textContent = '';
+  document.getElementById('ai-status').textContent = '';
+  document.getElementById('rec-btn').className = 'rec-btn idle';
+  document.getElementById('replay-bar').style.display = 'none';
+
+  if(chosenMode==='fluence'){
+    document.getElementById('chrono-bar').classList.remove('hidden');
+    document.getElementById('fluence-prog-wrap').classList.remove('hidden');
+    document.getElementById('text-zone').className = 'text-zone fluence-mode';
+    chronoSeconds = fluenceDur;
+    updateChronoDisplay();
+    document.getElementById('words-count').textContent = '0';
+  } else {
+    document.getElementById('chrono-bar').classList.add('hidden');
+    document.getElementById('fluence-prog-wrap').classList.add('hidden');
+    document.getElementById('text-zone').className = 'text-zone';
+  }
+
+  showScreen('sc-read');
+}
+
+function renderText(){
+  const container = document.getElementById('reading-text');
+  container.innerHTML = '';
+  words.forEach((w,i) => {
+    if(w === '¶'){
+      container.appendChild(document.createElement('br'));
+      container.appendChild(document.createElement('br'));
+      return;
+    }
+    if(/^[.,!?;:…]$/.test(w)){
+      container.appendChild(document.createTextNode(w+' '));
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = 'w ' + wordStates[i];
+    span.dataset.i = i;
+    span.textContent = w;
+    span.onclick = () => toggleWordState(i);
+    container.appendChild(span);
+    container.appendChild(document.createTextNode(' '));
+  });
+}
+
+function toggleWordState(i){
+  // Manual correction: click to mark as error or back to done
+  if(wordStates[i]==='done') wordStates[i]='error';
+  else if(wordStates[i]==='error') wordStates[i]='done';
+  renderText();
+}
+
+// ══ RECORDING ══
+async function toggleRec(){
+  if(isRecording){ stopRec(); return; }
+  await startRec();
+}
+
+async function startRec(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = onRecStop;
+    mediaRecorder.start(100);
+    isRecording = true;
+    recSeconds = 0;
+
+    document.getElementById('rec-btn').className = 'rec-btn recording';
+    document.getElementById('rec-status').textContent = '🔴 Enregistrement…';
+    document.getElementById('replay-bar').style.display = 'none';
+
+    recInterval = setInterval(()=>{
+      recSeconds++;
+      const m=Math.floor(recSeconds/60), s=recSeconds%60;
+      document.getElementById('rec-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    },1000);
+
+    // Start fluence chrono on first rec
+    if(chosenMode==='fluence' && !fluenceRunning){
+      fluenceRunning = true;
+      startChronoCountdown();
+    }
+
+    // Start speech recognition for word tracking
+    startRecognition();
+
+  } catch(e){
+    alert('Microphone non disponible. Vérifie les permissions dans Chrome !');
+  }
+}
+
+function stopRec(){
+  if(mediaRecorder && isRecording){
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+  }
+  isRecording = false;
+  clearInterval(recInterval);
+  stopRecognition();
+  if(chosenMode==='fluence') stopChronoCountdown();
+  document.getElementById('rec-btn').className = 'rec-btn analyzing';
+  document.getElementById('rec-status').textContent = '✨ Analyse en cours…';
+}
+
+function onRecStop(){
+  audioBlob = new Blob(audioChunks, {type:'audio/webm'});
+  audioUrl = URL.createObjectURL(audioBlob);
+  document.getElementById('replay-bar').style.display = 'flex';
+  analyzeWithClaude();
+}
+
+function playRecording(){
+  if(audioUrl){ new Audio(audioUrl).play(); }
+}
+
+// ══ SPEECH RECOGNITION (word tracking) ══
+function startRecognition(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  recognition = new SR();
+  recognition.lang='fr-FR'; recognition.continuous=true; recognition.interimResults=true;
+  let fullTranscript = '';
+  let lastFinalIndex = 0; // tracks how many results we've already counted as final, resets each (re)start
+  recognition.onresult = e => {
+    // Only accumulate results we haven't already counted (avoids duplication on restart)
+    let newFinal = '';
+    for(let i=lastFinalIndex; i<e.results.length; i++){
+      if(e.results[i].isFinal){
+        newFinal += ' ' + e.results[i][0].transcript;
+        lastFinalIndex = i+1;
+      }
+    }
+    if(newFinal) fullTranscript += newFinal;
+    // Also use interim (not-yet-final) results for live word count
+    const interim = Array.from(e.results)
+      .filter(r=>!r.isFinal).map(r=>r[0].transcript).join(' ');
+    updateWordProgress((fullTranscript + ' ' + interim).toLowerCase().trim());
+  };
+  recognition.onend = () => {
+    // Restart recognition if still recording (continuous mode workaround for mobile/Chrome timeout)
+    lastFinalIndex = 0; // results array resets on restart, so our counter must too
+    if(isRecording && recognizing){
+      try { recognition.start(); } catch(e){}
+    }
+  };
+  recognizing = true;
+  recognition.start();
+}
+function stopRecognition(){ if(recognition){ try{recognition.stop();}catch(e){} recognition=null; } recognizing=false; }
+
+function updateWordProgress(transcript){
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z\s]/g,'').trim();
+  const heardWords = norm(transcript).split(/\s+/).filter(w=>w.length>0);
+
+  const isMatch = (textWord, heardWord) => {
+    if(!textWord || !heardWord) return false;
+    if(textWord === heardWord) return true;
+    // For short words (<=3 letters like "est", "le", "et"), require exact or near-exact match
+    if(textWord.length<=3 || heardWord.length<=3){
+      return textWord===heardWord;
+    }
+    const minLen = Math.min(3, textWord.length, heardWord.length);
+    return textWord.slice(0,minLen)===heardWord.slice(0,minLen);
+  };
+
+  // Reset word states based on full transcript
+  let fluenceCount = 0;
+  let wi = 0; // word index in text
+  let hi = 0; // heard index
+
+  while(wi < words.length && hi < heardWords.length){
+    // Skip punctuation and paragraph break markers
+    if(/^[.,!?;:…]$/.test(words[wi]) || words[wi]==='¶'){ wi++; continue; }
+    const wNorm = norm(words[wi]);
+    const hw = heardWords[hi];
+
+    if(isMatch(wNorm, hw)){
+      wordStates[wi] = 'done';
+      fluenceCount++;
+      wi++; hi++;
+    } else {
+      // Try looking ahead a few heard words in case one was misheard/skipped,
+      // so a single bad recognition doesn't permanently block the cursor
+      let found = false;
+      for(let look=1; look<=3 && hi+look<heardWords.length; look++){
+        if(isMatch(wNorm, heardWords[hi+look])){
+          hi = hi+look+1;
+          wordStates[wi] = 'done';
+          fluenceCount++;
+          wi++;
+          found = true;
+          break;
+        }
+      }
+      if(!found) hi++; // skip this heard word, try next
+    }
+  }
+
+  fluenceWordCount = fluenceCount;
+  if(chosenMode==='fluence'){
+    document.getElementById('words-count').textContent = fluenceWordCount;
+  }
+
+  renderText();
+  // Auto-scroll to current position
+  const doneWords = document.querySelectorAll('.w.done');
+  if(doneWords.length > 0){
+    doneWords[doneWords.length-1].scrollIntoView({block:'center', behavior:'smooth'});
+  }
+}
+
+// ══ FLUENCE CHRONO ══
+function startChronoCountdown(){
+  const total = fluenceDur;
+  chronoInterval = setInterval(()=>{
+    chronoSeconds--;
+    updateChronoDisplay();
+    const pct = (chronoSeconds/total)*100;
+    document.getElementById('fluence-prog-fill').style.width = pct+'%';
+    document.getElementById('fluence-prog-fill').style.background =
+      pct>50?'linear-gradient(90deg,#6BCB77,#4D96FF)':
+      pct>20?'linear-gradient(90deg,#FFD93D,#FF9F1C)':
+             'linear-gradient(90deg,#FF4757,#FF9F1C)';
+    const el = document.getElementById('chrono-display');
+    el.classList.toggle('urgent', chronoSeconds<=10);
+    if(chronoSeconds<=0){ stopRec(); }
+  },1000);
+}
+function stopChronoCountdown(){ clearInterval(chronoInterval); }
+function updateChronoDisplay(){
+  const m=Math.floor(chronoSeconds/60), s=chronoSeconds%60;
+  document.getElementById('chrono-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// ══ ANALYSE CLAUDE ══
+async function analyzeWithClaude(){
+  // Use speech recognition results directly - no API call needed
+  document.getElementById('ai-status').textContent = '✨ Analyse en cours…';
+  document.getElementById('rec-btn').className = 'rec-btn done';
+  
+  // Build result from word states already tracked by speech recognition
+  const doneW = wordStates.filter(s=>s==='done').length;
+  const totalW = words.filter(w=>!/^[.,!?;:]/.test(w) && w!=='¶').length;
+  const pct = totalW>0 ? Math.round(doneW/totalW*100) : 0;
+  const wpm = chosenMode==='fluence' && fluenceDur>0 ? Math.round(doneW/(fluenceDur/60)) : 0;
+  
+  // Mark unread words as skipped
+  wordStates = wordStates.map((s,i)=>{
+    if(!words[i]||/^[.,!?;:]/.test(words[i])) return s;
+    return s==='unread'?'skipped':s;
+  });
+  renderText();
+  
+  // Scroll to first skipped/error word
+  setTimeout(()=>{
+    const first = document.querySelector('.w.skipped,.w.error');
+    if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 300);
+  
+  // Build synthetic result
+  const json = {
+    errors: words.filter((_,i)=>wordStates[i]==='error' && words[i]!=='¶'),
+    well_read: words.filter((_,i)=>wordStates[i]==='done' && words[i]!=='¶').slice(0,10),
+    wpm: wpm,
+    fluence_comment: wpm>0 ? (wpm>=80?"Excellente vitesse !":wpm>=60?"Bonne vitesse !":"Continue à t'entraîner !") : "",
+    global_feedback: pct>=80 ? `Bravo ! ${doneW} mots lus sur ${totalW} 🌟` : `${doneW} mots lus sur ${totalW} — continue comme ça !`,
+    emoji: pct>=90?'🏆':pct>=70?'🥇':pct>=50?'🥈':'💪'
+  };
+  
+  document.getElementById('ai-status').textContent = '';
+  showResult(json);
+  return; // Skip old Claude code below
+  
+  // OLD CODE BELOW (kept for reference):
+  document.getElementById('ai-status').textContent = '🤖 Claude analyse ta lecture…';
+  document.getElementById('rec-btn').className = 'rec-btn analyzing';
+
+  // Get read words from recognition
+  const readWords = words.filter((_,i)=>wordStates[i]==='done' && words[i]!=='¶').map(w=>w.toLowerCase());
+  const allWords = words.filter(w=>!/^[.,!?;:…]$/.test(w) && w!=='¶').map(w=>w.toLowerCase());
+  const unreadWords = allWords.filter(w=>!readWords.includes(w));
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        messages:[{role:'user',content:[{type:'text',
+          text:`Tu es un assistant bienveillant pour aider une enfant de 7 ans à apprendre à lire.
+
+Texte complet (${allWords.length} mots) :
+"${currentText.body}"
+
+Mots détectés comme lus par la reconnaissance vocale : ${readWords.join(', ')||'aucun'}
+Mots non lus / passés : ${unreadWords.join(', ')||'aucun'}
+Mode : ${chosenMode==='fluence'?'Fluence ('+fluenceDur+'s)':'Lecture libre'}
+${chosenMode==='fluence'?'Mots lus en '+fluenceDur+'s : '+fluenceWordCount:''}
+
+Analyse la lecture et réponds UNIQUEMENT en JSON :
+{
+  "errors": ["liste des mots probablement mal lus ou hésités (max 8)"],
+  "well_read": ["liste des mots bien lus (max 10, les plus longs)"],
+  "wpm": ${chosenMode==='fluence'?'mots par minute calculé (nombre entier)':0},
+  "fluence_comment": "commentaire sur la vitesse (max 15 mots, style encourageant pour enfant)",
+  "global_feedback": "feedback global bienveillant pour l'enfant (2 phrases max, très encourageant)",
+  "emoji": "un emoji qui représente le niveau de performance"
+}`
+        }]}]
+      })
+    });
+    const data = await resp.json();
+    const json = JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+    document.getElementById('ai-status').textContent = '';
+    document.getElementById('rec-btn').className = 'rec-btn done';
+
+    // Apply error states from Claude
+    if(json.errors && json.errors.length>0){
+      words.forEach((w,i)=>{
+        if(/^[.,!?;:]/g.test(w)) return;
+        const wn=w.toLowerCase().normalize('NFD').replace(/[^a-z]/g,'');
+        const match=json.errors.some(e=>{
+          const en=e.toLowerCase().normalize('NFD').replace(/[^a-z]/g,'');
+          return en===wn || (wn.length>3 && en.startsWith(wn.slice(0,3)));
+        });
+        if(match){
+          if(wordStates[i]==='done') wordStates[i]='error';
+          else wordStates[i]='skipped';
+        }
+      });
+    }
+    // Mark remaining unread as skipped
+    wordStates = wordStates.map((s,i)=> (!words[i]||/^[.,!?;:]/.test(words[i]))?s : s==='unread'?'skipped':s);
+    renderText();
+    setTimeout(()=>{ const e=document.querySelector('.w.error'); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); },300);
+    showResult(json);
+  } catch(e){
+    document.getElementById('ai-status').textContent = '⚠️ Analyse manuelle — clique sur les mots erreurs';
+    document.getElementById('rec-btn').className = 'rec-btn idle';
+    document.getElementById('rec-status').textContent = 'Appuie à nouveau pour relire';
+    isRecording = false;
+  }
+}
+
+// ══ RESULT ══
+function showResult(json){
+  const totalW = words.filter(w=>!/^[.,!?;:…]$/.test(w) && w!=='¶').length;
+  const doneW = wordStates.filter(s=>s==='done').length;
+  const errW = wordStates.filter(s=>s==='error').length;
+  const skipW = wordStates.filter(s=>s==='skipped').length;
+  const pct = totalW>0?Math.round(doneW/totalW*100):0;
+
+  document.getElementById('res-emoji').textContent = json.emoji||'🌟';
+  document.getElementById('res-title').textContent = json.global_feedback||'Bien lu !';
+
+  // Fluence block
+  if(chosenMode==='fluence' && json.wpm>0){
+    document.getElementById('res-fluence-block').style.display='';
+    document.getElementById('res-wpm').textContent = json.wpm;
+    document.getElementById('res-fluence-comment').textContent = json.fluence_comment||'';
+  }
+
+  // Stats
+  const grid = document.getElementById('res-grid');
+  grid.innerHTML = `
+    <div class="res-card"><div class="res-val highlight">${doneW}</div><div class="res-lbl">✅ Mots lus</div></div>
+    <div class="res-card"><div class="res-val">${pct}%</div><div class="res-lbl">📊 Réussite</div></div>
+    <div class="res-card"><div class="res-val" style="color:var(--red)">${errW}</div><div class="res-lbl">❌ Erreurs</div></div>
+    <div class="res-card"><div class="res-val" style="color:var(--gray)">${skipW}</div><div class="res-lbl">⏭️ Passés</div></div>
+  `;
+
+  // Text review with colors
+  document.getElementById('res-text-review').style.display='';
+  const body = document.getElementById('res-text-body');
+  body.innerHTML = '';
+  let wi=0;
+  currentText.body.split(/(\s+)/).forEach(token => {
+    if(/^\s+$/.test(token)){ body.appendChild(document.createTextNode(' ')); return; }
+    if(/^[.,!?;:…]$/.test(token)){ body.appendChild(document.createTextNode(token)); return; }
+    const state = wordStates[wi]||'unread';
+    const span = document.createElement('span');
+    span.textContent = token;
+    span.style.cssText = state==='done'?'color:#059669;font-weight:800':
+      state==='error'?'background:rgba(255,71,87,.2);color:var(--red);border-radius:4px;padding:1px 3px;text-decoration:underline wavy var(--red)':
+      state==='skipped'?'color:#ccc;text-decoration:line-through':'color:#aaa';
+    body.appendChild(span);
+    body.appendChild(document.createTextNode(' '));
+    wi++;
+  });
+
+  if(pct>=80) launchConfetti();
+  showScreen('sc-result');
+}
+
+function replay(){ startReading(); }
+function quitReading(){
+  if(isRecording) stopRec();
+  stopRecognition();
+  clearInterval(chronoInterval);
+  clearInterval(recInterval);
+  showScreen('sc-setup');
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function launchConfetti(){
+  const colors=['#FF6B9D','#FFD93D','#6BCB77','#4D96FF','#C77DFF'];
+  for(let i=0;i<35;i++){
+    const el=document.createElement('div');el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),2500);
+  }
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function(){
+  buildTextList();
+});
+// Fallback
+if(document.readyState !== 'loading') buildTextList();
+
+</script>
+</body>
+</html>
+

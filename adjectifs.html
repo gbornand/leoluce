@@ -1,0 +1,631 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Adjectifs 🎨</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#4D96FF;--green:#6BCB77;--red:#E63946;--orange:#FF9F1C;
+  --purple:#C77DFF;--pink:#FF6B9D;--yellow:#FFD93D;--teal:#26de81;
+  --bg:#FFF5FF;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ HOME ══ */
+#sc-home{background:linear-gradient(160deg,#1a1a2e 0%,#2d1040 100%);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-icon{font-size:52px;display:block;animation:float 3s ease-in-out infinite;}
+.home-title{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--pink),var(--purple),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px;}
+.home-sub{color:rgba(255,255,255,.5);font-size:13px;margin-top:3px;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+
+/* Stats */
+.stats-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.sc-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.sc-row{display:flex;justify-content:space-around;}
+.sc-stat{text-align:center;}
+.sc-val{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+.sc-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;}
+
+/* Rules recap */
+.rules-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.rule-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07);}
+.rule-row:last-child{border:none;}
+.rule-tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-top:1px;}
+.rule-text{font-size:12px;color:rgba(255,255,255,.7);font-weight:600;line-height:1.5;}
+
+/* Mode buttons */
+.modes-card{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.mode-row{border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;background:rgba(255,255,255,.04);margin-bottom:8px;}
+.mode-row:last-child{margin-bottom:0;}
+.mode-row.sel{border-color:var(--pink);background:rgba(255,107,157,.1);}
+.mode-row:active{transform:scale(.98);}
+.mr-icon{font-size:22px;min-width:30px;text-align:center;}
+.mr-info{flex:1;}
+.mr-name{font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:#fff;}
+.mr-desc{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;}
+
+.start-btn{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(255,107,157,.4);transition:transform .15s;margin:0 16px;}
+.start-btn:active{transform:scale(.97);}
+
+/* ══ GAME ══ */
+#sc-game{background:var(--bg);overflow-y:auto;padding-bottom:80px;}
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;position:sticky;top:0;background:var(--bg);z-index:10;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.gnav-mode{background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--gray);}
+.gnav-score{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));border-radius:999px;transition:width .4s;}
+
+/* Rule reminder badge */
+.rule-badge{margin:0 16px 8px;border-radius:14px;padding:10px 14px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.rb-tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+
+/* Sentence card */
+.sentence-card{background:#fff;border-radius:22px;margin:0 16px 12px;padding:20px 16px;box-shadow:0 4px 20px rgba(199,125,255,.12);}
+.sc-label{font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;text-align:center;}
+.sentence-display{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--dark);line-height:2;text-align:center;flex-wrap:wrap;display:flex;justify-content:center;align-items:center;gap:6px;}
+.sentence-word{display:inline-block;}
+.drop-zone{display:inline-flex;align-items:center;justify-content:center;min-width:100px;height:42px;border-radius:12px;border:3px dashed #E5E7EB;background:#FAFAFA;transition:all .2s;vertical-align:middle;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;padding:0 10px;cursor:pointer;}
+.drop-zone.hover{border-color:var(--purple);background:rgba(199,125,255,.08);}
+.drop-zone.filled{border-style:solid;border-color:var(--purple);background:rgba(199,125,255,.1);color:var(--purple);}
+.drop-zone.correct{border-color:var(--green);background:rgba(107,203,119,.15);color:#059669;}
+.drop-zone.wrong{border-color:var(--red);background:rgba(230,57,70,.08);color:var(--red);}
+
+/* Adjective chips */
+.chips-label{font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin:0 16px 8px;display:block;}
+.chips-zone{display:flex;flex-wrap:wrap;gap:8px;margin:0 16px;justify-content:center;min-height:50px;}
+.adj-chip{padding:10px 16px;border-radius:14px;background:#fff;border:2px solid var(--purple);font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:var(--purple);cursor:pointer;transition:all .15s;user-select:none;box-shadow:0 3px 10px rgba(199,125,255,.2);}
+.adj-chip:active{transform:scale(.93);}
+.adj-chip.used{opacity:.25;cursor:default;pointer-events:none;}
+.adj-chip.selected{background:var(--purple);color:#fff;transform:scale(1.05);box-shadow:0 4px 14px rgba(199,125,255,.4);}
+
+/* Help hint */
+.help-hint{font-size:12px;color:var(--gray);text-align:center;margin:8px 16px 0;font-weight:700;}
+
+/* Feedback */
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--red);}
+
+/* Explanation box */
+.expl-box{background:#F0F7FF;border:2px solid var(--blue);border-radius:14px;padding:12px 16px;margin:8px 16px 0;display:none;font-size:13px;font-weight:700;color:var(--dark);line-height:1.6;}
+
+.next-btn{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+.retry-btn{background:#F3F4F6;border:none;border-radius:14px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin:6px 16px 0;color:var(--gray);display:none;}
+
+/* Progress dots */
+.progress-dots{display:flex;gap:5px;justify-content:center;margin:6px 16px 0;}
+.pdot{width:12px;height:12px;border-radius:50%;background:#E5E7EB;transition:all .3s;}
+.pdot.ok{background:var(--green);}
+.pdot.ko{background:var(--red);}
+.pdot.cur{background:var(--purple);transform:scale(1.2);}
+
+/* ══ RESULT ══ */
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;overflow-y:auto;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-detail{background:#fff;border-radius:16px;padding:14px;width:100%;max-height:260px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.rd-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.rd-row{padding:7px 0;border-bottom:1px solid #F3F4F6;font-size:13px;}
+.rd-row:last-child{border:none;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--pink);color:var(--pink);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span class="home-icon">🎨</span>
+    <div class="home-title">Adjectifs</div>
+    <div class="home-sub">Pluriel · Accord · Cas spéciaux</div>
+  </div>
+  <div class="home-body">
+    <div class="stats-card">
+      <div class="sc-title">Mes stats</div>
+      <div class="sc-row">
+        <div class="sc-stat"><div class="sc-val" id="st-ok">0</div><div class="sc-lbl">Réussis</div></div>
+        <div class="sc-stat"><div class="sc-val" id="st-sessions">0</div><div class="sc-lbl">Sessions</div></div>
+        <div class="sc-stat"><div class="sc-val" id="st-streak">0🔥</div><div class="sc-lbl">Série</div></div>
+      </div>
+    </div>
+
+    <!-- Règles rappel -->
+    <div class="rules-card">
+      <div class="sc-title">📖 Les règles à retenir</div>
+      <div class="rule-row">
+        <span class="rule-tag" style="background:rgba(77,150,255,.2);color:var(--blue)">+S</span>
+        <div class="rule-text">La plupart des adjectifs : on ajoute <b>-s</b> au pluriel<br><i>grand → grands, belle → belles</i></div>
+      </div>
+      <div class="rule-row">
+        <span class="rule-tag" style="background:rgba(107,203,119,.2);color:#059669">-eau</span>
+        <div class="rule-text">Adjectifs en <b>-eau</b> : on ajoute <b>-x</b><br><i>beau → beaux, nouveau → nouveaux</i></div>
+      </div>
+      <div class="rule-row">
+        <span class="rule-tag" style="background:rgba(255,159,28,.2);color:var(--orange)">-al</span>
+        <div class="rule-text">Adjectifs en <b>-al</b> : devient <b>-aux</b><br><i>génial → géniaux, royal → royaux</i></div>
+      </div>
+      <div class="rule-row">
+        <span class="rule-tag" style="background:rgba(199,125,255,.2);color:var(--purple)">-s/-x</span>
+        <div class="rule-text">Adjectifs déjà en <b>-s</b> ou <b>-x</b> : ne changent pas !<br><i>gros → gros, doux → doux</i></div>
+      </div>
+    </div>
+
+    <div class="modes-card">
+      <div class="sc-title">🎮 Mode</div>
+      <div class="mode-row sel" data-mode="glisser" onclick="pickMode(this)">
+        <span class="mr-icon">🖐️</span>
+        <div class="mr-info"><div class="mr-name">Glisser l'adjectif</div><div class="mr-desc">Clique sur l'adjectif accordé et place-le dans la phrase</div></div>
+      </div>
+      <div class="mode-row" data-mode="pluriel" onclick="pickMode(this)">
+        <span class="mr-icon">📝</span>
+        <div class="mr-info"><div class="mr-name">Former le pluriel</div><div class="mr-desc">Choisis la bonne forme parmi 3 propositions</div></div>
+      </div>
+      <div class="mode-row" data-mode="erreurs" onclick="pickMode(this)">
+        <span class="mr-icon">🔁</span>
+        <div class="mr-info"><div class="mr-name">Trouver l'erreur</div><div class="mr-desc">La phrase a une faute d'accord — trouve-la !</div></div>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startGame()">🚀 C'est parti !</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="sc-game" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode" id="gnav-mode">🖐️ Glisser</span>
+    <span class="gnav-score" id="gnav-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div class="progress-dots" id="pdots"></div>
+
+  <!-- Rule reminder -->
+  <div class="rule-badge" id="rule-badge" style="background:rgba(77,150,255,.1)">
+    <span class="rb-tag" id="rb-tag" style="background:var(--blue);color:#fff">+S</span>
+    <span id="rb-text" style="font-size:12px;font-weight:700;color:var(--dark)">La règle du moment</span>
+  </div>
+
+  <!-- Sentence -->
+  <div class="sentence-card">
+    <div class="sc-label" id="q-label">PLACE L'ADJECTIF AU BON ENDROIT</div>
+    <div class="sentence-display" id="sentence-display"></div>
+  </div>
+
+  <!-- Chips -->
+  <span class="chips-label" id="chips-label">Choisis la bonne forme :</span>
+  <div class="chips-zone" id="chips-zone"></div>
+  <div class="help-hint" id="help-hint"></div>
+
+  <div class="fb-bar" id="fb-bar"></div>
+  <div class="expl-box" id="expl-box"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Question suivante →</button>
+  <button class="retry-btn" id="retry-btn" onclick="retryQ()">🔄 Réessayer</button>
+</div>
+
+<!-- RESULT -->
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--purple)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-detail" id="res-detail"></div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="replayGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ════════════════════════════════════════
+// DONNÉES
+// ════════════════════════════════════════
+
+// Règles d'accord
+const RULES = {
+  plusS:  { tag:'+S',    color:'#4D96FF', bg:'rgba(77,150,255,.1)',   text:'La plupart des adjectifs : on ajoute -s au pluriel' },
+  eau:    { tag:'-eau→x',color:'#059669', bg:'rgba(107,203,119,.1)',  text:'Adjectifs en -eau : on ajoute -x (beau → beaux)' },
+  al:     { tag:'-al→aux',color:'#FF9F1C',bg:'rgba(255,159,28,.1)',   text:'Adjectifs en -al : devient -aux (génial → géniaux)' },
+  deja:   { tag:'-s/-x', color:'#C77DFF', bg:'rgba(199,125,255,.1)',  text:'Déjà en -s ou -x : ne change pas ! (gros → gros)' },
+  femS:   { tag:'+S fem', color:'#FF6B9D',bg:'rgba(255,107,157,.1)',  text:'Au féminin : on accorde avec le nom (grande, petite...)' },
+};
+
+// Questions pour le mode "Glisser l'adjectif"
+// format: { phrase, trou (position du mot vide), nom (genre+nombre), adj (infinitif), correct, choices, rule, expl }
+const GLISSER_QS = [
+  // +S masculin
+  { phrase:['Les','chiens','sont','{ADJ}','.'], nom:'les chiens (masc. plur.)', adj:'grand', correct:'grands',
+    choices:['grand','grande','grands','grandes'], rule:'plusS', expl:'"les chiens" → masculin pluriel → on ajoute -s → grands' },
+  { phrase:['Des','lapins','{ADJ}','jouent','.'], nom:'des lapins (masc. plur.)', adj:'petit', correct:'petits',
+    choices:['petit','petite','petits','petites'], rule:'plusS', expl:'"des lapins" → masculin pluriel → on ajoute -s → petits' },
+  { phrase:['Les','élèves','sont','{ADJ}','.'], nom:'les élèves (masc. plur.)', adj:'impatient', correct:'impatients',
+    choices:['impatient','impatiente','impatients','impatientes'], rule:'plusS', expl:'"les élèves" → masculin pluriel → on ajoute -s → impatients' },
+
+  // +S féminin
+  { phrase:['Les','fleurs','sont','{ADJ}','.'], nom:'les fleurs (fém. plur.)', adj:'beau', correct:'belles',
+    choices:['beaux','beau','belle','belles'], rule:'femS', expl:'"les fleurs" → féminin pluriel → belle + s → belles' },
+  { phrase:['Des','valises','{ADJ}','partent','.'], nom:'des valises (fém. plur.)', adj:'lourd', correct:'lourdes',
+    choices:['lourd','lourds','lourde','lourdes'], rule:'femS', expl:'"des valises" → féminin pluriel → lourde + s → lourdes' },
+  { phrase:['Les','filles','sont','{ADJ}','.'], nom:'les filles (fém. plur.)', adj:'sage', correct:'sages',
+    choices:['sage','sages','sageux','sageux'], rule:'plusS', expl:'"les filles" → féminin pluriel → sage + s → sages (déjà féminin)' },
+
+  // -eau → -eaux
+  { phrase:['Ses','{ADJ}','dessins','brillent','.'], nom:'ses dessins (masc. plur.)', adj:'beau', correct:'beaux',
+    choices:['beau','beaux','belle','belles'], rule:'eau', expl:'"beau" se termine par -eau → au pluriel on ajoute -x → beaux' },
+  { phrase:['De','{ADJ}','oiseaux','chantent','.'], nom:'des oiseaux (masc. plur.)', adj:'nouveau', correct:'nouveaux',
+    choices:['nouveau','nouveaux','nouvelle','nouvelles'], rule:'eau', expl:'"nouveau" → -eau → on ajoute -x → nouveaux' },
+
+  // -al → -aux
+  { phrase:['Ces','jeux','sont','{ADJ}','.'], nom:'ces jeux (masc. plur.)', adj:'génial', correct:'géniaux',
+    choices:['génial','géniaux','génials','géniale'], rule:'al', expl:'"génial" se termine par -al → au pluriel → -aux → géniaux' },
+  { phrase:['Des','projets','{ADJ}','commencent','.'], nom:'des projets (masc. plur.)', adj:'royal', correct:'royaux',
+    choices:['royal','royaux','royals','royale'], rule:'al', expl:'"royal" → -al → -aux → royaux' },
+  { phrase:['Les','animaux','sont','{ADJ}','.'], nom:'les animaux (masc. plur.)', adj:'amical', correct:'amicaux',
+    choices:['amical','amicals','amicaux','amicale'], rule:'al', expl:'"amical" → -al → -aux → amicaux' },
+
+  // Déjà -s ou -x
+  { phrase:['Les','sacs','sont','{ADJ}','.'], nom:'les sacs (masc. plur.)', adj:'gros', correct:'gros',
+    choices:['gros','gross','groses','grosse'], rule:'deja', expl:'"gros" se termine déjà par -s → il ne change pas au pluriel' },
+  { phrase:['Des','manteaux','{ADJ}','pendent','.'], nom:'des manteaux (masc. plur.)', adj:'doux', correct:'doux',
+    choices:['doux','douxs','douce','douces'], rule:'deja', expl:'"doux" se termine par -x → il ne change pas au pluriel' },
+
+  // Accord singulier
+  { phrase:['Un','petit','garçon','{ADJ}','court','.'], nom:'un garçon (masc. sing.)', adj:'rapide', correct:'rapide',
+    choices:['rapide','rapides','rapido','rapides'], rule:'plusS', expl:'"un garçon" → masculin singulier → rapide (pas de -s)' },
+  { phrase:['Une','{ADJ}','maison','brille','.'], nom:'une maison (fém. sing.)', adj:'beau', correct:'belle',
+    choices:['beau','beaux','belle','belles'], rule:'femS', expl:'"une maison" → féminin singulier → belle' },
+  { phrase:['Un','vêtement','{ADJ}','sèche','.'], nom:'un vêtement (masc. sing.)', adj:'chaud', correct:'chaud',
+    choices:['chaud','chaude','chauds','chaudes'], rule:'plusS', expl:'"un vêtement" → masculin singulier → chaud (pas de -s)' },
+];
+
+// Questions pour le mode "Pluriel" — choisir la bonne forme
+const PLURIEL_QS = [
+  { question:'Quel est le pluriel de "grand" (masc.) ?', correct:'grands', choices:['grands','grandes','grandaux','grand'], rule:'plusS', expl:'grand → masculin → on ajoute -s → grands' },
+  { question:'Quel est le pluriel de "belle" (fém.) ?', correct:'belles', choices:['beaux','belle','belles','belleux'], rule:'femS', expl:'belle → féminin → on ajoute -s → belles' },
+  { question:'Quel est le pluriel de "beau" (masc.) ?', correct:'beaux', choices:['beaus','belles','beaux','beauxs'], rule:'eau', expl:'beau → finit en -eau → on ajoute -x → beaux' },
+  { question:'Quel est le pluriel de "nouveau" (masc.) ?', correct:'nouveaux', choices:['nouveaus','nouvelles','nouveauxs','nouveaux'], rule:'eau', expl:'nouveau → finit en -eau → on ajoute -x → nouveaux' },
+  { question:'Quel est le pluriel de "génial" (masc.) ?', correct:'géniaux', choices:['génials','géniaux','géniales','géniaus'], rule:'al', expl:'génial → finit en -al → devient -aux → géniaux' },
+  { question:'Quel est le pluriel de "royal" (masc.) ?', correct:'royaux', choices:['royals','royales','royaux','royaus'], rule:'al', expl:'royal → finit en -al → devient -aux → royaux' },
+  { question:'Quel est le pluriel de "gros" (masc.) ?', correct:'gros', choices:['gross','groses','gros','grosses'], rule:'deja', expl:'gros → finit déjà en -s → ne change pas → gros' },
+  { question:'Quel est le pluriel de "doux" (masc.) ?', correct:'doux', choices:['douxs','douces','doux','douceux'], rule:'deja', expl:'doux → finit déjà en -x → ne change pas → doux' },
+  { question:'Quel est le pluriel de "petit" (masc.) ?', correct:'petits', choices:['petites','petit','petits','petitaux'], rule:'plusS', expl:'petit → masculin → on ajoute -s → petits' },
+  { question:'Quel est le pluriel de "chaud" (fém.) ?', correct:'chaudes', choices:['chaudes','chauds','chaude','chaudaux'], rule:'femS', expl:'chaud au féminin → chaude → pluriel → chaudes' },
+  { question:'Quel est le pluriel de "amical" (masc.) ?', correct:'amicaux', choices:['amicaux','amicales','amicals','amicalux'], rule:'al', expl:'amical → finit en -al → devient -aux → amicaux' },
+  { question:'Quel est le pluriel de "impatient" (masc.) ?', correct:'impatients', choices:['impatients','impatientes','impatient','impatiaux'], rule:'plusS', expl:'impatient → masculin → on ajoute -s → impatients' },
+];
+
+// Questions mode "Trouver l'erreur"
+const ERREUR_QS = [
+  { phrase:'Les petits chats jouent.', correct:true, wrongVersion:'Les petites chats jouent.', erreurPos:1, expl:'"chats" est masculin → l\'adjectif doit être "petits" (masc. plur.)' },
+  { phrase:'Des beaux oiseaux chantent.', correct:true, wrongVersion:null, expl:'"oiseaux" est masculin pluriel → "beaux" est correct ✅' },
+  { phrase:'Elle porte des robes beaux.', correct:false, correction:'Elle porte des robes belles.', expl:'"robes" est féminin pluriel → il faut "belles", pas "beaux"' },
+  { phrase:'Les enfants sont impatients.', correct:true, wrongVersion:null, expl:'"enfants" masculin pluriel → "impatients" est correct ✅' },
+  { phrase:'Des jeux géniaux commencent.', correct:true, wrongVersion:null, expl:'"jeux" masc. plur. + "génial" → "géniaux" est correct ✅' },
+  { phrase:'Ses nouveaux chaussures sont jolies.', correct:false, correction:'Ses nouvelles chaussures sont jolies.', expl:'"chaussures" est féminin → il faut "nouvelles", pas "nouveaux"' },
+  { phrase:'Les gros chiens aboient.', correct:true, wrongVersion:null, expl:'"gros" finit en -s → ne change pas au pluriel ✅' },
+  { phrase:'Des manteaux royals sont exposés.', correct:false, correction:'Des manteaux royaux sont exposés.', expl:'"royal" → -al → devient -aux au pluriel → "royaux"' },
+  { phrase:'Une belle fleur pousse.', correct:true, wrongVersion:null, expl:'"fleur" est féminin singulier → "belle" est correct ✅' },
+  { phrase:'Des élèves sages travaillent.', correct:true, wrongVersion:null, expl:'"élèves" pluriel → "sages" (déjà féminin/masc) → correct ✅' },
+];
+
+// ════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════
+function getDB(){try{return JSON.parse(localStorage.getItem('adj_db')||'{}')}catch(e){return{}}}
+function saveDB(db){localStorage.setItem('adj_db',JSON.stringify(db));}
+
+// ════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════
+let selMode='glisser';
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+
+function buildHome(){
+  const db=getDB();
+  document.getElementById('st-ok').textContent=db.totalOk||0;
+  document.getElementById('st-sessions').textContent=db.sessions||0;
+  document.getElementById('st-streak').textContent=(db.streak||0)+'🔥';
+}
+
+function pickMode(el){
+  document.querySelectorAll('.mode-row').forEach(r=>r.classList.remove('sel'));
+  el.classList.add('sel'); selMode=el.dataset.mode;
+}
+
+// ════════════════════════════════════════
+// GAME STATE
+// ════════════════════════════════════════
+let questions=[], qIdx=0, correct=0, wrong=0, answers=[], qLocked=false;
+let selectedChip=null; // for glisser mode
+
+function startGame(){
+  if(selMode==='glisser') questions=[...GLISSER_QS].sort(()=>Math.random()-.5).slice(0,12);
+  else if(selMode==='pluriel') questions=[...PLURIEL_QS].sort(()=>Math.random()-.5).slice(0,12);
+  else questions=[...ERREUR_QS].sort(()=>Math.random()-.5).slice(0,10);
+  qIdx=0;correct=0;wrong=0;answers=[];qLocked=false;selectedChip=null;
+  showScreen('sc-game');
+  buildDots();
+  showQ();
+}
+
+function replayGame(){ startGame(); }
+function quitGame(){backHome();}
+function backHome(){ showScreen('sc-home'); buildHome(); }
+
+function buildDots(){
+  const dots=document.getElementById('pdots');dots.innerHTML='';
+  questions.forEach((_,i)=>{
+    const d=document.createElement('div');d.className='pdot'+(i===0?' cur':'');d.id='pdot-'+i;dots.appendChild(d);
+  });
+}
+
+function updateDot(idx,ok){
+  const d=document.getElementById('pdot-'+idx);if(!d)return;
+  d.className='pdot '+(ok?'ok':'ko');
+  const next=document.getElementById('pdot-'+(idx+1));if(next)next.className='pdot cur';
+}
+
+// ════════════════════════════════════════
+// SHOW QUESTION
+// ════════════════════════════════════════
+function showQ(){
+  if(qIdx>=questions.length){endGame();return;}
+  const q=questions[qIdx]; qLocked=false; selectedChip=null;
+  document.getElementById('pfill').style.width=(qIdx/questions.length*100)+'%';
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('expl-box').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('retry-btn').style.display='none';
+
+  // Rule badge
+  const rule=RULES[q.rule||'plusS'];
+  const badge=document.getElementById('rule-badge');
+  badge.style.background=rule.bg;
+  document.getElementById('rb-tag').textContent=rule.tag;
+  document.getElementById('rb-tag').style.background=rule.color;
+  document.getElementById('rb-text').textContent=rule.text;
+
+  if(selMode==='glisser') showGlisserQ(q);
+  else if(selMode==='pluriel') showPlurielQ(q);
+  else showErreurQ(q);
+}
+
+// ─── GLISSER ───
+function showGlisserQ(q){
+  document.getElementById('gnav-mode').textContent='🖐️ Glisser';
+  document.getElementById('q-label').textContent='PLACE L\'ADJECTIF DANS LA PHRASE';
+  document.getElementById('chips-label').textContent='Choisis la bonne forme puis clique sur le trou :';
+  document.getElementById('help-hint').textContent='1️⃣ Clique sur un adjectif  2️⃣ Clique sur le trou dans la phrase';
+
+  // Build sentence
+  const display=document.getElementById('sentence-display');display.innerHTML='';
+  q.phrase.forEach((word,i)=>{
+    if(word==='{ADJ}'){
+      const zone=document.createElement('div');zone.className='drop-zone';zone.id='drop-zone';zone.textContent='…';
+      zone.onclick=()=>dropOnZone(q);
+      display.appendChild(zone);
+    } else {
+      const span=document.createElement('span');span.className='sentence-word';span.textContent=word;display.appendChild(span);
+    }
+  });
+
+  // Build chips
+  const chips=document.getElementById('chips-zone');chips.innerHTML='';
+  const shuffled=[...q.choices].sort(()=>Math.random()-.5);
+  shuffled.forEach(ch=>{
+    const chip=document.createElement('div');chip.className='adj-chip';chip.textContent=ch;
+    chip.onclick=()=>selectChip(chip,ch,q);
+    chips.appendChild(chip);
+  });
+}
+
+function selectChip(chip,val,q){
+  if(qLocked)return;
+  // Deselect all
+  document.querySelectorAll('.adj-chip').forEach(c=>c.classList.remove('selected'));
+  chip.classList.add('selected');
+  selectedChip=val;
+  // Update drop zone hint
+  const zone=document.getElementById('drop-zone');
+  if(zone){ zone.textContent=val; zone.classList.add('filled'); }
+  document.getElementById('help-hint').textContent='Maintenant clique sur le trou pour valider !';
+}
+
+function dropOnZone(q){
+  if(qLocked)return;
+  if(!selectedChip){
+    document.getElementById('help-hint').textContent='⚠️ D\'abord choisis un adjectif en bas !';
+    return;
+  }
+  const ok=selectedChip===q.correct;
+  const zone=document.getElementById('drop-zone');
+  zone.textContent=selectedChip;
+  zone.classList.remove('filled');
+  zone.classList.add(ok?'correct':'wrong');
+  if(ok) zone.style.animation='pop .3s ease';
+  recordAnswer(ok,q);
+}
+
+function retryQ(){
+  const zone=document.getElementById('drop-zone');
+  if(zone){zone.className='drop-zone';zone.textContent='…';}
+  document.querySelectorAll('.adj-chip').forEach(c=>{c.classList.remove('selected','used');});
+  selectedChip=null;
+  qLocked=false;
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('expl-box').style.display='none';
+  document.getElementById('retry-btn').style.display='none';
+  document.getElementById('help-hint').textContent='1️⃣ Clique sur un adjectif  2️⃣ Clique sur le trou dans la phrase';
+}
+
+// ─── PLURIEL QCM ───
+function showPlurielQ(q){
+  document.getElementById('gnav-mode').textContent='📝 Pluriel';
+  document.getElementById('q-label').textContent=q.question;
+  document.getElementById('chips-label').textContent='Choisis la bonne forme :';
+  document.getElementById('help-hint').textContent='';
+  document.getElementById('sentence-display').innerHTML='';
+
+  const chips=document.getElementById('chips-zone');chips.innerHTML='';
+  const shuffled=[...q.choices].sort(()=>Math.random()-.5);
+  shuffled.forEach(ch=>{
+    const chip=document.createElement('div');
+    chip.className='adj-chip';chip.textContent=ch;
+    chip.style.fontSize='20px';chip.style.padding='12px 20px';
+    chip.onclick=()=>{
+      if(qLocked)return;
+      const ok=ch===q.correct;
+      chip.style.background=ok?'var(--green)':'var(--red)';
+      chip.style.borderColor=ok?'var(--green)':'var(--red)';
+      chip.style.color='#fff';
+      if(!ok){
+        chips.querySelectorAll('.adj-chip').forEach(c=>{
+          if(c.textContent===q.correct){c.style.background='var(--green)';c.style.borderColor='var(--green)';c.style.color='#fff';}
+        });
+      }
+      recordAnswer(ok,q);
+    };
+    chips.appendChild(chip);
+  });
+}
+
+// ─── ERREUR ───
+function showErreurQ(q){
+  document.getElementById('gnav-mode').textContent='🔍 Erreur';
+  document.getElementById('q-label').textContent='CETTE PHRASE EST-ELLE CORRECTE ?';
+  document.getElementById('chips-label').textContent='';
+  document.getElementById('help-hint').textContent='';
+
+  // Show the phrase (sometimes correct, sometimes wrong)
+  const showWrong=!q.correct&&Math.random()<0.7;
+  const displayed=showWrong&&q.correction?q.correction.replace('belles','beaux') // show wrong version
+    :(q.correct?q.phrase:q.correction);
+
+  // Actually: show the phrase as given, ask if correct
+  const display=document.getElementById('sentence-display');display.innerHTML='';
+  const span=document.createElement('span');
+  span.style.cssText='font-family:"Baloo 2",sans-serif;font-size:20px;font-weight:800;color:var(--dark);text-align:center;line-height:1.6';
+  span.textContent=q.correct?q.phrase:(q.wrongVersion||q.correction||q.phrase);
+  display.appendChild(span);
+
+  const chips=document.getElementById('chips-zone');chips.innerHTML='';
+  document.getElementById('chips-label').textContent='';
+
+  [['✅ Oui, c\'est correct !',true],['❌ Non, il y a une erreur',false]].forEach(([label,val])=>{
+    const chip=document.createElement('div');chip.className='adj-chip';
+    chip.style.cssText='font-size:14px;padding:12px 16px;width:100%;text-align:center;border-color:'+(val?'var(--green)':'var(--red)')+';color:'+(val?'var(--green)':'var(--red)');
+    chip.textContent=label;
+    chip.onclick=()=>{
+      if(qLocked)return;
+      const isCorrect=q.correct; // Is the displayed phrase actually correct?
+      const displayedWrong=!q.correct&&q.wrongVersion;
+      const ok=(val===isCorrect)||(val===false&&displayedWrong)||(val===true&&q.correct);
+      // Simplified: if phrase is correct and user says yes → ok, if wrong and user says no → ok
+      const userRight=(q.correct&&val===true)||(!q.correct&&val===false);
+      chip.style.background=userRight?'var(--green)':'var(--red)';
+      chip.style.color='#fff';chip.style.borderColor=userRight?'var(--green)':'var(--red)';
+      recordAnswer(userRight,q);
+    };
+    chips.appendChild(chip);
+  });
+}
+
+// ─── SHARED ───
+function recordAnswer(ok,q){
+  qLocked=true;
+  if(ok)correct++;else wrong++;
+  answers.push({q,ok});
+  updateDot(qIdx,ok);
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+
+  const fb=document.getElementById('fb-bar');
+  fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?'✅ Bravo ! C\'est correct !':'❌ Pas tout à fait...';
+
+  // Always show explanation
+  const expl=document.getElementById('expl-box');
+  expl.style.display='block';
+  expl.innerHTML='💡 <b>Explication :</b> '+q.expl;
+
+  document.getElementById('next-btn').style.display='block';
+  if(!ok&&selMode==='glisser'){ document.getElementById('retry-btn').style.display='block'; }
+  else { setTimeout(()=>{ qIdx++; showQ(); }, 1800); }
+}
+
+function nextQ(){ qIdx++; showQ(); }
+
+// ════════════════════════════════════════
+// RESULT
+// ════════════════════════════════════════
+function endGame(){
+  const total=correct+wrong,pct=total>0?Math.round(correct/total*100):0;
+  const db=getDB();
+  db.sessions=(db.sessions||0)+1;
+  db.totalOk=(db.totalOk||0)+correct;
+  const today=new Date().toDateString();
+  if(db.lastPlay!==today)db.streak=(db.streak||0)+1;
+  db.lastPlay=today;saveDB(db);
+
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;
+  document.getElementById('rs-ko').textContent=wrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+
+  const det=document.getElementById('res-detail');
+  det.innerHTML='<div class="rd-title">Détail</div>';
+  answers.forEach(a=>{
+    const row=document.createElement('div');row.className='rd-row';
+    const label=a.q.phrase?a.q.phrase.join(' ').replace('{ADJ}','[…]'):a.q.question||'';
+    row.innerHTML=`<span style="color:${a.ok?'var(--green)':'var(--red)'}">${a.ok?'✅':'❌'}</span> <span style="font-size:12px">${label.substring(0,50)}</span>`;
+    det.appendChild(row);
+  });
+  if(pct>=70)launchConfetti();
+  showScreen('sc-result');
+}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){
+  const colors=['#FF6B9D','#C77DFF','#FFD93D','#6BCB77','#4D96FF'];
+  for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
+}
+
+buildHome();
+</script>
+</body>
+</html>
+

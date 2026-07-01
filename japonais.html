@@ -1,0 +1,1161 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Japonais <b style="font-size:14px">JP</b></title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'><b style="font-size:14px">JP</b></text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#E63946;--pink:#FF6B9D;--purple:#C77DFF;--blue:#4D96FF;
+  --green:#6BCB77;--yellow:#FFD93D;--orange:#FF9F1C;--teal:#26de81;
+  --bg:#FFF5F5;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ HOME ══ */
+#sc-home{background:linear-gradient(160deg,#1a1a2e 0%,#2d1b4e 100%);padding-bottom:40px;overflow-y:auto;}
+.home-header{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-flag{font-size:48px;display:block;animation:float 3s ease-in-out infinite;}
+.home-title{font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;color:#fff;margin-top:6px;}
+.home-sub{color:rgba(255,255,255,.55);font-size:13px;margin-top:3px;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+
+/* Progress bar */
+.global-prog{background:rgba(255,255,255,.07);border-radius:16px;padding:14px 16px;}
+.gp-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.gp-row{display:flex;justify-content:space-around;}
+.gp-stat{text-align:center;}
+.gp-val{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+.gp-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;}
+.gp-bar-wrap{height:5px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;margin-top:10px;}
+.gp-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--pink));border-radius:999px;transition:width .6s;}
+
+/* Mode buttons */
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mode-card{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:18px;padding:14px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;gap:5px;}
+.mode-card:active{transform:scale(.97);}
+.mode-card.locked{opacity:.4;cursor:default;}
+.mc-icon{font-size:28px;}
+.mc-name{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;color:#fff;}
+.mc-desc{font-size:10px;color:rgba(255,255,255,.5);}
+.mc-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;width:fit-content;}
+.mc-badge.ok{background:rgba(107,203,119,.3);color:var(--green);}
+.mc-badge.locked{background:rgba(255,255,255,.1);color:rgba(255,255,255,.4);}
+.mc-badge.ready{background:rgba(255,211,61,.25);color:var(--yellow);}
+
+/* Column grid */
+.cols-section{background:rgba(255,255,255,.07);border-radius:16px;padding:14px 16px;}
+.cols-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.cols-grid{display:flex;flex-wrap:wrap;gap:7px;}
+.col-pill{border-radius:12px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all .2s;border:2px solid transparent;min-width:52px;}
+.col-pill.locked{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);opacity:.5;cursor:default;}
+.col-pill.learning{background:rgba(255,211,61,.15);border-color:rgba(255,211,61,.4);}
+.col-pill.mastered{background:rgba(107,203,119,.15);border-color:rgba(107,203,119,.4);}
+.col-pill.active{background:rgba(77,150,255,.2);border-color:var(--blue);transform:scale(1.05);}
+.col-kana{font-size:20px;color:#fff;}
+.col-ro{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);}
+.col-stars{font-size:9px;}
+
+/* Errors chip */
+.errors-chip{background:rgba(255,71,87,.15);border:1px solid rgba(255,71,87,.3);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.ec-left{display:flex;flex-direction:column;gap:2px;}
+.ec-title{font-size:13px;font-weight:800;color:#fff;}
+.ec-count{font-size:11px;color:rgba(255,71,87,.8);}
+.ec-btn{background:rgba(255,71,87,.3);border:none;border-radius:10px;padding:7px 14px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+
+/* ══ LEARN SCREEN ══ */
+#sc-learn{background:var(--bg);}
+.learn-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;}
+.ln-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.ln-title{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:var(--dark);}
+.ln-quit{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+
+/* Step indicator */
+.step-bar{display:flex;gap:4px;padding:0 16px 8px;align-items:center;}
+.step-dot{flex:1;height:6px;border-radius:999px;background:#E5E7EB;transition:all .3s;}
+.step-dot.active{background:var(--orange);}
+.step-dot.done{background:var(--green);}
+.step-label{font-size:11px;font-weight:800;color:var(--gray);white-space:nowrap;margin-left:6px;}
+
+/* ─ STEP 1: Copie visible ─ */
+.step-card{background:#fff;border-radius:22px;margin:8px 16px;padding:20px;box-shadow:0 4px 20px rgba(230,57,70,.1);}
+.step-card-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;text-align:center;}
+.kana-showcase{display:flex;flex-direction:column;gap:10px;}
+.kana-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:#FAFAFA;cursor:pointer;transition:all .2s;}
+.kana-row:active{background:#F0F0F0;}
+.kana-row.highlighted{background:rgba(230,57,70,.08);border:2px solid rgba(230,57,70,.2);}
+.kr-char{font-size:44px;line-height:1;min-width:52px;text-align:center;}
+.kr-info{flex:1;}
+.kr-ro{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);}
+.kr-word{font-size:12px;color:var(--gray);font-weight:600;margin-top:2px;}
+.kr-audio{background:rgba(77,150,255,.1);border:none;border-radius:10px;padding:8px 12px;font-size:16px;cursor:pointer;}
+.step-next-btn{width:100%;background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border:none;border-radius:16px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;cursor:pointer;margin:10px 16px 0;width:calc(100% - 32px);}
+
+/* ─ STEP 2: Repérer dans liste ─ */
+.find-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.find-cell{border:2px solid #E5E7EB;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;}
+.find-cell.correct{border-color:var(--green);background:rgba(107,203,119,.15);animation:pop .3s ease;}
+.find-cell.wrong{border-color:var(--red);background:rgba(255,71,87,.1);animation:shake .3s ease;}
+.find-cell.target{border-color:var(--orange);background:rgba(255,159,28,.08);}
+.find-char{font-size:28px;display:block;}
+.find-ro{display:none;}
+.find-question{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;color:var(--dark);text-align:center;margin-bottom:12px;}
+.find-hint{font-size:13px;color:var(--gray);text-align:center;margin-bottom:10px;}
+.find-score{display:flex;gap:6px;justify-content:center;margin-bottom:10px;}
+.find-dot{width:14px;height:14px;border-radius:50%;background:#E5E7EB;transition:all .2s;}
+.find-dot.ok{background:var(--green);}
+.find-dot.ko{background:var(--red);}
+
+/* ─ STEP 3: Reproduire ─ */
+.repro-target{font-family:'Baloo 2',sans-serif;font-size:56px;font-weight:900;color:var(--dark);text-align:center;margin:8px 0;}
+.repro-ro{font-size:18px;font-weight:700;color:var(--gray);text-align:center;margin-bottom:12px;}
+.repro-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.repro-choice{border:2px solid #E5E7EB;border-radius:14px;padding:14px;font-size:32px;text-align:center;cursor:pointer;background:#fff;transition:all .15s;}
+.repro-choice:active{transform:scale(.93);}
+.repro-choice.correct{border-color:var(--green);background:rgba(107,203,119,.15);}
+.repro-choice.wrong{border-color:var(--red);background:rgba(255,71,87,.1);}
+.repro-choice.reveal{border-color:var(--green);background:rgba(107,203,119,.08);}
+
+/* ─ STEP 4: Prononcer ─ */
+.prononce-kana{font-size:72px;text-align:center;margin:8px 0;}
+.prononce-hint{font-size:13px;color:var(--gray);text-align:center;margin-bottom:14px;}
+.mic-big{width:76px;height:76px;border-radius:50%;border:none;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto;}
+.mic-big.idle{background:linear-gradient(135deg,var(--red),var(--pink));box-shadow:0 4px 18px rgba(230,57,70,.4);}
+.mic-big.on{background:linear-gradient(135deg,var(--red),var(--orange));animation:pulse .9s ease-in-out infinite;}
+.mic-big.done{background:linear-gradient(135deg,var(--green),var(--teal));}
+.mic-heard-text{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);text-align:center;min-height:30px;margin-top:8px;}
+.mic-status-text{font-size:13px;color:var(--gray);text-align:center;margin-top:4px;}
+.prononce-fb{border-radius:14px;padding:12px;text-align:center;font-size:14px;font-weight:800;margin-top:8px;display:none;}
+.prononce-fb.ok{background:#D1FAE5;color:#059669;}
+.prononce-fb.ko{background:#FEE2E2;color:var(--red);}
+.skip-btn{background:#F3F4F6;border:none;border-radius:12px;padding:10px 20px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--gray);cursor:pointer;margin-top:8px;}
+
+/* ── TEST SCREEN ── */
+#sc-test{background:var(--bg);}
+.test-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 8px;}
+.test-score-disp{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:var(--yellow);}
+.test-prog{font-size:12px;font-weight:700;color:var(--gray);}
+.tpbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 10px;}
+.tpfill{height:100%;background:linear-gradient(90deg,var(--red),var(--pink));border-radius:999px;transition:width .4s;}
+.test-card{background:#fff;border-radius:22px;margin:0 16px;padding:22px 18px;text-align:center;box-shadow:0 6px 22px rgba(230,57,70,.1);min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:background .3s;}
+.test-kana-big{font-size:80px;line-height:1;color:var(--dark);}
+.test-ro-big{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;color:var(--dark);}
+.test-hint{font-size:13px;color:var(--gray);font-weight:700;}
+.test-audio-btn{background:linear-gradient(135deg,var(--blue),var(--teal));border:none;border-radius:14px;padding:11px 22px;color:#fff;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;}
+.test-qcm{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 16px 0;}
+.tq-btn{border:2px solid #E5E7EB;background:#fff;border-radius:16px;padding:16px;font-size:30px;cursor:pointer;transition:all .15s;text-align:center;}
+.tq-btn .tq-ro{font-size:12px;font-weight:700;color:var(--gray);display:block;margin-top:3px;}
+.tq-btn:active{transform:scale(.95);}
+.tq-btn.correct{border-color:var(--green);background:rgba(107,203,119,.15);}
+.tq-btn.wrong{border-color:var(--red);background:rgba(255,71,87,.1);}
+.tq-btn.reveal{border-color:var(--green);background:rgba(107,203,119,.08);}
+.test-mic-zone{display:flex;flex-direction:column;align-items:center;gap:6px;margin:10px 16px 0;}
+.test-duo-fb{border-radius:14px;padding:11px;font-size:14px;font-weight:800;text-align:center;display:none;margin:6px 16px 0;}
+.test-duo-fb.ok{background:#D1FAE5;color:#059669;}
+.test-duo-fb.ko{background:#FEE2E2;color:var(--red);}
+.test-next-btn{display:none;background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border:none;border-radius:14px;padding:12px 28px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px auto 0;}
+.stars-row{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin:4px 0;}
+.star{font-size:15px;transition:all .3s;}
+
+/* ══ RESULT ══ */
+#sc-result{padding:20px 16px;gap:12px;overflow-y:auto;align-items:center;padding-bottom:40px;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--red),var(--pink));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--red);color:var(--red);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.pop{animation:pop .3s ease forwards;}
+.shake{animation:shake .3s ease forwards;}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ HOME ══ -->
+<div id="sc-home" class="screen active">
+  <div class="home-header">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span class="home-flag"><b style="font-size:14px">JP</b></span>
+    <div class="home-title">Japonais</div>
+    <div class="home-sub">Hiragana · Katakana · Expressions</div>
+  </div>
+  <div class="home-body">
+    <div class="global-prog">
+      <div class="gp-title">Ma progression</div>
+      <div class="gp-row">
+        <div class="gp-stat"><div class="gp-val" id="gp-kana">0</div><div class="gp-lbl">Kana appris</div></div>
+        <div class="gp-stat"><div class="gp-val" id="gp-sessions">0</div><div class="gp-lbl">Sessions</div></div>
+        <div class="gp-stat"><div class="gp-val" id="gp-streak">0🔥</div><div class="gp-lbl">Série</div></div>
+      </div>
+      <div class="gp-bar-wrap"><div class="gp-bar-fill" id="gp-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Mode cards -->
+    <div class="mode-cards">
+      <div class="mode-card" onclick="startLearnMode()">
+        <span class="mc-icon">📖</span>
+        <div class="mc-name">Apprendre</div>
+        <div class="mc-desc">Copie → Repérer → Reproduire → Prononcer</div>
+        <span class="mc-badge ready" id="badge-learn">Colonne par colonne</span>
+      </div>
+      <div class="mode-card" id="test-card" onclick="startTestMode()">
+        <span class="mc-icon">🎯</span>
+        <div class="mc-name">Tester</div>
+        <div class="mc-desc">QCM + Vocal sur tous les kana appris</div>
+        <span class="mc-badge locked" id="badge-test">Débloqué à 5 kana</span>
+      </div>
+      <div class="mode-card" id="errors-mode-card" onclick="startErrorMode()" style="display:none">
+        <span class="mc-icon">🔁</span>
+        <div class="mc-name">Réviser erreurs</div>
+        <div class="mc-desc">Retravailler les kana ratés</div>
+        <span class="mc-badge" style="background:rgba(255,71,87,.2);color:var(--red)" id="badge-errors">0 à revoir</span>
+      </div>
+      <div class="mode-card" id="kata-card" onclick="alert('Katakana bientôt disponible ! Commence par les hiragana 😊')">
+        <span class="mc-icon">ア</span>
+        <div class="mc-name">Katakana</div>
+        <div class="mc-desc">Disponible bientôt</div>
+        <span class="mc-badge ready">🚧 En construction</span>
+      </div>
+    </div>
+
+    <!-- Columns -->
+    <div class="cols-section">
+      <div class="cols-title">Colonnes hiragana</div>
+      <div class="cols-grid" id="cols-grid"></div>
+    </div>
+
+    <!-- Errors -->
+    <div class="errors-chip" id="errors-chip" style="display:none" onclick="startErrorMode()">
+      <div class="ec-left">
+        <div class="ec-title">❌ Kana à retravailler</div>
+        <div class="ec-count" id="ec-count">0 kana avec erreurs</div>
+      </div>
+      <button class="ec-btn">Réviser →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LEARN ══ -->
+<div id="sc-learn" class="screen">
+  <div class="learn-nav">
+    <button class="ln-back" onclick="backToHome()">← Retour</button>
+    <div class="ln-title" id="ln-title">Colonne あ</div>
+    <button class="ln-quit" onclick="backToHome()">🏠</button>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot" id="sd-0"></div>
+    <div class="step-dot" id="sd-1"></div>
+    <div class="step-dot" id="sd-2"></div>
+    <div class="step-dot" id="sd-3"></div>
+    <span class="step-label" id="step-label">Étape 1/4</span>
+  </div>
+  <div id="learn-content" style="padding:0 16px;display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;padding-bottom:32px;"></div>
+</div>
+
+<!-- ══ TEST ══ -->
+<div id="sc-test" class="screen">
+  <div class="test-nav">
+    <button class="ln-back" onclick="backToHome()">← Retour</button>
+    <div class="stars-row" id="test-stars"></div>
+    <div class="test-score-disp" id="test-score">0</div>
+  </div>
+  <div class="tpbar"><div class="tpfill" id="tpfill" style="width:0%"></div></div>
+  <div class="test-card" id="test-card-el">
+    <div id="test-content"></div>
+  </div>
+  <div class="test-qcm" id="test-qcm" style="display:none"></div>
+  <div class="test-mic-zone" id="test-mic-zone" style="display:none">
+    <button class="mic-big idle" id="test-mic-btn" onclick="toggleTestMic()">🎤</button>
+    <div class="mic-status-text" id="test-mic-status">Appuie et prononce</div>
+    <div class="mic-heard-text" id="test-mic-heard"></div>
+  </div>
+  <div class="test-duo-fb" id="test-duo-fb"></div>
+  <button class="test-next-btn" id="test-next-btn" onclick="nextTestQ()">Continuer →</button>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--orange)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div id="res-unlock" style="display:none;background:rgba(107,203,119,.15);border:2px solid var(--green);border-radius:16px;padding:14px;text-align:center;width:100%">
+    <div style="font-size:24px">🎉</div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:#059669" id="res-unlock-text"></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="replaySession()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backToHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+<script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+
+// Firebase score sync helper
+async function syncScore(appName, scoreData) {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid');
+    if (!uid || uid === 'undefined') return;
+    const firebase_app = window._fb_app || (window._fb_app = (() => {
+      if (!firebase.apps.length) firebase.initializeApp({
+        apiKey:"AIzaSyAVRC2nu8xEbYlFdhyGjKtY-RiIsA3fQ1o",
+        authDomain:"leoluce-ad497.firebaseapp.com",
+        projectId:"leoluce-ad497"
+      });
+      return firebase.app();
+    })());
+    const fdb = firebase.firestore();
+    await fdb.collection('users').doc(uid).update({
+      [`scores.${appName}`]: {
+        best: scoreData.best || 0,
+        sessions: firebase.firestore.FieldValue.increment(1),
+        lastPlay: new Date().toISOString(),
+        pct: scoreData.pct || 0
+      }
+    });
+  } catch(e) { /* silent fail */ }
+}
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+const HIRA_COLS = [
+  {id:'a',  label:'あ列', chars:[['あ','a','あい','amour'],['い','i','いぬ','chien'],['う','u','うえ','au-dessus'],['え','e','え','dessin'],['お','o','おかあさん','maman']]},
+  {id:'ka', label:'か列', chars:[['か','ka','かさ','parapluie'],['き','ki','き','arbre'],['く','ku','くつ','chaussures'],['け','ke','けいたい','téléphone'],['こ','ko','こい','carpe']]},
+  {id:'sa', label:'さ列', chars:[['さ','sa','さくら','cerisier'],['し','shi','しろくま','ours blanc'],['す','su','すし','sushi'],['せ','se','せんせい','professeur'],['そ','so','そら','ciel']]},
+  {id:'ta', label:'た列', chars:[['た','ta','たこ','pieuvre'],['ち','chi','ちず','carte'],['つ','tsu','つき','lune'],['て','te','て','main'],['と','to','とけい','montre']]},
+  {id:'na', label:'な列', chars:[['な','na','なか','intérieur'],['に','ni','にく','viande'],['ぬ','nu','ぬの','tissu'],['ね','ne','ねこ','chat'],['の','no','のはら','prairie']]},
+  {id:'ha', label:'は列', chars:[['は','ha','はな','fleur'],['ひ','hi','ひと','personne'],['ふ','fu','ふね','bateau'],['へ','he','へそ','nombril'],['ほ','ho','ほし','étoile']]},
+  {id:'ma', label:'ま列', chars:[['ま','ma','まち','ville'],['み','mi','みみ','oreille'],['む','mu','むし','insecte'],['め','me','め','œil'],['も','mo','もも','pêche']]},
+  {id:'ya', label:'や列', chars:[['や','ya','やま','montagne'],['ゆ','yu','ゆき','neige'],['よ','yo','よてい','programme']]},
+  {id:'ra', label:'ら列', chars:[['ら','ra','らいねん','année prochaine'],['り','ri','りか','sciences'],['る','ru','くるま','voiture'],['れ','re','れきし','histoire'],['ろ','ro','しろくま','ours blanc']]},
+  {id:'wa', label:'わ列', chars:[['わ','wa','わに','crocodile'],['を','wo','ごはんをたべる','manger du riz'],['ん','n','しんかんせん','shinkansen']]},
+];
+
+const TOTAL_KANA = HIRA_COLS.reduce((s,c)=>s+c.chars.length,0);
+
+// ══════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════
+function getDB(){ try{return JSON.parse(localStorage.getItem('jp_v2')||'{}')}catch(e){return{}} }
+function saveDB(db){ localStorage.setItem('jp_v2',JSON.stringify(db)); }
+
+function getMastered(){ return getDB().mastered||[]; }
+function getErrors(){ return getDB().errors||{}; }
+function getColProgress(colId){ return (getDB().colProgress||{})[colId]||{step:0,scores:{}}; }
+
+function markMastered(kana){
+  const db=getDB(); if(!db.mastered) db.mastered=[];
+  if(!db.mastered.includes(kana)) db.mastered.push(kana);
+  saveDB(db);
+}
+function addError(kana){
+  const db=getDB(); if(!db.errors) db.errors={};
+  db.errors[kana]=(db.errors[kana]||0)+1; saveDB(db);
+}
+function reduceError(kana){
+  const db=getDB(); if(!db.errors) return;
+  db.errors[kana]=Math.max(0,(db.errors[kana]||0)-1);
+  saveDB(db);
+}
+function setColStep(colId,step){
+  const db=getDB(); if(!db.colProgress) db.colProgress={};
+  if(!db.colProgress[colId]) db.colProgress[colId]={step:0,scores:{}};
+  db.colProgress[colId].step=step; saveDB(db);
+}
+function isColUnlocked(colIdx){
+  return true; // Toutes les colonnes accessibles dès le début
+}
+function isColMastered(col){
+  const mastered=getMastered();
+  return col.chars.filter(c=>mastered.includes(c[0])).length/col.chars.length>=0.8;
+}
+
+// ══════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════
+function goHub(){
+  const base=window.location.href.substring(0,window.location.href.lastIndexOf('/')+1);
+  window.location.href=base+'index.html';
+}
+
+function updateHome(){
+  const mastered=getMastered();
+  const errors=getErrors();
+  const errKana=Object.entries(errors).filter(([,v])=>v>0);
+  const db=getDB();
+
+  // Stats
+  document.getElementById('gp-kana').textContent=mastered.length;
+  document.getElementById('gp-sessions').textContent=db.sessions||0;
+  document.getElementById('gp-streak').textContent=(db.streak||0)+'🔥';
+  document.getElementById('gp-bar').style.width=(mastered.length/TOTAL_KANA*100)+'%';
+
+  // Test badge
+  const testCard=document.getElementById('test-card');
+  const testBadge=document.getElementById('badge-test');
+  if(mastered.length>=5){
+    testCard.classList.remove('locked');
+    testBadge.className='mc-badge ok';
+    testBadge.textContent=mastered.length+' kana à tester';
+  }
+
+  // Errors
+  if(errKana.length>0){
+    document.getElementById('errors-chip').style.display='';
+    document.getElementById('errors-mode-card').style.display='';
+    document.getElementById('ec-count').textContent=errKana.length+' kana avec erreurs';
+    document.getElementById('badge-errors').textContent=errKana.length+' à revoir';
+  } else {
+    document.getElementById('errors-chip').style.display='none';
+    document.getElementById('errors-mode-card').style.display='none';
+  }
+
+  // Katakana toujours accessible
+  const kataCard = document.getElementById('kata-card');
+  if(kataCard) kataCard.classList.remove('locked');
+
+  // Columns grid
+  buildColsGrid();
+}
+
+function buildColsGrid(){
+  const grid=document.getElementById('cols-grid');
+  if(!grid){ console.error('cols-grid not found'); return; }
+  grid.innerHTML='';
+  const mastered=getMastered();
+  HIRA_COLS.forEach((col,idx)=>{
+    const colMastered=isColMastered(col);
+    const pill=document.createElement('div');
+    pill.className='col-pill'+(colMastered?' mastered':' learning');
+    pill.innerHTML=`<span class="col-kana">${col.chars[0][0]}</span><span class="col-ro">${col.id}</span><span class="col-stars">${colMastered?'✅':'📖'}</span>`;
+    pill.onclick=()=>startLearnCol(idx);
+    grid.appendChild(pill);
+  });
+}
+
+// ══════════════════════════════════════════
+// LEARN MODE
+// ══════════════════════════════════════════
+let currentColIdx=0, learnStep=0, currentCol=null;
+let learnCorrect=0, learnWrong=0;
+
+function startLearnMode(){
+  // Find first unlocked, non-mastered column
+  let idx=0;
+  for(let i=0;i<HIRA_COLS.length;i++){
+    if(isColUnlocked(i) && !isColMastered(HIRA_COLS[i])){ idx=i; break; }
+  }
+  startLearnCol(idx);
+}
+
+function startLearnCol(idx){
+  currentColIdx=idx;
+  currentCol=HIRA_COLS[idx];
+  const alreadyMastered = isColMastered(currentCol);
+  const progress=getColProgress(currentCol.id);
+  // If the column is already mastered, always restart from step 0 (full review)
+  // instead of resuming at the last saved step (which would skip straight to the end)
+  learnStep = alreadyMastered ? 0 : (progress.step||0);
+  learnCorrect=0; learnWrong=0;
+  document.getElementById('ln-title').textContent=currentCol.label+(alreadyMastered?' (révision)':'');
+  showScreen('sc-learn');
+  renderLearnStep();
+}
+
+function renderLearnStep(){
+  updateStepBar();
+  const content=document.getElementById('learn-content');
+  content.innerHTML='';
+  if(learnStep===0) renderStep1(content);
+  else if(learnStep===1) renderStep2(content);
+  else if(learnStep===2) renderStep3(content);
+  else if(learnStep===3) renderStep4(content);
+}
+
+function updateStepBar(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('sd-'+i);
+    d.className='step-dot'+(i<learnStep?' done':i===learnStep?' active':'');
+  }
+  const labels=['1/4 — Copie visible','2/4 — Repérer','3/4 — Reproduire','4/4 — Prononcer'];
+  document.getElementById('step-label').textContent=labels[learnStep]||'';
+}
+
+// ─ STEP 1: Copie visible + tracé un par un ─
+let traceIdx = 0;
+function renderStep1(container){
+  traceIdx = 0;
+  showTraceOne(container);
+}
+
+function showTraceOne(container){
+  container.innerHTML='';
+  const chars = currentCol.chars;
+  const [kana, ro, word, meaning] = chars[traceIdx];
+  const isLast = traceIdx === chars.length - 1;
+
+  // Show current kana info
+  const infoCard = document.createElement('div'); infoCard.className='step-card';
+  infoCard.innerHTML=`
+    <div class="step-card-title">✏️ Observe puis trace au doigt — ${traceIdx+1}/${chars.length}</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:8px 0 14px">
+      <div style="text-align:center;min-width:70px">
+        <div style="font-size:72px;line-height:1">${kana}</div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:var(--dark);margin-top:4px">${ro}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:2px">${word} — ${meaning}</div>
+      </div>
+      <button onclick="speakJP('${kana}')" style="background:linear-gradient(135deg,var(--blue),var(--teal));border:none;border-radius:14px;padding:10px 16px;color:#fff;font-size:16px;cursor:pointer">🔊</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray);text-align:center;margin-bottom:6px">Trace ce caractère au doigt :</div>
+    <canvas id="trace-canvas-${traceIdx}" style="width:100%;height:160px;border-radius:14px;border:2px solid #E5E7EB;background:#F9F9FF;display:block;touch-action:none"></canvas>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+      <button onclick="undoLastStroke(${traceIdx})" style="background:#F0F7FF;border:none;border-radius:11px;padding:9px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--blue)">↩️ Annuler le trait</button>
+      <button onclick="clearTraceCanvas(${traceIdx})" style="background:#F3F4F6;border:none;border-radius:11px;padding:9px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🗑️ Tout effacer</button>
+    </div>`;
+  container.appendChild(infoCard);
+  speakJP(kana);
+
+  // Init canvas
+  setTimeout(()=>initTraceCanvas(traceIdx), 100);
+
+  // Navigation buttons
+  const navDiv = document.createElement('div');
+  navDiv.style.cssText='display:flex;gap:8px;padding:0 0 8px';
+
+  if(traceIdx > 0){
+    const prevBtn = document.createElement('button');
+    prevBtn.className='skip-btn'; prevBtn.textContent='← Précédent';
+    prevBtn.style.cssText='display:block;flex:1;text-align:center;';
+    prevBtn.onclick=()=>{ traceIdx--; showTraceOne(document.getElementById('learn-content')); };
+    navDiv.appendChild(prevBtn);
+  }
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className='step-next-btn';
+  nextBtn.style.cssText='flex:1;margin:0;';
+  nextBtn.textContent = isLast ? "✅ J'ai tout tracé → Continuer" : `Caractère suivant → ${chars[traceIdx+1]?.[0]||''}`;
+  nextBtn.onclick=()=>{
+    if(isLast){ advanceStep(); }
+    else { traceIdx++; showTraceOne(document.getElementById('learn-content')); }
+  };
+  navDiv.appendChild(nextBtn);
+  container.appendChild(navDiv);
+
+  // Progress dots
+  const dots = document.createElement('div');
+  dots.style.cssText='display:flex;gap:6px;justify-content:center;padding-bottom:8px';
+  chars.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.style.cssText=`width:10px;height:10px;border-radius:50%;background:${i<traceIdx?'var(--green)':i===traceIdx?'var(--orange)':'#E5E7EB'};transition:all .3s`;
+    dots.appendChild(d);
+  });
+  container.appendChild(dots);
+}
+
+let traceCtxMap = {};
+let traceStrokesMap = {}; // idx -> array of strokes, each stroke = array of {x,y} points
+
+function initTraceCanvas(idx){
+  const canvas = document.getElementById('trace-canvas-'+idx);
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.fillStyle='#F9F9FF'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  traceCtxMap[idx] = ctx;
+  traceStrokesMap[idx] = [];
+  let drawing=false, currentStroke=null;
+  canvas.onpointerdown=e=>{
+    drawing=true;
+    const r=canvas.getBoundingClientRect(),sx=canvas.width/r.width,sy=canvas.height/r.height;
+    const x=(e.clientX-r.left)*sx, y=(e.clientY-r.top)*sy;
+    currentStroke=[{x,y}];
+    traceStrokesMap[idx].push(currentStroke);
+    ctx.beginPath(); ctx.moveTo(x,y);
+  };
+  canvas.onpointermove=e=>{
+    if(!drawing)return;
+    const r=canvas.getBoundingClientRect(),sx=canvas.width/r.width,sy=canvas.height/r.height;
+    const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;
+    ctx.lineTo(x,y); ctx.stroke();
+    if(currentStroke) currentStroke.push({x,y});
+  };
+  canvas.onpointerup=canvas.onpointerleave=()=>{ drawing=false; currentStroke=null; };
+}
+
+function redrawTraceCanvas(idx){
+  const canvas=document.getElementById('trace-canvas-'+idx);
+  const ctx=traceCtxMap[idx];
+  if(!canvas||!ctx) return;
+  ctx.fillStyle='#F9F9FF'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const strokes = traceStrokesMap[idx]||[];
+  strokes.forEach(stroke=>{
+    if(stroke.length<2) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+    for(let i=1;i<stroke.length;i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+    ctx.stroke();
+  });
+}
+
+function undoLastStroke(idx){
+  const strokes = traceStrokesMap[idx];
+  if(strokes && strokes.length>0){
+    strokes.pop();
+    redrawTraceCanvas(idx);
+  }
+}
+
+function clearTraceCanvas(idx){
+  const canvas=document.getElementById('trace-canvas-'+idx);
+  const ctx=traceCtxMap[idx];
+  if(canvas&&ctx){ ctx.fillStyle='#F9F9FF'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+  traceStrokesMap[idx] = [];
+}
+
+function speakCol(){
+  let i=0;
+  const chars=currentCol.chars;
+  function playNext(){ if(i>=chars.length)return; speakJP(chars[i][0]); i++; setTimeout(playNext,1200); }
+  playNext();
+}
+
+// ─ STEP 2: Repérer dans liste ─
+let findQueue=[], findIdx=0, findCorrectCount=0;
+function renderStep2(container){
+  // Build a pool of ALL unlocked kana for distraction
+  const allKana=[];
+  HIRA_COLS.forEach((col,ci)=>{ if(isColUnlocked(ci)) col.chars.forEach(c=>allKana.push(c)); });
+
+  findQueue=[...currentCol.chars].sort(()=>Math.random()-.5);
+  findIdx=0; findCorrectCount=0;
+
+  const card=document.createElement('div'); card.className='step-card';
+  card.innerHTML=`
+    <div class="step-card-title">🔍 Trouve le bon caractère !</div>
+    <div class="find-hint" id="find-hint">Trouve le hiragana qui se lit :</div>
+    <div class="find-question" id="find-question">${findQueue[0][1]}</div>
+    <div class="find-score" id="find-score"></div>
+    <div class="find-grid" id="find-grid"></div>`;
+  container.appendChild(card);
+
+  buildFindGrid(allKana);
+  buildFindScore();
+}
+
+function buildFindScore(){
+  const score=document.getElementById('find-score');
+  if(!score)return;
+  score.innerHTML=findQueue.map((_,i)=>`<div class="find-dot" id="fd-${i}"></div>`).join('');
+}
+
+function buildFindGrid(allKana){
+  const grid=document.getElementById('find-grid'); if(!grid)return;
+  grid.innerHTML='';
+  const target=findQueue[findIdx];
+  // 3 distractors from all unlocked (not current target)
+  const others=allKana.filter(c=>c[0]!==target[0]).sort(()=>Math.random()-.5).slice(0,7);
+  const pool=[target,...others].sort(()=>Math.random()-.5);
+  pool.forEach(([kana,ro])=>{
+    const cell=document.createElement('div'); cell.className='find-cell';
+    cell.innerHTML=`<span class="find-char">${kana}</span>`;
+    cell.onclick=()=>checkFind(kana,target[0],cell);
+    grid.appendChild(cell);
+  });
+}
+
+function checkFind(chosen,target,cell){
+  const ok=chosen===target;
+  cell.classList.add(ok?'correct':'wrong');
+  const dot=document.getElementById('fd-'+findIdx);
+  if(dot){ dot.className='find-dot '+(ok?'ok':'ko'); }
+  if(ok){
+    findCorrectCount++;
+    setTimeout(()=>{
+      findIdx++;
+      if(findIdx>=findQueue.length){ checkStepCompletion(2,findCorrectCount,findQueue.length); return; }
+      const qEl=document.getElementById('find-question');
+      if(qEl) qEl.textContent=findQueue[findIdx][1];
+      // Rebuild pool including all unlocked
+      const allKana=[];
+      HIRA_COLS.forEach((col,ci)=>{ if(isColUnlocked(ci)) col.chars.forEach(c=>allKana.push(c)); });
+      buildFindGrid(allKana);
+    },500);
+  } else {
+    setTimeout(()=>cell.classList.remove('wrong'),600);
+  }
+}
+
+// ─ STEP 3: Reproduire ─
+let reproQueue=[], reproIdx=0, reproCorrect=0;
+function renderStep3(container){
+  reproQueue=[...currentCol.chars].sort(()=>Math.random()-.5);
+  reproIdx=0; reproCorrect=0;
+  const card=document.createElement('div'); card.className='step-card';
+  card.innerHTML=`
+    <div class="step-card-title">✍️ Retrouve le caractère</div>
+    <div class="repro-target" id="repro-target"></div>
+    <div class="repro-ro" id="repro-ro"></div>
+    <div id="repro-score" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px"></div>
+    <div class="repro-choices" id="repro-choices"></div>`;
+  container.appendChild(card);
+  buildReproScore();
+  showReproQ();
+}
+
+function buildReproScore(){
+  const s=document.getElementById('repro-score'); if(!s)return;
+  s.innerHTML=reproQueue.map((_,i)=>`<div class="find-dot" id="rpd-${i}"></div>`).join('');
+}
+
+function showReproQ(){
+  const q=reproQueue[reproIdx];
+  const rt=document.getElementById('repro-target');
+  const rr=document.getElementById('repro-ro');
+  if(rt) rt.textContent='?';
+  if(rr){ rr.textContent=q[1]; speakJP(q[0]); }
+  // Choices: current + distractors from col + other cols
+  const allKana=HIRA_COLS.flatMap(c=>c.chars);
+  const others=allKana.filter(c=>c[0]!==q[0]).sort(()=>Math.random()-.5).slice(0,5);
+  const choices=[q,...others].sort(()=>Math.random()-.5).slice(0,6);
+  const grid=document.getElementById('repro-choices'); if(!grid)return;
+  grid.innerHTML='';
+  choices.forEach(([kana])=>{
+    const btn=document.createElement('button'); btn.className='repro-choice'; btn.textContent=kana;
+    btn.onclick=()=>checkRepro(kana,q[0],btn,grid);
+    grid.appendChild(btn);
+  });
+}
+
+function checkRepro(chosen,target,btn,grid){
+  const ok=chosen===target;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok){ grid.querySelectorAll('.repro-choice').forEach(b=>{ if(b.textContent===target) b.classList.add('reveal'); }); }
+  const dot=document.getElementById('rpd-'+reproIdx); if(dot) dot.className='find-dot '+(ok?'ok':'ko');
+  const rt=document.getElementById('repro-target'); if(rt) rt.textContent=target;
+  if(ok) reproCorrect++;
+  setTimeout(()=>{
+    reproIdx++;
+    if(reproIdx>=reproQueue.length){ checkStepCompletion(3,reproCorrect,reproQueue.length); return; }
+    grid.querySelectorAll('.repro-choice').forEach(b=>b.className='repro-choice');
+    showReproQ();
+  }, ok?700:1200);
+}
+
+// ─ STEP 4: Prononcer ─
+let pronQueue=[], pronIdx=0, pronCorrect=0, pronMicOn=false, pronRecog=null;
+function renderStep4(container){
+  pronQueue=[...currentCol.chars].sort(()=>Math.random()-.5);
+  pronIdx=0; pronCorrect=0;
+
+  const card=document.createElement('div'); card.className='step-card';
+  card.innerHTML=`
+    <div class="step-card-title">🎤 Prononce chaque caractère</div>
+    <div class="prononce-kana" id="pron-kana">${pronQueue[0][0]}</div>
+    <div class="prononce-hint">Prononce sa lecture en français (ex: "${pronQueue[0][1]}")</div>
+    <div style="display:flex;gap:5px;justify-content:center;margin-bottom:10px" id="pron-score"></div>
+    <button class="mic-big idle" id="pron-mic" onclick="togglePronMic()">🎤</button>
+    <div class="mic-heard-text" id="pron-heard"></div>
+    <div class="mic-status-text" id="pron-status">Appuie sur le micro et prononce</div>
+    <div class="prononce-fb" id="pron-fb"></div>`;
+  container.appendChild(card);
+
+  const skipBtn=document.createElement('button'); skipBtn.className='skip-btn';
+  skipBtn.textContent='⏭️ Passer ce caractère';
+  skipBtn.onclick=()=>skipPron();
+  skipBtn.style.cssText='display:block;margin:6px auto;';
+  container.appendChild(skipBtn);
+
+  buildPronScore();
+  speakJP(pronQueue[0][0]);
+}
+
+function buildPronScore(){
+  const s=document.getElementById('pron-score'); if(!s)return;
+  s.innerHTML=pronQueue.map((_,i)=>`<div class="find-dot" id="prd-${i}"></div>`).join('');
+}
+
+function togglePronMic(){
+  if(pronMicOn){ stopPronMic(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('pron-status').textContent='Micro non dispo — prononce à voix haute puis valide';
+    document.querySelector('.skip-btn').textContent="✅ J'ai prononcé → Suivant";
+    return;
+  }
+  pronRecog=new SR(); pronRecog.lang='fr-FR'; pronRecog.continuous=false; pronRecog.interimResults=true;
+  pronRecog.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
+    document.getElementById('pron-heard').textContent='"'+t+'"';
+    if(e.results[e.results.length-1].isFinal) checkPron(t);
+  };
+  pronRecog.onerror=()=>{ stopPronMic(); skipPron(); };
+  pronRecog.onend=()=>{ pronMicOn=false; const b=document.getElementById('pron-mic'); if(b) b.className='mic-big idle'; };
+  pronRecog.start(); pronMicOn=true;
+  document.getElementById('pron-mic').className='mic-big on';
+  document.getElementById('pron-status').textContent='🔴 J\'écoute…';
+}
+
+function stopPronMic(){ if(pronRecog)pronRecog.stop(); pronMicOn=false; }
+
+function checkPron(heard){
+  stopPronMic();
+  const q=pronQueue[pronIdx];
+  const target=q[1].toLowerCase(); // romaji
+  const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+  const ok=norm(heard).includes(norm(target))||norm(target).includes(norm(heard).slice(0,2));
+  const fb=document.getElementById('pron-fb'); if(!fb)return;
+  fb.style.display='block';
+  fb.className='prononce-fb '+(ok?'ok':'ko');
+  fb.textContent=ok?`✅ Bravo ! "${q[1]}" bien prononcé !`:`❌ Il fallait dire "${q[1]}" — écoute : `;
+  if(!ok) setTimeout(()=>speakJP(q[0]),400);
+  const dot=document.getElementById('prd-'+pronIdx); if(dot) dot.className='find-dot '+(ok?'ok':'ko');
+  if(ok) pronCorrect++;
+  document.getElementById('pron-mic').className='mic-big done';
+  document.getElementById('pron-status').textContent=ok?'Super !':'Écoute et réessaie.';
+  setTimeout(()=>advancePron(), ok?900:1800);
+}
+
+function skipPron(){
+  stopPronMic();
+  const dot=document.getElementById('prd-'+pronIdx); if(dot) dot.className='find-dot ko';
+  advancePron();
+}
+
+function advancePron(){
+  pronIdx++;
+  if(pronIdx>=pronQueue.length){ checkStepCompletion(4,pronCorrect,pronQueue.length); return; }
+  const kanaEl=document.getElementById('pron-kana'); if(kanaEl) kanaEl.textContent=pronQueue[pronIdx][0];
+  const fb=document.getElementById('pron-fb'); if(fb) fb.style.display='none';
+  const heard=document.getElementById('pron-heard'); if(heard) heard.textContent='';
+  document.getElementById('pron-mic').className='mic-big idle';
+  document.getElementById('pron-status').textContent='Appuie sur le micro et prononce';
+  speakJP(pronQueue[pronIdx][0]);
+}
+
+// ─ Step completion ─
+function checkStepCompletion(step, correct, total){
+  const pct=Math.round(correct/total*100);
+  const passed=pct>=80;
+
+  if(passed){
+    // Mark kana as mastered for this step
+    currentCol.chars.forEach(c=>{ if(step===4) markMastered(c[0]); });
+    if(step===4){
+      // Column done!
+      showColResult(correct,total);
+    } else {
+      learnStep=step; // advance
+      setColStep(currentCol.id,step);
+      renderLearnStep();
+    }
+  } else {
+    // Failed — retry this step
+    showStepRetry(step,correct,total);
+  }
+}
+
+function showStepRetry(step,correct,total){
+  const content=document.getElementById('learn-content'); content.innerHTML='';
+  const card=document.createElement('div'); card.className='step-card';
+  card.innerHTML=`
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:48px">😅</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);margin:8px 0">Score : ${correct}/${total}</div>
+      <div style="font-size:14px;color:var(--gray);margin-bottom:16px">Il faut 80% pour avancer. Encore un peu !</div>
+      <button class="step-next-btn" onclick="renderLearnStep()" style="margin:0">🔄 Réessayer cette étape</button>
+    </div>`;
+  content.appendChild(card);
+}
+
+function showColResult(correct,total){
+  const content=document.getElementById('learn-content'); content.innerHTML='';
+  currentCol.chars.forEach(c=>markMastered(c[0]));
+  setColStep(currentCol.id,4);
+  const nextIdx=currentColIdx+1;
+  const hasNext=nextIdx<HIRA_COLS.length;
+  const card=document.createElement('div'); card.className='step-card';
+  card.innerHTML=`
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:56px">🎉</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:var(--dark);margin:8px 0">${currentCol.label} maîtrisée !</div>
+      <div style="font-size:14px;color:var(--gray);margin-bottom:16px">${correct}/${total} correct — Bravo !</div>
+      ${hasNext && isColUnlocked(nextIdx)?`<button class="step-next-btn" onclick="startLearnCol(${nextIdx})" style="margin:0 0 8px">→ Colonne suivante : ${HIRA_COLS[nextIdx].label}</button><br>`:''}
+      <button class="skip-btn" onclick="backToHome()" style="display:inline-block;margin-top:8px">🏠 Retour accueil</button>
+    </div>`;
+  content.appendChild(card);
+  launchConfetti();
+}
+
+function advanceStep(){
+  learnStep++;
+  setColStep(currentCol.id,learnStep);
+  renderLearnStep();
+}
+
+// ══════════════════════════════════════════
+// TEST MODE
+// ══════════════════════════════════════════
+let testQuestions=[], testIdx=0, testScore=0, testCorrect=0, testWrong=0;
+let testMicOn=false, testRecog=null, testLocked=false;
+let testSessionType=''; // 'learn'|'test'|'errors'
+
+function startTestMode(){
+  const mastered=getMastered();
+  if(mastered.length<5){ alert('Apprends au moins 5 caractères avant de tester !'); return; }
+  testSessionType='test';
+  buildTestQuestions(mastered);
+  showScreen('sc-test');
+  showTestQ();
+}
+
+function startErrorMode(){
+  const errors=getErrors();
+  const errKana=Object.keys(errors).filter(k=>errors[k]>0);
+  if(errKana.length===0){ alert('Pas d\'erreurs à réviser !'); return; }
+  testSessionType='errors';
+  // Build questions from error kana
+  const allChars=HIRA_COLS.flatMap(c=>c.chars);
+  const errChars=allChars.filter(c=>errKana.includes(c[0]));
+  // Boost by error count
+  const boosted=[];
+  errChars.forEach(c=>{ for(let i=0;i<Math.min((errors[c[0]]||1),3);i++) boosted.push(c); });
+  buildTestQuestions(errKana, boosted);
+  showScreen('sc-test');
+  showTestQ();
+}
+
+function buildTestQuestions(masteredList, forcedPool){
+  const allChars=HIRA_COLS.flatMap(c=>c.chars);
+  const pool=forcedPool||allChars.filter(c=>masteredList.includes(c[0]));
+  // Alternate QCM / vocal
+  testQuestions=pool.sort(()=>Math.random()-.5).slice(0,Math.min(pool.length,12)).map((c,i)=>({
+    char:c, mode:i%2===0?'qcm':'vocal'
+  }));
+  testIdx=0; testScore=0; testCorrect=0; testWrong=0; testLocked=false;
+  // Build stars
+  const stars=document.getElementById('test-stars');
+  stars.innerHTML=testQuestions.map((_,i)=>`<span class="star" id="tst-${i}" style="opacity:.2">⭐</span>`).join('');
+}
+
+function showTestQ(){
+  if(testIdx>=testQuestions.length){ endTestSession(); return; }
+  const q=testQuestions[testIdx];
+  testLocked=false;
+  document.getElementById('tpfill').style.width=(testIdx/testQuestions.length*100)+'%';
+  document.getElementById('test-card-el').style.background='#fff';
+  document.getElementById('test-duo-fb').style.display='none';
+  document.getElementById('test-next-btn').style.display='none';
+  ['test-qcm','test-mic-zone'].forEach(hide);
+
+  if(q.mode==='qcm') showTestQCM(q.char);
+  else showTestVocal(q.char);
+}
+
+function showTestQCM([kana,ro,word,meaning]){
+  document.getElementById('test-content').innerHTML=
+    `<div class="test-kana-big">${kana}</div><div class="test-hint">Quelle est la lecture ?</div>`;
+  show('test-qcm');
+  const allChars=HIRA_COLS.flatMap(c=>c.chars);
+  const mastered=getMastered();
+  const others=allChars.filter(c=>c[0]!==kana&&mastered.includes(c[0])).sort(()=>Math.random()-.5).slice(0,3);
+  const choices=[[kana,ro],...others.map(c=>[c[0],c[1]])].sort(()=>Math.random()-.5);
+  const grid=document.getElementById('test-qcm'); grid.innerHTML='';
+  choices.forEach(([k,r])=>{
+    const btn=document.createElement('button'); btn.className='tq-btn';
+    btn.innerHTML=`${k}<span class="tq-ro">${r}</span>`;
+    btn.onclick=()=>checkTestQCM(k,kana,btn,grid);
+    grid.appendChild(btn);
+  });
+  speakJP(kana);
+}
+
+function checkTestQCM(chosen,target,btn,grid){
+  if(testLocked)return; testLocked=true;
+  const ok=chosen===target;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok){ grid.querySelectorAll('.tq-btn').forEach(b=>{ if(b.textContent.startsWith(target))b.classList.add('reveal'); }); }
+  recordTestAnswer(ok,target);
+  setTimeout(nextTestQ, ok?800:1400);
+}
+
+function showTestVocal([kana,ro]){
+  document.getElementById('test-content').innerHTML=
+    `<button class="test-audio-btn" onclick="speakJP('${kana}')">🔊 Écouter</button>
+     <div class="test-ro-big">${ro}</div>
+     <div class="test-hint">Prononce ce son !</div>`;
+  show('test-mic-zone');
+  document.getElementById('test-mic-btn').className='mic-big idle';
+  document.getElementById('test-mic-status').textContent='Appuie et prononce';
+  document.getElementById('test-mic-heard').textContent='';
+  speakJP(kana);
+}
+
+function toggleTestMic(){
+  if(testLocked)return;
+  if(testMicOn){ stopTestMic(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('test-mic-status').textContent='🎤 Micro non dispo — prononce à voix haute puis appuie sur Continuer';
+    document.getElementById('test-next-btn').style.display='block';
+    document.getElementById('test-next-btn').textContent="✅ J'ai prononcé → Continuer";
+    testLocked=true; return;
+  }
+  testRecog=new SR(); testRecog.lang='fr-FR'; testRecog.continuous=false; testRecog.interimResults=true;
+  testRecog.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
+    document.getElementById('test-mic-heard').textContent='"'+t+'"';
+    if(e.results[e.results.length-1].isFinal) evalTestVocal(t);
+  };
+  testRecog.onnomatch=()=>{
+    // Speech was heard but not recognized as any word (common with very short sounds like single vowels)
+    document.getElementById('test-mic-status').textContent="🤔 Pas sûr d'avoir compris — réessaie ou continue";
+    document.getElementById('test-next-btn').style.display='block';
+    document.getElementById('test-next-btn').textContent="✅ J'ai prononcé → Continuer";
+    testMicOn=false; testLocked=false;
+  };
+  testRecog.onerror=(e)=>{
+    stopTestMic();
+    document.getElementById('test-mic-status').textContent='🎤 Pas compris — réessaie ou continue';
+    document.getElementById('test-next-btn').style.display='block';
+    document.getElementById('test-next-btn').textContent="✅ J'ai prononcé → Continuer";
+    testLocked=true;
+  };
+  testRecog.onend=()=>{ testMicOn=false; };
+  testRecog.start(); testMicOn=true;
+  document.getElementById('test-mic-btn').className='mic-big on';
+  document.getElementById('test-mic-status').textContent='🔴 J\'écoute…';
+}
+function stopTestMic(){ if(testRecog)testRecog.stop(); testMicOn=false; }
+
+function evalTestVocal(heard){
+  stopTestMic(); testLocked=true;
+  const q=testQuestions[testIdx];
+  const target=q.char[1]; // romaji
+  const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+  const h=norm(heard), t=norm(target);
+  // French speech recognition often transcribes Japanese sounds using French spelling conventions.
+  // Convert the heard French transcription into likely phonetic equivalents before comparing.
+  const frenchToPhonetic = (s) => s
+    .replace(/qu/g,'k').replace(/^c(?=[aeiou])/,'k').replace(/que$/,'k')
+    .replace(/ch/g,'sh').replace(/^j/,'j')
+    .replace(/ou/g,'u').replace(/oi/g,'wa')
+    .replace(/in$/,'in').replace(/ain$/,'in')
+    .replace(/eu/g,'u').replace(/y/g,'i');
+  const hPhon = frenchToPhonetic(h);
+  const tPhon = frenchToPhonetic(t);
+  // Tolerant matching across raw and phonetically-adjusted versions
+  const ok = h.includes(t) || t.includes(h) || hPhon.includes(tPhon) || tPhon.includes(hPhon)
+    || (h.length>0 && h[0]===t[0]) || (hPhon.length>0 && hPhon[0]===tPhon[0])
+    || h.includes(t[0]+t[0]);
+  document.getElementById('test-mic-btn').className='mic-big done';
+  const fb=document.getElementById('test-duo-fb');
+  fb.style.display='block';
+  fb.className='test-duo-fb '+(ok?'ok':'ko');
+  fb.textContent=ok?`🌟 Bravo ! "${target}" bien prononcé !`:`❌ Il fallait dire "${target}"`;
+  if(!ok) setTimeout(()=>speakJP(q.char[0]),400);
+  document.getElementById('test-next-btn').style.display='block';
+  recordTestAnswer(ok,q.char[0]);
+}
+
+function recordTestAnswer(ok,kana){
+  if(ok){ testCorrect++; testScore+=10+(testCorrect>3?5:0); reduceError(kana); }
+  else{ testWrong++; addError(kana); }
+  document.getElementById('test-score').textContent=testScore;
+  const s=document.getElementById('tst-'+testIdx);
+  if(s){s.style.opacity='1';s.textContent=ok?'⭐':'💔';}
+  document.getElementById('test-card-el').style.background=ok?'#D1FAE5':'#FEE2E2';
+}
+
+function nextTestQ(){
+  if(testMicOn) stopTestMic();
+  testIdx++; showTestQ();
+}
+
+function endTestSession(){
+  const db=getDB();
+  db.sessions=(db.sessions||0)+1;
+  const today=new Date().toDateString();
+  if(db.lastPlay===new Date(Date.now()-86400000).toDateString()) db.streak=(db.streak||0)+1;
+  else if(db.lastPlay!==today) db.streak=1;
+  db.lastPlay=today;
+  saveDB(db);
+
+  const total=testCorrect+testWrong, pct=total>0?Math.round(testCorrect/total*100):0;
+  const medals=[{min:90,i:'🏆',t:'完璧！ Parfait !'},{min:70,i:'🥇',t:'すごい！ Excellent !'},{min:50,i:'🥈',t:'いいね！ Bien joué !'},{min:0,i:'💪',t:'がんばれ！ Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=testCorrect;
+  document.getElementById('rs-ko').textContent=testWrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  document.getElementById('res-unlock').style.display='none';
+  if(pct>=70) launchConfetti();
+  showScreen('sc-result');
+}
+
+function replaySession(){
+  if(testSessionType==='errors') startErrorMode();
+  else startTestMode();
+}
+
+// ══ UTILS ══
+function backToHome(){ showScreen('sc-home'); updateHome(); }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function show(id){ document.getElementById(id).style.display=''; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+
+function speakJP(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ja-JP'; u.rate=0.75;
+  // Fallback to fr-FR if ja-JP fails
+  u.onerror=()=>{ const u2=new SpeechSynthesisUtterance(text); u2.lang='fr-FR'; u2.rate=0.8; window.speechSynthesis.speak(u2); };
+  window.speechSynthesis.speak(u);
+}
+
+function launchConfetti(){
+  const colors=['#E63946','#FFD93D','#6BCB77','#4D96FF','#C77DFF'];
+  for(let i=0;i<35;i++){
+    const el=document.createElement('div');el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),2500);
+  }
+}
+
+// INIT
+updateHome();
+</script>
+</body>
+</html>
+

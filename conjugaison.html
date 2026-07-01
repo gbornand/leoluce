@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Conjugaison 📝</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#4D96FF;--green:#6BCB77;--red:#E63946;--orange:#FF9F1C;--purple:#C77DFF;--pink:#FF6B9D;--yellow:#FFD93D;--teal:#26de81;--bg:#F0FFF4;--dark:#1a1a2e;--gray:#9CA3AF;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+#sc-home{background:linear-gradient(160deg,#0d2e1a,#1a4a2e);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+.scard{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.slabel{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.temps-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.temps-btn{border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);border-radius:13px;padding:11px;cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all .2s;}
+.temps-btn.sel{border-color:var(--teal);background:rgba(38,222,129,.12);}
+.temps-btn:active{transform:scale(.97);}
+.tb-name{font-size:14px;font-weight:800;color:#fff;}
+.tb-ex{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
+.start-btn{background:linear-gradient(135deg,var(--teal),var(--blue));color:#1a1a2e;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;margin:0 16px;}
+/* GAME */
+#sc-game{background:var(--bg);overflow-y:auto;}
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;background:var(--bg);position:sticky;top:0;z-index:10;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:999px;transition:width .4s;}
+.phrase-card{background:#fff;border-radius:22px;margin:0 16px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);}
+.temps-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;margin-bottom:12px;}
+.phrase-text{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:var(--dark);line-height:1.8;text-align:center;}
+.trou{display:inline-flex;align-items:center;justify-content:center;min-width:90px;height:38px;border-radius:10px;border:3px dashed #E5E7EB;background:#FAFAFA;color:var(--gray);font-size:16px;font-weight:800;padding:0 8px;transition:all .2s;vertical-align:middle;}
+.trou.filled{border-style:solid;border-color:var(--teal);background:rgba(38,222,129,.1);color:var(--dark);}
+.trou.correct{border-color:var(--green);background:rgba(107,203,119,.15);color:#059669;}
+.trou.wrong{border-color:var(--red);background:rgba(230,57,70,.08);color:var(--red);}
+.infinitif-badge{display:inline-block;background:#F0F7FF;border:1.5px solid var(--blue);border-radius:10px;padding:4px 12px;font-size:13px;font-weight:800;color:var(--blue);margin-top:10px;}
+.pronom-badge{font-size:13px;color:var(--gray);font-weight:700;margin-top:6px;text-align:center;}
+.terminaisons-zone{margin:10px 16px 0;display:flex;flex-direction:column;gap:10px;}
+.term-label{font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;}
+.term-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.term-chip{padding:11px 18px;border-radius:14px;background:#fff;border:2px solid #E5E7EB;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);cursor:pointer;transition:all .15s;}
+.term-chip:active{transform:scale(.93);}
+.term-chip.correct{background:var(--green);color:#fff;border-color:var(--green);}
+.term-chip.wrong{background:#FEE2E2;border-color:var(--red);color:var(--red);}
+.term-chip.reveal{background:var(--green);color:#fff;border-color:var(--green);opacity:.7;}
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--red);}
+.expl{background:#F0F7FF;border:2px solid var(--blue);border-radius:14px;padding:12px 16px;margin:8px 16px 0;display:none;font-size:13px;font-weight:700;color:var(--dark);line-height:1.6;}
+.next-btn{background:linear-gradient(135deg,var(--teal),var(--blue));color:#1a1a2e;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+/* RESULT */
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--teal),var(--blue));color:#1a1a2e;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--teal);color:var(--dark);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span style="font-size:52px;display:block;animation:float 3s ease-in-out infinite">📝</span>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#26de81,#4D96FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px">Conjugaison</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px;margin-top:3px">Choisis les bons terminaisons</div>
+  </div>
+  <div class="home-body">
+    <div class="scard">
+      <div class="slabel">Temps à travailler (coche ceux que tu veux)</div>
+      <div class="temps-grid" id="temps-grid"></div>
+    </div>
+    <button class="start-btn" id="start-btn" onclick="startGame()" disabled>🚀 C'est parti !</button>
+  </div>
+</div>
+
+<div id="sc-game" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span style="background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--gray)" id="gnav-temps">Présent</span>
+    <span style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark)" id="gnav-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:2px 0 6px" id="q-prog">1/12</div>
+
+  <div class="phrase-card">
+    <div style="text-align:center">
+      <span class="temps-badge" id="temps-badge">Présent</span>
+    </div>
+    <div class="phrase-text" id="phrase-text"></div>
+    <div style="text-align:center;margin-top:10px">
+      <div class="infinitif-badge" id="infinitif-badge">verbe : aller</div>
+    </div>
+    <div class="pronom-badge" id="pronom-badge"></div>
+  </div>
+
+  <div class="terminaisons-zone">
+    <div class="term-label">Choisis la bonne terminaison :</div>
+    <div class="term-chips" id="term-chips"></div>
+  </div>
+
+  <div class="fb-bar" id="fb-bar"></div>
+  <div class="expl" id="expl"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Question suivante →</button>
+</div>
+
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--teal)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="startGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+</div>
+
+<script>
+const TEMPS = [
+  {id:'present', name:'Présent', ex:'je mange', color:'#26de81', colorBg:'rgba(38,222,129,.15)'},
+  {id:'imparfait', name:'Imparfait', ex:'je mangeais', color:'#4D96FF', colorBg:'rgba(77,150,255,.15)'},
+  {id:'futur', name:'Futur simple', ex:'je mangerai', color:'#FF9F1C', colorBg:'rgba(255,159,28,.15)'},
+  {id:'passe_compose', name:'Passé composé', ex:"j'ai mangé", color:'#C77DFF', colorBg:'rgba(199,125,255,.15)'},
+  {id:'passe_simple', name:'Passé simple', ex:'je mangeai', color:'#FF6B9D', colorBg:'rgba(255,107,157,.15)'},
+  {id:'conditionnel', name:'Conditionnel', ex:'je mangerais', color:'#FFD93D', colorBg:'rgba(255,211,61,.15)'},
+];
+
+// Questions: {temps, infinitif, groupe, pronom, radical, correct, choices, phrase, expl}
+const QUESTIONS = [
+  // PRÉSENT 1er groupe
+  {temps:'present',inf:'manger',g:1,pronom:'nous',radical:'mange',correct:'ons',choices:['ons','ez','ent','ions'],phrase:'Nous {V} une pomme.',expl:'NOUS → présent 1er groupe → -ons → nous mangeons'},
+  {temps:'present',inf:'chanter',g:1,pronom:'ils',radical:'chant',correct:'ent',choices:['ons','ez','ent','es'],phrase:'Ils {V} une chanson.',expl:'ILS → présent 1er groupe → -ent → ils chantent'},
+  {temps:'present',inf:'jouer',g:1,pronom:'vous',radical:'jou',correct:'ez',choices:['ons','ez','ent','ais'],phrase:'Vous {V} au foot.',expl:'VOUS → présent 1er groupe → -ez → vous jouez'},
+  {temps:'present',inf:'finir',g:2,pronom:'il',radical:'fin',correct:'it',choices:['is','it','issons','issez'],phrase:'Il {V} ses devoirs.',expl:'IL → présent 2e groupe → -it → il finit'},
+  {temps:'present',inf:'finir',g:2,pronom:'nous',radical:'fin',correct:'issons',choices:['issons','issez','issent','isons'],phrase:'Nous {V} le travail.',expl:'NOUS → présent 2e groupe → -issons → nous finissons'},
+  {temps:'present',inf:'être',g:3,pronom:'tu',radical:'',correct:'es',choices:['es','est','sommes','êtes'],phrase:'Tu {V} courageux.',expl:'TU ÊTRE → présent irrégulier → tu es'},
+  {temps:'present',inf:'avoir',g:3,pronom:'j\'',radical:'',correct:'ai',choices:['ai','as','a','avons'],phrase:"J'{V} faim.",expl:"J' AVOIR → présent → j'ai"},
+  {temps:'present',inf:'aller',g:3,pronom:'elle',radical:'',correct:'va',choices:['va','vai','alle','aille'],phrase:'Elle {V} à l\'école.',expl:'ELLE ALLER → présent irrégulier → elle va'},
+  // IMPARFAIT
+  {temps:'imparfait',inf:'manger',g:1,pronom:'je',radical:'mange',correct:'ais',choices:['ais','ait','ions','ez'],phrase:'Je {V} une glace.',expl:'JE → imparfait → -ais → je mangeais'},
+  {temps:'imparfait',inf:'jouer',g:1,pronom:'nous',radical:'jou',correct:'ions',choices:['ions','iez','aient','ais'],phrase:'Nous {V} dehors.',expl:'NOUS → imparfait → -ions → nous jouions'},
+  {temps:'imparfait',inf:'finir',g:2,pronom:'ils',radical:'finiss',correct:'aient',choices:['aient','ions','iez','ais'],phrase:'Ils {V} tard.',expl:'ILS → imparfait → -aient → ils finissaient'},
+  {temps:'imparfait',inf:'être',g:3,pronom:'tu',radical:'ét',correct:'ais',choices:['ais','ait','ions','ez'],phrase:'Tu {V} content.',expl:'TU ÊTRE → imparfait → tu étais'},
+  {temps:'imparfait',inf:'avoir',g:3,pronom:'elle',radical:'av',correct:'ait',choices:['ait','ais','ions','iez'],phrase:'Elle {V} peur.',expl:'ELLE AVOIR → imparfait → elle avait'},
+  {temps:'imparfait',inf:'aller',g:3,pronom:'nous',radical:'all',correct:'ions',choices:['ions','iez','aient','ais'],phrase:'Nous {V} à la mer.',expl:'NOUS ALLER → imparfait → nous allions'},
+  // FUTUR
+  {temps:'futur',inf:'manger',g:1,pronom:'je',radical:'manger',correct:'ai',choices:['ai','as','a','ons'],phrase:'Je {V} ce soir.',expl:'JE → futur → -ai → je mangerai'},
+  {temps:'futur',inf:'chanter',g:1,pronom:'vous',radical:'chanter',correct:'ez',choices:['ez','ons','ont','as'],phrase:'Vous {V} demain.',expl:'VOUS → futur → -ez → vous chanterez'},
+  {temps:'futur',inf:'finir',g:2,pronom:'il',radical:'finir',correct:'a',choices:['a','as','ai','ont'],phrase:'Il {V} bientôt.',expl:'IL → futur → -a → il finira'},
+  {temps:'futur',inf:'être',g:3,pronom:'tu',radical:'ser',correct:'as',choices:['as','a','ai','ez'],phrase:'Tu {V} là.',expl:'TU ÊTRE → futur irrégulier → tu seras'},
+  {temps:'futur',inf:'avoir',g:3,pronom:'nous',radical:'aur',correct:'ons',choices:['ons','ez','ont','as'],phrase:'Nous {V} le temps.',expl:'NOUS AVOIR → futur irrégulier → nous aurons'},
+  {temps:'futur',inf:'aller',g:3,pronom:'ils',radical:'ir',correct:'ont',choices:['ont','ons','ez','as'],phrase:'Ils {V} au cinéma.',expl:'ILS ALLER → futur irrégulier → ils iront'},
+  // PASSÉ COMPOSÉ
+  {temps:'passe_compose',inf:'manger',g:1,pronom:'j\'',radical:'mangé',correct:'ai',choices:['ai','as','a','avons'],phrase:"J'{AUX} une pomme.",auxType:'avoir',expl:"Passé composé avec AVOIR → j'ai mangé"},
+  {temps:'passe_compose',inf:'aller',g:3,pronom:'je',radical:'allé',correct:'suis',choices:['suis','ai','est','es'],phrase:'Je {AUX} au marché.',auxType:'être',expl:'ALLER → auxiliaire ÊTRE → je suis allé'},
+  {temps:'passe_compose',inf:'finir',g:2,pronom:'nous',radical:'fini',correct:'avons',choices:['avons','sommes','avez','ont'],phrase:'Nous {AUX} le gâteau.',auxType:'avoir',expl:'Passé composé avec AVOIR → nous avons fini'},
+  {temps:'passe_compose',inf:'partir',g:3,pronom:'elle',radical:'partie',correct:'est',choices:['est','a','sont','ont'],phrase:'Elle {AUX} tôt.',auxType:'être',expl:'PARTIR → auxiliaire ÊTRE → elle est partie'},
+  // CONDITIONNEL
+  {temps:'conditionnel',inf:'manger',g:1,pronom:'je',radical:'manger',correct:'ais',choices:['ais','ait','ions','ez'],phrase:'Je {V} bien.',expl:'JE → conditionnel → -ais → je mangerais'},
+  {temps:'conditionnel',inf:'finir',g:2,pronom:'nous',radical:'finir',correct:'ions',choices:['ions','iez','aient','ais'],phrase:'Nous {V} plus vite.',expl:'NOUS → conditionnel → -ions → nous finirions'},
+  {temps:'conditionnel',inf:'être',g:3,pronom:'ce',radical:'ser',correct:'ait',choices:['ait','ais','ions','ez'],phrase:'Ce {V} super.',expl:'ÊTRE → conditionnel → ce serait'},
+  {temps:'conditionnel',inf:'avoir',g:3,pronom:'tu',radical:'aur',correct:'ais',choices:['ais','ait','ions','ez'],phrase:'Tu {V} raison.',expl:'AVOIR → conditionnel → tu aurais'},
+];
+
+let selTemps=new Set(), questions=[], qIdx=0, correct=0, wrong=0, qLocked=false;
+
+// Build temps buttons
+document.addEventListener('DOMContentLoaded',()=>{
+  const grid=document.getElementById('temps-grid');
+  TEMPS.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='temps-btn';btn.dataset.id=t.id;
+    btn.innerHTML=`<div class="tb-name">${t.name}</div><div class="tb-ex">${t.ex}</div>`;
+    btn.onclick=()=>{
+      if(selTemps.has(t.id)){selTemps.delete(t.id);btn.classList.remove('sel');btn.style.borderColor='';}
+      else{selTemps.add(t.id);btn.classList.add('sel');btn.style.borderColor=t.color;}
+      document.getElementById('start-btn').disabled=selTemps.size===0;
+    };
+    grid.appendChild(btn);
+  });
+});
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+
+function startGame(){
+  const pool=QUESTIONS.filter(q=>selTemps.has(q.temps));
+  questions=[...pool].sort(()=>Math.random()-.5).slice(0,Math.min(12,pool.length));
+  qIdx=0;correct=0;wrong=0;qLocked=false;
+  showScreen('sc-game');showQ();
+}
+
+function showQ(){
+  if(qIdx>=questions.length){endGame();return;}
+  const q=questions[qIdx];qLocked=false;
+  document.getElementById('pfill').style.width=(qIdx/questions.length*100)+'%';
+  document.getElementById('q-prog').textContent=(qIdx+1)+'/'+questions.length;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('expl').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+
+  const t=TEMPS.find(x=>x.id===q.temps);
+  document.getElementById('gnav-temps').textContent=t?.name||'';
+  const badge=document.getElementById('temps-badge');
+  badge.textContent=t?.name||'';badge.style.background=t?.colorBg||'';badge.style.color=t?.color||'';
+
+  // Build phrase with blank
+  const isPC=q.temps==='passe_compose';
+  const form=isPC?q.radical:(q.radical||'')+(q.correct||'');
+  const display=q.phrase.replace('{V}',`<span class="trou" id="trou">…</span>`).replace('{AUX}',`<span class="trou" id="trou">…</span>`);
+  document.getElementById('phrase-text').innerHTML=display;
+  document.getElementById('infinitif-badge').textContent='verbe : '+q.inf;
+  document.getElementById('pronom-badge').textContent='sujet : '+q.pronom;
+
+  // Chips
+  const chips=document.getElementById('term-chips');chips.innerHTML='';
+  const label=document.getElementById('term-chips').previousElementSibling;
+  if(isPC){
+    // For passé composé: choose the auxiliary
+    chips.previousElementSibling.textContent='Choisis le bon auxiliaire :';
+    const auxChoices=q.choices;
+    auxChoices.forEach(ch=>{
+      const c=document.createElement('button');c.className='term-chip';
+      c.innerHTML=`<span style="font-size:14px;color:var(--gray);margin-right:4px">${q.pronom}</span>${ch} ${q.radical}`;
+      c.onclick=()=>checkAns(ch===q.correct,c,chips,q,ch+' '+q.radical);
+      chips.appendChild(c);
+    });
+  } else {
+    chips.previousElementSibling.textContent=q.radical?'Choisis la bonne terminaison :':'Choisis la bonne forme :';
+    const shuffled=[...q.choices].sort(()=>Math.random()-.5);
+    shuffled.forEach(ch=>{
+      const c=document.createElement('button');c.className='term-chip';
+      c.innerHTML=q.radical?`<span style="font-size:14px;color:var(--gray)">${q.radical}</span><b>${ch||'—'}</b>`:`<b>${ch||'—'}</b>`;
+      c.onclick=()=>checkAns(ch===q.correct,c,chips,q,q.radical+(ch||''));
+      chips.appendChild(c);
+    });
+  }
+}
+
+function checkAns(ok,btn,chips,q,fullForm){
+  if(qLocked)return;qLocked=true;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok) chips.querySelectorAll('.term-chip').forEach(c=>{
+    const isCorrect=q.temps==='passe_compose'?c.textContent.includes(q.correct+' '):c.querySelector('b')?.textContent===q.correct;
+    if(isCorrect)c.classList.add('reveal');
+  });
+  const trou=document.getElementById('trou');
+  if(trou){trou.textContent=fullForm;trou.className='trou '+(ok?'correct':'wrong');}
+  const fb=document.getElementById('fb-bar');fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?'✅ Bravo !':'❌ Pas tout à fait...';
+  const expl=document.getElementById('expl');expl.style.display='block';expl.textContent='💡 '+q.expl;
+  if(ok)correct++;else wrong++;
+  setTimeout(()=>{ qIdx++; showQ(); }, 1800);
+}
+
+function nextQ(){qIdx++;showQ();}
+function quitGame(){backHome();}
+function backHome(){showScreen('sc-home');}
+
+function endGame(){
+  const pct=Math.round(correct/(correct+wrong)*100)||0;
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;document.getElementById('rs-ko').textContent=wrong;document.getElementById('rs-pct').textContent=pct+'%';
+  if(pct>=70)launchConfetti();showScreen('sc-result');
+}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){const colors=['#26de81','#4D96FF','#FFD93D','#FF6B9D','#C77DFF'];for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}}
+</script>
+</body>
+</html>
+

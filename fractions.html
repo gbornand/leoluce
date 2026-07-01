@@ -1,0 +1,726 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fractions 🍕</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#4D96FF;--green:#6BCB77;--red:#E63946;--orange:#FF9F1C;
+  --purple:#C77DFF;--pink:#FF6B9D;--yellow:#FFD93D;--teal:#26de81;
+  --bg:#FFF8F0;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ HOME ══ */
+#sc-home{background:linear-gradient(160deg,#1a1a2e 0%,#2d1b4e 100%);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-icon{font-size:52px;display:block;animation:float 3s ease-in-out infinite;}
+.home-title{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--orange),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px;}
+.home-sub{color:rgba(255,255,255,.5);font-size:13px;margin-top:3px;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+
+.stats-banner{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.sb-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.sb-row{display:flex;justify-content:space-around;}
+.sb-stat{text-align:center;}
+.sb-val{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+.sb-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;}
+
+.ops-section{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.ops-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.ops-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.op-btn{border:2px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .2s;font-family:'Nunito',sans-serif;}
+.op-btn.sel{border-color:var(--yellow);background:rgba(255,211,61,.12);}
+.op-btn:active{transform:scale(.97);}
+.op-icon{font-size:26px;}
+.op-name{font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:#fff;}
+.op-desc{font-size:10px;color:rgba(255,255,255,.45);text-align:center;}
+.op-stats{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;}
+
+.start-btn{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(255,159,28,.4);transition:transform .15s;margin:0 16px;}
+.start-btn:active{transform:scale(.97);}
+
+/* ══ GAME ══ */
+#sc-game{background:var(--bg);}
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.gnav-op{background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:800;color:var(--gray);}
+.gnav-score{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--orange),var(--pink));border-radius:999px;transition:width .4s;}
+
+/* Question card */
+.q-card{background:#fff;border-radius:22px;margin:0 16px;padding:20px;box-shadow:0 4px 20px rgba(255,159,28,.1);text-align:center;}
+.q-label{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+
+/* Fraction display */
+.frac-display{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.frac{display:inline-flex;flex-direction:column;align-items:center;gap:2px;}
+.frac-num{font-family:'Baloo 2',sans-serif;font-size:38px;font-weight:900;color:var(--dark);line-height:1;}
+.frac-bar{width:100%;min-width:32px;height:3px;background:var(--dark);border-radius:2px;}
+.frac-den{font-family:'Baloo 2',sans-serif;font-size:38px;font-weight:900;color:var(--dark);line-height:1;}
+.op-sign{font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:900;color:var(--orange);}
+.eq-sign{font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:900;color:var(--gray);}
+
+/* Step-by-step pedagogy */
+.steps-zone{background:#F9FAFB;border-radius:16px;padding:14px;margin-top:12px;display:none;}
+.step-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;font-weight:700;color:var(--dark);}
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+.step-text{flex:1;line-height:1.4;}
+
+/* QCM answers */
+.qcm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 16px 0;}
+.qcm-btn{background:#fff;border:2px solid #E5E7EB;border-radius:16px;padding:14px 8px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.qcm-btn:active{transform:scale(.95);}
+.qcm-btn.correct{border-color:var(--green);background:rgba(107,203,119,.12);}
+.qcm-btn.wrong{border-color:var(--red);background:rgba(230,57,70,.08);}
+.qcm-btn.reveal{border-color:var(--green);background:rgba(107,203,119,.08);opacity:.8;}
+
+/* Input answer */
+.input-zone{background:#fff;border-radius:18px;margin:10px 16px 0;padding:16px;box-shadow:0 3px 12px rgba(0,0,0,.06);}
+.input-label{font-size:12px;font-weight:800;color:var(--gray);text-align:center;margin-bottom:12px;}
+.frac-input{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.frac-input-num{width:80px;height:52px;border:3px solid var(--orange);border-radius:12px;font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;text-align:center;outline:none;color:var(--dark);background:#FFF8F0;}
+.frac-input-bar{width:80px;height:3px;background:var(--dark);border-radius:2px;}
+.frac-input-den{width:80px;height:52px;border:3px solid #E5E7EB;border-radius:12px;font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;text-align:center;outline:none;color:var(--dark);}
+.frac-input-den:focus{border-color:var(--blue);}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px;width:200px;margin-left:auto;margin-right:auto;}
+.np-btn{height:48px;border:2px solid #E5E7EB;border-radius:12px;background:#fff;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;cursor:pointer;transition:transform .1s;color:var(--dark);}
+.np-btn:active{transform:scale(.9);}
+.np-btn.del{background:#FEE2E2;border-color:#fca5a5;color:var(--red);font-size:16px;}
+.np-btn.ok{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;font-size:15px;}
+.np-field{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:4px;}
+.np-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;border:2px solid transparent;transition:all .2s;font-family:'Nunito',sans-serif;}
+.np-tab.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+.np-tab:not(.active){background:#F3F4F6;color:var(--gray);}
+
+/* Feedback */
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--red);}
+.next-btn{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+
+/* Visual fraction bar */
+.vis-bar{display:flex;gap:2px;justify-content:center;margin:8px 0;flex-wrap:wrap;}
+.vis-cell{height:28px;width:28px;border-radius:5px;border:2px solid rgba(0,0,0,.1);transition:all .3s;}
+.vis-cell.filled{background:var(--orange);}
+.vis-cell.empty{background:#F3F4F6;}
+
+/* ══ RESULT ══ */
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;overflow-y:auto;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-detail{background:#fff;border-radius:16px;padding:14px;width:100%;max-height:240px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.rd-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.rd-row{padding:7px 0;border-bottom:1px solid #F3F4F6;font-size:13px;font-weight:700;}
+.rd-row:last-child{border:none;}
+.res-btns{display:flex;gap:8px;width:100%;flex-wrap:wrap;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--orange);color:var(--orange);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span class="home-icon">🍕</span>
+    <div class="home-title">Les Fractions</div>
+    <div class="home-sub">Addition · Soustraction · Multiplication · Division · Réduction</div>
+  </div>
+  <div class="home-body">
+    <div class="stats-banner">
+      <div class="sb-title">Mes stats</div>
+      <div class="sb-row">
+        <div class="sb-stat"><div class="sb-val" id="st-sessions">0</div><div class="sb-lbl">Sessions</div></div>
+        <div class="sb-stat"><div class="sb-val" id="st-correct">0</div><div class="sb-lbl">Justes</div></div>
+        <div class="sb-stat"><div class="sb-val" id="st-streak">0🔥</div><div class="sb-lbl">Série</div></div>
+      </div>
+    </div>
+
+    <div style="background:#F0F7FF;border:2px solid var(--blue);border-radius:16px;padding:14px 16px;margin:0 16px 14px">
+      <div style="font-size:12px;font-weight:800;color:var(--blue);margin-bottom:4px">💡 C'est quoi le PGCD ?</div>
+      <div style="font-size:13px;color:var(--dark);line-height:1.5">Le <b>Plus Grand Commun Diviseur</b> entre deux nombres est le plus grand nombre qui peut diviser les deux sans laisser de reste. Par exemple, le PGCD de 8 et 12 est 4.</div>
+    </div>
+
+    <div class="ops-section">
+      <div class="ops-title">🎯 Quelle opération travailler ?</div>
+      <div class="ops-grid">
+        <div class="op-btn sel" data-op="add" onclick="pickOp(this)">
+          <span class="op-icon">➕</span>
+          <div class="op-name">Addition</div>
+          <div class="op-desc">a/b + c/d</div>
+        </div>
+        <div class="op-btn" data-op="sub" onclick="pickOp(this)">
+          <span class="op-icon">➖</span>
+          <div class="op-name">Soustraction</div>
+          <div class="op-desc">a/b − c/d</div>
+        </div>
+        <div class="op-btn" data-op="mul" onclick="pickOp(this)">
+          <span class="op-icon">✖️</span>
+          <div class="op-name">Multiplication</div>
+          <div class="op-desc">a/b × c/d</div>
+        </div>
+        <div class="op-btn" data-op="div" onclick="pickOp(this)">
+          <span class="op-icon">➗</span>
+          <div class="op-name">Division</div>
+          <div class="op-desc">a/b ÷ c/d</div>
+        </div>
+        <div class="op-btn" data-op="red" onclick="pickOp(this)" style="grid-column:span 2">
+          <span class="op-icon">✂️</span>
+          <div class="op-name">Réduction</div>
+          <div class="op-desc">Simplifier une fraction au maximum</div>
+        </div>
+        <div class="op-btn" data-op="mix" onclick="pickOp(this)" style="grid-column:span 2">
+          <span class="op-icon">🎲</span>
+          <div class="op-name">Tout mélangé !</div>
+          <div class="op-desc">Toutes les opérations en aléatoire</div>
+        </div>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startGame()">🚀 C'est parti !</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="sc-game" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-op" id="gnav-op">➕</span>
+    <span class="gnav-score" id="gnav-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:2px 0 6px" id="q-prog">1/10</div>
+
+  <!-- Question -->
+  <div class="q-card" id="q-card">
+    <div class="q-label" id="q-label">CALCULE</div>
+    <div class="frac-display" id="frac-display"></div>
+    <div class="steps-zone" id="steps-zone"></div>
+  </div>
+
+  <!-- Visual bar (for addition/reduction) -->
+  <div style="margin:8px 16px 0;display:none" id="vis-zone">
+    <div style="font-size:11px;font-weight:700;color:var(--gray);text-align:center;margin-bottom:4px">Représentation visuelle</div>
+    <div class="vis-bar" id="vis-bar"></div>
+  </div>
+
+  <!-- QCM -->
+  <div class="qcm-grid" id="qcm-grid" style="display:none"></div>
+
+  <!-- Input -->
+  <div class="input-zone" id="input-zone" style="display:none">
+    <div class="input-label">Écris ta réponse — numérateur puis dénominateur :</div>
+    <div class="np-field">
+      <button class="np-tab active" id="tab-num" onclick="setInputField('num')">Numérateur</button>
+      <button class="np-tab" id="tab-den" onclick="setInputField('den')">Dénominateur</button>
+    </div>
+    <div class="frac-input">
+      <input class="frac-input-num" id="inp-num" type="text" readonly placeholder="?">
+      <div class="frac-input-bar"></div>
+      <input class="frac-input-den" id="inp-den" type="text" readonly placeholder="?">
+    </div>
+    <div class="numpad">
+      <button class="np-btn" onpointerdown="e=>{e.preventDefault()}" onclick="npKey('1')">1</button>
+      <button class="np-btn" onclick="npKey('2')">2</button>
+      <button class="np-btn" onclick="npKey('3')">3</button>
+      <button class="np-btn" onclick="npKey('4')">4</button>
+      <button class="np-btn" onclick="npKey('5')">5</button>
+      <button class="np-btn" onclick="npKey('6')">6</button>
+      <button class="np-btn" onclick="npKey('7')">7</button>
+      <button class="np-btn" onclick="npKey('8')">8</button>
+      <button class="np-btn" onclick="npKey('9')">9</button>
+      <button class="np-btn del" onclick="npKey('DEL')">⌫</button>
+      <button class="np-btn" onclick="npKey('0')">0</button>
+      <button class="np-btn ok" onclick="npKey('OK')">✓</button>
+    </div>
+  </div>
+
+  <div class="fb-bar" id="fb-bar"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Question suivante →</button>
+</div>
+
+<!-- RESULT -->
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--orange)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-detail" id="res-detail"></div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="replayGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ════════════════════════════
+// MATH UTILS
+// ════════════════════════════
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;}
+function lcm(a,b){return Math.abs(a*b)/gcd(a,b);}
+function reduce(n,d){const g=gcd(Math.abs(n),Math.abs(d));return{n:n/g,d:d/g};}
+function fracEq(n1,d1,n2,d2){
+  // Check if n1/d1 == n2/d2 (cross multiply)
+  return n1*d2===n2*d1;
+}
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+// Generate a question based on operation
+function genQuestion(op){
+  if(op==='mix'){
+    op=pick(['add','sub','mul','div','red','red']);
+  }
+
+  const DENOMS=[2,3,4,5,6,8,9,10,12];
+
+  if(op==='add'||op==='sub'){
+    const sameD=Math.random()<0.4;
+    const d1=pick(DENOMS);
+    const d2=sameD?d1:pick(DENOMS.filter(d=>d!==d1));
+    const n1=randInt(1,d1-1);
+    let n2=randInt(1,d2-1);
+    if(op==='sub'){
+      // Ensure result positive
+      const r=reduce(n1,d1);
+      const rr=reduce(n2,d2);
+      if(n1*d2<n2*d1) n2=randInt(1,Math.floor(n1*d2/d1));
+      if(n2===0) n2=1;
+    }
+    // Compute result
+    const L=lcm(d1,d2);
+    const rn=op==='add'?n1*(L/d1)+n2*(L/d2):n1*(L/d1)-n2*(L/d2);
+    const rd=L;
+    const res=reduce(rn,rd);
+    const steps=op==='add'?buildAddSteps(n1,d1,n2,d2,L,rn,rd,res):buildSubSteps(n1,d1,n2,d2,L,rn,rd,res);
+    return{op,n1,d1,n2,d2,rn:res.n,rd:res.d,steps,label:op==='add'?'➕ Addition':'➖ Soustraction'};
+  }
+
+  if(op==='mul'){
+    const d1=pick(DENOMS),d2=pick(DENOMS);
+    const n1=randInt(1,d1),n2=randInt(1,d2);
+    const rn=n1*n2,rd=d1*d2;
+    const res=reduce(rn,rd);
+    const steps=buildMulSteps(n1,d1,n2,d2,rn,rd,res);
+    return{op,n1,d1,n2,d2,rn:res.n,rd:res.d,steps,label:'✖️ Multiplication'};
+  }
+
+  if(op==='div'){
+    const d1=pick(DENOMS),d2=pick(DENOMS);
+    const n1=randInt(1,d1),n2=randInt(1,d2);
+    // a/b ÷ c/d = a*d / b*c
+    const rn=n1*d2,rd=d1*n2;
+    const res=reduce(rn,rd);
+    const steps=buildDivSteps(n1,d1,n2,d2,rn,rd,res);
+    return{op,n1,d1,n2,d2,rn:res.n,rd:res.d,steps,label:'➗ Division'};
+  }
+
+  if(op==='red'){
+    // Generate a non-reduced fraction
+    const g=pick([2,3,4,5,6]);
+    const res_n=randInt(1,8),res_d=randInt(res_n+1,10);
+    const n1=res_n*g,d1=res_d*g;
+    const res=reduce(n1,d1);
+    const steps=buildRedSteps(n1,d1,res);
+    return{op,n1,d1,n2:null,d2:null,rn:res.n,rd:res.d,steps,label:'✂️ Réduction'};
+  }
+}
+
+// ════════════════════════════
+// STEP BUILDERS
+// ════════════════════════════
+function buildAddSteps(n1,d1,n2,d2,L,rn,rd,res){
+  const steps=[];
+  if(d1===d2){
+    steps.push({color:'#4D96FF',text:`Les dénominateurs sont identiques (${d1}), on additionne directement les numérateurs.`});
+    steps.push({color:'#6BCB77',text:`${n1} + ${n2} = ${rn} → résultat : ${rn}/${rd}`});
+  } else {
+    steps.push({color:'#4D96FF',text:`Les dénominateurs sont différents. On cherche le PPCM de ${d1} et ${d2} = ${L}`});
+    steps.push({color:'#FF9F1C',text:`On convertit : ${n1}/${d1} = ${n1*(L/d1)}/${L} et ${n2}/${d2} = ${n2*(L/d2)}/${L}`});
+    steps.push({color:'#6BCB77',text:`On additionne : ${n1*(L/d1)} + ${n2*(L/d2)} = ${rn} → ${rn}/${rd}`});
+  }
+  if(res.n!==rn||res.d!==rd){
+    const g=gcd(rn,rd);
+    steps.push({color:'#C77DFF',text:`On simplifie par ${g} : ${rn}/${rd} = ${res.n}/${res.d}`});
+  }
+  return steps;
+}
+
+function buildSubSteps(n1,d1,n2,d2,L,rn,rd,res){
+  const steps=[];
+  if(d1===d2){
+    steps.push({color:'#4D96FF',text:`Même dénominateur (${d1}), on soustrait les numérateurs.`});
+    steps.push({color:'#6BCB77',text:`${n1} − ${n2} = ${rn} → résultat : ${rn}/${rd}`});
+  } else {
+    steps.push({color:'#4D96FF',text:`PPCM de ${d1} et ${d2} = ${L}`});
+    steps.push({color:'#FF9F1C',text:`${n1}/${d1} = ${n1*(L/d1)}/${L} et ${n2}/${d2} = ${n2*(L/d2)}/${L}`});
+    steps.push({color:'#6BCB77',text:`${n1*(L/d1)} − ${n2*(L/d2)} = ${rn} → ${rn}/${rd}`});
+  }
+  if(res.n!==rn||res.d!==rd){
+    const g=gcd(Math.abs(rn),rd);
+    steps.push({color:'#C77DFF',text:`Simplification par ${g} → ${res.n}/${res.d}`});
+  }
+  return steps;
+}
+
+function buildMulSteps(n1,d1,n2,d2,rn,rd,res){
+  return[
+    {color:'#4D96FF',text:'Pour multiplier : numérateur × numérateur, dénominateur × dénominateur.'},
+    {color:'#FF9F1C',text:`${n1} × ${n2} = ${rn}  et  ${d1} × ${d2} = ${rd}`},
+    ...(res.n!==rn||res.d!==rd?[{color:'#C77DFF',text:`On simplifie : ${rn}/${rd} ÷ ${gcd(rn,rd)} = ${res.n}/${res.d}`}]:[]),
+  ];
+}
+
+function buildDivSteps(n1,d1,n2,d2,rn,rd,res){
+  return[
+    {color:'#4D96FF',text:`Diviser par une fraction = multiplier par son inverse. On retourne ${n2}/${d2} → ${d2}/${n2}`},
+    {color:'#FF9F1C',text:`${n1}/${d1} × ${d2}/${n2} = ${n1}×${d2} / ${d1}×${n2} = ${rn}/${rd}`},
+    ...(res.n!==rn||res.d!==rd?[{color:'#C77DFF',text:`Simplification → ${res.n}/${res.d}`}]:[]),
+  ];
+}
+
+function buildRedSteps(n,d,res){
+  const g=gcd(n,d);
+  return[
+    {color:'#4D96FF',text:`Le PGCD, c'est le Plus Grand Commun Diviseur : le plus grand nombre qui divise à la fois ${n} et ${d} sans laisser de reste.`},
+    {color:'#FF9F1C',text:`PGCD(${n},${d}) = ${g}`},
+    {color:'#6BCB77',text:`On divise : ${n}÷${g} = ${res.n} et ${d}÷${g} = ${res.d} → ${res.n}/${res.d}`},
+  ];
+}
+
+// ════════════════════════════
+// STORAGE
+// ════════════════════════════
+function getDB(){try{return JSON.parse(localStorage.getItem('frac_db')||'{}')}catch(e){return{}}}
+function saveDB(db){localStorage.setItem('frac_db',JSON.stringify(db));}
+
+// ════════════════════════════
+// HOME
+// ════════════════════════════
+let selOp='add';
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+
+function buildHome(){
+  const db=getDB();
+  document.getElementById('st-sessions').textContent=db.sessions||0;
+  document.getElementById('st-correct').textContent=db.totalCorrect||0;
+  document.getElementById('st-streak').textContent=(db.streak||0)+'🔥';
+}
+
+function pickOp(el){
+  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel'); selOp=el.dataset.op;
+}
+
+// ════════════════════════════
+// GAME
+// ════════════════════════════
+let questions=[],qIdx=0,correct=0,wrong=0,answers=[],qLocked=false;
+let inputField='num'; // which field is active in numpad
+let autoSwitchTimer=null;
+
+function startGame(){
+  questions=Array.from({length:10},()=>genQuestion(selOp)).filter(Boolean);
+  qIdx=0;correct=0;wrong=0;answers=[];qLocked=false;
+  showScreen('sc-game');
+  showQ();
+}
+
+function replayGame(){
+  questions=Array.from({length:10},()=>genQuestion(selOp)).filter(Boolean);
+  qIdx=0;correct=0;wrong=0;answers=[];qLocked=false;
+  showScreen('sc-game');
+  showQ();
+}
+
+function quitGame(){backHome();}
+
+function showQ(){
+  if(qIdx>=questions.length){endGame();return;}
+  const q=questions[qIdx];qLocked=false;
+  document.getElementById('pfill').style.width=(qIdx/questions.length*100)+'%';
+  document.getElementById('q-prog').textContent=(qIdx+1)+'/'+questions.length;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  document.getElementById('gnav-op').textContent=q.label;
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('steps-zone').style.display='none';
+  document.getElementById('vis-zone').style.display='none';
+  document.getElementById('qcm-grid').style.display='none';
+  document.getElementById('input-zone').style.display='none';
+  document.getElementById('inp-num').value='';
+  document.getElementById('inp-den').value='';
+
+  // Render question
+  renderFracDisplay(q);
+
+  // Visual bar for simple fractions
+  if((q.op==='add'||q.op==='red')&&q.d1<=12){
+    buildVisBar(q);
+    document.getElementById('vis-zone').style.display='block';
+  }
+
+  // Use QCM for multiplication and division (easier to pick)
+  // Use input for addition, subtraction, reduction
+  if(q.op==='mul'||q.op==='div'){
+    buildQCM(q);
+  } else {
+    buildInput(q);
+  }
+}
+
+function renderFracDisplay(q){
+  const div=document.getElementById('frac-display');
+  div.innerHTML='';
+  if(q.op==='red'){
+    div.appendChild(makeFrac(q.n1,q.d1));
+    const label=document.getElementById('q-label');
+    label.textContent='RÉDUIS CETTE FRACTION';
+  } else {
+    document.getElementById('q-label').textContent='CALCULE ET SIMPLIFIE';
+    div.appendChild(makeFrac(q.n1,q.d1));
+    div.appendChild(makeSign(q.op));
+    div.appendChild(makeFrac(q.n2,q.d2));
+    div.appendChild(makeEq());
+    div.appendChild(makeFrac('?','?',true));
+  }
+}
+
+function makeFrac(n,d,isQ=false){
+  const wrap=document.createElement('div');wrap.className='frac';
+  const top=document.createElement('div');top.className='frac-num';
+  top.style.color=isQ?'var(--gray)':n==='?'?'var(--gray)':'var(--dark)';
+  top.textContent=n;
+  const bar=document.createElement('div');bar.className='frac-bar';
+  const bot=document.createElement('div');bot.className='frac-den';
+  bot.style.color=isQ?'var(--gray)':d==='?'?'var(--gray)':'var(--dark)';
+  bot.textContent=d;
+  wrap.appendChild(top);wrap.appendChild(bar);wrap.appendChild(bot);
+  return wrap;
+}
+
+function makeSign(op){
+  const s=document.createElement('div');s.className='op-sign';
+  s.textContent={add:'＋',sub:'−',mul:'×',div:'÷'}[op]||'';
+  return s;
+}
+function makeEq(){const s=document.createElement('div');s.className='eq-sign';s.textContent='＝';return s;}
+
+function buildVisBar(q){
+  const bar=document.getElementById('vis-bar');bar.innerHTML='';
+  const d=q.d1;
+  for(let i=0;i<d;i++){
+    const c=document.createElement('div');
+    c.className='vis-cell '+(i<q.n1?'filled':'empty');
+    bar.appendChild(c);
+  }
+}
+
+// ─── QCM ───
+function buildQCM(q){
+  document.getElementById('qcm-grid').style.display='grid';
+  const grid=document.getElementById('qcm-grid');grid.innerHTML='';
+  // Generate 3 wrong answers
+  const wrongs=new Set();
+  while(wrongs.size<3){
+    const wn=randInt(1,12),wd=randInt(2,12);
+    if(!fracEq(wn,wd,q.rn,q.rd)) wrongs.add(wn+'/'+wd);
+  }
+  const choices=[`${q.rn}/${q.rd}`,...wrongs].sort(()=>Math.random()-.5);
+  choices.forEach(ch=>{
+    const[cn,cd]=ch.split('/').map(Number);
+    const btn=document.createElement('button');btn.className='qcm-btn';
+    btn.appendChild(makeFrac(cn,cd));
+    btn.onclick=()=>checkQCM(fracEq(cn,cd,q.rn,q.rd),btn,grid,q);
+    grid.appendChild(btn);
+  });
+}
+
+function checkQCM(ok,btn,grid,q){
+  if(qLocked)return;qLocked=true;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok){
+    // Reveal correct
+    grid.querySelectorAll('.qcm-btn').forEach(b=>{
+      const fracs=b.querySelectorAll('.frac-num,.frac-den');
+      if(fracs.length>=2){
+        const cn=parseInt(fracs[0].textContent),cd=parseInt(fracs[1].textContent);
+        if(fracEq(cn,cd,q.rn,q.rd)) b.classList.add('reveal');
+      }
+    });
+  }
+  recordAnswer(ok,q);
+  showSteps(q);
+}
+
+// ─── INPUT ───
+function buildInput(q){
+  document.getElementById('input-zone').style.display='block';
+  inputField='num';
+  document.getElementById('tab-num').classList.add('active');
+  document.getElementById('tab-den').classList.remove('active');
+}
+
+function setInputField(f){
+  inputField=f;
+  document.getElementById('tab-num').classList.toggle('active',f==='num');
+  document.getElementById('tab-den').classList.toggle('active',f==='den');
+  document.getElementById(f==='num'?'inp-num':'inp-den').focus();
+}
+
+function npKey(k){
+  if(qLocked)return;
+  const el=document.getElementById(inputField==='num'?'inp-num':'inp-den');
+  if(k==='DEL'){
+    el.value=el.value.slice(0,-1);
+  } else if(k==='OK'){
+    checkInput();
+  } else if(el.value.length<3){
+    el.value+=k;
+    // Auto-validate once both fields already have a value (no auto-switch: numbers can be 2-3 digits)
+    const numVal=document.getElementById('inp-num').value;
+    const denVal=document.getElementById('inp-den').value;
+    if(numVal!=='' && denVal!==''){
+      setTimeout(()=>checkInput(), 400);
+    }
+  }
+}
+
+function checkInput(){
+  if(qLocked)return;
+  const q=questions[qIdx];
+  const numStr=document.getElementById('inp-num').value;
+  const denStr=document.getElementById('inp-den').value;
+  if(numStr===''){
+    // Highlight numérateur
+    document.getElementById('inp-num').style.borderColor='var(--red)';
+    document.getElementById('tab-num').classList.add('active');
+    document.getElementById('tab-den').classList.remove('active');
+    inputField='num';
+    return;
+  }
+  if(denStr===''){
+    // Highlight dénominateur
+    document.getElementById('inp-den').style.borderColor='var(--red)';
+    document.getElementById('tab-num').classList.remove('active');
+    document.getElementById('tab-den').classList.add('active');
+    inputField='den';
+    return;
+  }
+  const num=parseInt(numStr);
+  const den=parseInt(denStr);
+  // Reset borders
+  document.getElementById('inp-num').style.borderColor='var(--orange)';
+  document.getElementById('inp-den').style.borderColor='#E5E7EB';
+  const ok=fracEq(num,den,q.rn,q.rd);
+  qLocked=true;
+  recordAnswer(ok,q);
+  showSteps(q);
+}
+
+// ─── SHARED ───
+function recordAnswer(ok,q){
+  if(ok)correct++;else wrong++;
+  answers.push({q,ok});
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  const fb=document.getElementById('fb-bar');
+  fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?`✅ Bravo ! ${q.rn}/${q.rd} est correct !`:`❌ La réponse était ${q.rn}/${q.rd}`;
+  document.getElementById('next-btn').style.display='block';
+}
+
+function showSteps(q){
+  if(!q.steps||q.steps.length===0)return;
+  const zone=document.getElementById('steps-zone');zone.style.display='block';zone.innerHTML='';
+  const title=document.createElement('div');title.style.cssText='font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;text-align:center';title.textContent='💡 Comment on calcule';zone.appendChild(title);
+  q.steps.forEach((s,i)=>{
+    const row=document.createElement('div');row.className='step-row';
+    const num=document.createElement('div');num.className='step-num';num.style.background=s.color;num.textContent=i+1;
+    const txt=document.createElement('div');txt.className='step-text';txt.textContent=s.text;
+    row.appendChild(num);row.appendChild(txt);zone.appendChild(row);
+  });
+}
+
+function nextQ(){
+  // Clear inputs immediately
+  document.getElementById('inp-num').value='';
+  document.getElementById('inp-den').value='';
+  document.getElementById('inp-num').style.borderColor='var(--orange)';
+  document.getElementById('inp-den').style.borderColor='#E5E7EB';
+  qIdx++;
+  showQ();
+}
+
+// ════════════════════════════
+// RESULT
+// ════════════════════════════
+function endGame(){
+  const total=correct+wrong,pct=total>0?Math.round(correct/total*100):0;
+  const db=getDB();
+  db.sessions=(db.sessions||0)+1;
+  db.totalCorrect=(db.totalCorrect||0)+correct;
+  const today=new Date().toDateString();
+  if(db.lastPlay!==today)db.streak=(db.streak||0)+1;
+  db.lastPlay=today;saveDB(db);
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;
+  document.getElementById('rs-ko').textContent=wrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  const det=document.getElementById('res-detail');
+  det.innerHTML='<div class="rd-title">Détail</div>';
+  answers.forEach(a=>{
+    const row=document.createElement('div');row.className='rd-row';
+    const {q,ok}=a;
+    const opSymbol={add:'＋',sub:'−',mul:'×',div:'÷',red:'✂️'}[q.op]||'';
+    const expr=q.op==='red'?`${q.n1}/${q.d1}`:`${q.n1}/${q.d1} ${opSymbol} ${q.n2}/${q.d2}`;
+    row.innerHTML=`<span style="color:${ok?'var(--green)':'var(--red)'}">${ok?'✅':'❌'} ${expr} = <b>${q.rn}/${q.rd}</b></span>`;
+    det.appendChild(row);
+  });
+  if(pct>=70)launchConfetti();
+  showScreen('sc-result');
+}
+
+function backHome(){showScreen('sc-home');buildHome();}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){
+  const colors=['#FFD93D','#FF6B9D','#6BCB77','#4D96FF','#C77DFF'];
+  for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
+}
+
+buildHome();
+</script>
+</body>
+</html>
+

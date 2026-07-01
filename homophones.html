@@ -1,0 +1,266 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Homophones 🔤</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#4D96FF;--green:#6BCB77;--red:#E63946;--orange:#FF9F1C;--purple:#C77DFF;--pink:#FF6B9D;--yellow:#FFD93D;--teal:#26de81;--bg:#FFFBF0;--dark:#1a1a2e;--gray:#9CA3AF;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+#sc-home{background:linear-gradient(160deg,#2d1a00,#4a2e00);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+.scard{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.slabel{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.homo-grid{display:flex;flex-direction:column;gap:8px;}
+.homo-btn{border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);border-radius:13px;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:12px;transition:all .2s;}
+.homo-btn.sel{border-color:var(--yellow);background:rgba(255,211,61,.12);}
+.hb-pair{font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;color:#fff;min-width:90px;}
+.hb-rule{font-size:11px;color:rgba(255,255,255,.5);flex:1;}
+.start-btn{background:linear-gradient(135deg,var(--yellow),var(--orange));color:#1a1a2e;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;margin:0 16px;}
+/* GAME */
+#sc-game{background:var(--bg);overflow-y:auto;}
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;background:var(--bg);position:sticky;top:0;z-index:10;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));border-radius:999px;transition:width .4s;}
+.phrase-card{background:#fff;border-radius:22px;margin:0 16px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);text-align:center;}
+.phrase-text{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--dark);line-height:2;}
+.trou{display:inline-flex;align-items:center;justify-content:center;min-width:80px;height:38px;border-radius:10px;border:3px dashed #E5E7EB;background:#FAFAFA;color:var(--gray);font-size:18px;font-weight:800;padding:0 8px;transition:all .2s;vertical-align:middle;}
+.trou.correct{border-color:var(--green);background:rgba(107,203,119,.15);color:#059669;border-style:solid;}
+.trou.wrong{border-color:var(--red);background:rgba(230,57,70,.08);color:var(--red);border-style:solid;}
+.choices-zone{display:flex;gap:10px;justify-content:center;margin:12px 16px 0;flex-wrap:wrap;}
+.choice-btn{padding:14px 24px;border-radius:16px;background:#fff;border:3px solid #E5E7EB;font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);cursor:pointer;transition:all .15s;min-width:100px;text-align:center;}
+.choice-btn:active{transform:scale(.93);}
+.choice-btn.correct{background:var(--green);color:#fff;border-color:var(--green);}
+.choice-btn.wrong{background:#FEE2E2;border-color:var(--red);color:var(--red);}
+.choice-btn.reveal{background:var(--green);color:#fff;border-color:var(--green);opacity:.7;}
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--red);}
+.expl{background:#FFFBEB;border:2px solid var(--yellow);border-radius:14px;padding:12px 16px;margin:8px 16px 0;display:none;font-size:13px;font-weight:700;color:var(--dark);line-height:1.6;}
+.next-btn{background:linear-gradient(135deg,var(--yellow),var(--orange));color:#1a1a2e;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--yellow),var(--orange));color:#1a1a2e;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--yellow);color:var(--dark);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span style="font-size:52px;display:block;animation:float 3s ease-in-out infinite">🔤</span>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#FFD93D,#FF9F1C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px">Homophones</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px;margin-top:3px">a/à · on/ont · ou/où · et bien d'autres !</div>
+  </div>
+  <div class="home-body">
+    <div class="scard">
+      <div class="slabel">Choisis les homophones à travailler</div>
+      <div class="homo-grid" id="homo-grid"></div>
+    </div>
+    <button class="start-btn" id="start-btn" onclick="startGame()" disabled>🚀 C'est parti !</button>
+  </div>
+</div>
+
+<div id="sc-game" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span style="background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:800;color:var(--gray)" id="gnav-pair">a/à</span>
+    <span style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark)" id="gnav-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:2px 0 6px" id="q-prog">1/12</div>
+  <div class="phrase-card">
+    <div class="phrase-text" id="phrase-text"></div>
+  </div>
+  <div class="choices-zone" id="choices-zone"></div>
+  <div class="fb-bar" id="fb-bar"></div>
+  <div class="expl" id="expl"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Question suivante →</button>
+</div>
+
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Justes</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Erreurs</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--orange)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="startGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+</div>
+
+<script>
+const HOMOPHONES = [
+  {id:'a_a',pair:'a / à',rule:'"a" = verbe avoir (il a) · "à" = préposition (je vais à Paris)',choices:['a','à'],
+   qs:[
+    {p:'Le chat {_} faim.',c:'a',e:'"a" = il a → verbe avoir au présent'},
+    {p:'Elle va {_} l\'école.',c:'à',e:'"à" = préposition de lieu'},
+    {p:'Mon père {_} une voiture rouge.',c:'a',e:'"a" = verbe avoir → on peut remplacer par "avait"'},
+    {p:'Il pense {_} toi.',c:'à',e:'"à" = préposition → on ne peut pas remplacer par "avait"'},
+    {p:'Le soleil {_} brillé toute la journée.',c:'a',e:'"a" brillé = passé composé avec avoir'},
+    {p:'Elle est bonne {_} la course.',c:'à',e:'"à" = préposition → "bonne à la course"'},
+  ]},
+  {id:'on_ont',pair:'on / ont',rule:'"on" = pronom (on mange) · "ont" = verbe avoir (ils ont)',choices:['on','ont'],
+   qs:[
+    {p:'Les enfants {_} faim.',c:'ont',e:'"ont" = ils ont → verbe avoir. Remplace par "ils" → ça marche !'},
+    {p:'{_} joue dans le jardin.',c:'on',e:'"on" = pronom. Remplace par "ils" → "ils joue" ne marche pas'},
+    {p:'Ils {_} mangé la tarte.',c:'ont',e:'"ont" mangé = passé composé → ils ont'},
+    {p:'{_} part demain.',c:'on',e:'"on" = pronom sujet'},
+    {p:'Les oiseaux {_} froid.',c:'ont',e:'"ont" = verbe avoir → les oiseaux ont froid'},
+    {p:'{_} dirait que c\'est vrai.',c:'on',e:'"on" = pronom indéfini'},
+  ]},
+  {id:'ou_ou',pair:'ou / où',rule:'"ou" = choix (café ou thé) · "où" = lieu/question (la ville où il vit)',choices:['ou','où'],
+   qs:[
+    {p:'Tu veux du pain {_} du gâteau ?',c:'ou',e:'"ou" = choix entre deux choses'},
+    {p:'La ville {_} j\'habite est belle.',c:'où',e:'"où" = lieu relatif. On peut remplacer par "dans laquelle"'},
+    {p:'{_} est mon sac ?',c:'où',e:'"où" = question de lieu'},
+    {p:'Il viendra lundi {_} mardi.',c:'ou',e:'"ou" = choix → on peut remplacer par "ou bien"'},
+    {p:'Le parc {_} nous jouons est grand.',c:'où',e:'"où" = lieu → "dans lequel nous jouons"'},
+    {p:'Tu préfères le bleu {_} le rouge ?',c:'ou',e:'"ou" = choix entre deux options'},
+  ]},
+  {id:'et_est',pair:'est / et',rule:'"est" = verbe être (il est) · "et" = liaison (pain et beurre)',choices:['est','et'],
+   qs:[
+    {p:'Le ciel {_} bleu.',c:'est',e:'"est" = il est → verbe être au présent'},
+    {p:'J\'aime le chocolat {_} la vanille.',c:'et',e:'"et" = liaison. On peut remplacer par "ainsi que"'},
+    {p:'Mon frère {_} grand {_} fort.',c:'est',e:'"est" → verbe être. Le 2e trou = "et"'},
+    {p:'Elle {_} partie tôt ce matin.',c:'est',e:'"est" partie = passé composé avec être'},
+    {p:'Il mange une pomme {_} une poire.',c:'et',e:'"et" = liaison entre deux éléments'},
+    {p:'Ce film {_} passionnant.',c:'est',e:'"est" = verbe être → on peut remplacer par "était"'},
+  ]},
+  {id:'son_sont',pair:'son / sont',rule:'"son" = déterminant possessif (son chien) · "sont" = verbe être (ils sont)',choices:['son','sont'],
+   qs:[
+    {p:'Les élèves {_} fatigués.',c:'sont',e:'"sont" = ils sont → remplace par "étaient" → ça marche !'},
+    {p:'Elle a perdu {_} cahier.',c:'son',e:'"son" = déterminant possessif → son/sa/ses'},
+    {p:'Les fleurs {_} belles.',c:'sont',e:'"sont" = verbe être au pluriel'},
+    {p:'Il a rangé {_} manteau.',c:'son',e:'"son" = possessif → on ne peut pas remplacer par "étaient"'},
+    {p:'Mes amis {_} gentils.',c:'sont',e:'"sont" = ils sont → "étaient" fonctionne à l\'imparfait'},
+    {p:'Le chien mange {_} repas.',c:'son',e:'"son" = déterminant possessif masculin'},
+  ]},
+  {id:'ces_ses_cest',pair:"c'est / ces / ses",rule:'"c\'est" = présentation · "ces" = démonstratif · "ses" = possessif',choices:["c'est","ces","ses"],
+   qs:[
+    {p:'{_} mes amis.',c:"ce sont / c'est",e:'"C\'est" = présentation. Ou "ce sont" pour le pluriel',overrideC:"c'est"},
+    {p:'Elle range {_} affaires.',c:'ses',e:'"ses" = possessif pluriel → ses affaires à elle'},
+    {p:'{_} une belle journée.',c:"c'est",e:'"c\'est" = présentation → on peut remplacer par "cela est"'},
+    {p:'Je regarde {_} étoiles.',c:'ces',e:'"ces" = démonstratif → ces étoiles-là'},
+    {p:'{_} magnifique !',c:"c'est",e:'"c\'est" = cela est magnifique'},
+    {p:'Il a pris {_} livres.',c:'ses',e:'"ses" = possessif → les livres qui lui appartiennent'},
+  ]},
+  {id:'leur_leurs',pair:'leur / leurs',rule:'"leur" = à eux (je leur dis) ou possessif singulier · "leurs" = possessif pluriel',choices:['leur','leurs'],
+   qs:[
+    {p:'Je {_} ai dit bonjour.',c:'leur',e:'"leur" = pronom COI → je dis à eux → singulier'},
+    {p:'Ils rangent {_} affaires.',c:'leurs',e:'"leurs" = possessif pluriel → plusieurs affaires'},
+    {p:'Elle {_} a offert un cadeau.',c:'leur',e:'"leur" = pronom → à eux/elles'},
+    {p:'Les enfants ont fini {_} devoirs.',c:'leurs',e:'"leurs" = possessif → plusieurs devoirs'},
+    {p:'Je {_} explique la leçon.',c:'leur',e:'"leur" = à eux → pronom COI'},
+    {p:'Ils adorent {_} parents.',c:'leurs',e:'"leurs" = possessif pluriel → leurs parents à eux'},
+  ]},
+  {id:'mais_mes_met',pair:'mais / mes / met',rule:'"mais" = opposition · "mes" = possessif pluriel · "met" = verbe mettre',choices:['mais','mes','met'],
+   qs:[
+    {p:'Je veux venir, {_} je suis fatigué.',c:'mais',e:'"mais" = opposition/contraste'},
+    {p:'Elle {_} la table.',c:'met',e:'"met" = verbe mettre au présent → il/elle met'},
+    {p:'J\'ai perdu {_} clés.',c:'mes',e:'"mes" = possessif pluriel de première personne'},
+    {p:'Il pleut, {_} il fait chaud.',c:'mais',e:'"mais" = opposition entre deux idées'},
+    {p:'Elle {_} son manteau.',c:'met',e:'"met" = verbe mettre → on peut remplacer par "mettait"'},
+    {p:'{_} parents sont gentils.',c:'mes',e:'"mes" = possessif pluriel → mes parents à moi'},
+  ]},
+];
+
+let selHomos=new Set(), questions=[], qIdx=0, correct=0, wrong=0, qLocked=false;
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const grid=document.getElementById('homo-grid');
+  HOMOPHONES.forEach(h=>{
+    const btn=document.createElement('button');btn.className='homo-btn';btn.dataset.id=h.id;
+    btn.innerHTML=`<span class="hb-pair">${h.pair}</span><span class="hb-rule">${h.rule}</span>`;
+    btn.onclick=()=>{
+      if(selHomos.has(h.id)){selHomos.delete(h.id);btn.classList.remove('sel');btn.style.borderColor='';}
+      else{selHomos.add(h.id);btn.classList.add('sel');btn.style.borderColor='var(--yellow)';}
+      document.getElementById('start-btn').disabled=selHomos.size===0;
+    };
+    grid.appendChild(btn);
+  });
+});
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+
+function startGame(){
+  const pool=[];
+  HOMOPHONES.filter(h=>selHomos.has(h.id)).forEach(h=>h.qs.forEach(q=>pool.push({...q,pair:h.pair,choices:h.choices})));
+  questions=[...pool].sort(()=>Math.random()-.5).slice(0,12);
+  qIdx=0;correct=0;wrong=0;qLocked=false;
+  showScreen('sc-game');showQ();
+}
+
+function showQ(){
+  if(qIdx>=questions.length){endGame();return;}
+  const q=questions[qIdx];qLocked=false;
+  document.getElementById('pfill').style.width=(qIdx/questions.length*100)+'%';
+  document.getElementById('q-prog').textContent=(qIdx+1)+'/'+questions.length;
+  document.getElementById('gnav-score').textContent=correct+' ⭐';
+  document.getElementById('fb-bar').style.display='none';
+  document.getElementById('expl').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('gnav-pair').textContent=q.pair;
+  document.getElementById('phrase-text').innerHTML=q.p.replace('{_}','<span class="trou" id="trou">…</span>');
+  const zone=document.getElementById('choices-zone');zone.innerHTML='';
+  q.choices.forEach(ch=>{
+    const btn=document.createElement('button');btn.className='choice-btn';btn.textContent=ch;
+    btn.onclick=()=>checkAns(ch===(q.overrideC||q.c),btn,zone,q,ch);
+    zone.appendChild(btn);
+  });
+}
+
+function checkAns(ok,btn,zone,q,chosen){
+  if(qLocked)return;qLocked=true;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok) zone.querySelectorAll('.choice-btn').forEach(b=>{if(b.textContent===(q.overrideC||q.c))b.classList.add('reveal');});
+  const trou=document.getElementById('trou');
+  if(trou){trou.textContent=q.overrideC||q.c;trou.className='trou '+(ok?'correct':'wrong');}
+  const fb=document.getElementById('fb-bar');fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?'✅ Bravo !':'❌ Ce n\'est pas "'+chosen+'" ici...';
+  document.getElementById('expl').style.display='block';document.getElementById('expl').textContent='💡 '+q.e;
+  if(ok)correct++;else wrong++;
+  setTimeout(()=>{ qIdx++; showQ(); }, 1800);
+}
+
+function nextQ(){qIdx++;showQ();}
+function quitGame(){backHome();}
+function backHome(){showScreen('sc-home');}
+function endGame(){
+  const pct=Math.round(correct/(correct+wrong)*100)||0;
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;document.getElementById('rs-ko').textContent=wrong;document.getElementById('rs-pct').textContent=pct+'%';
+  if(pct>=70)launchConfetti();showScreen('sc-result');
+}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){const colors=['#FFD93D','#FF9F1C','#6BCB77','#4D96FF','#FF6B9D'];for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}}
+</script>
+</body>
+</html>
+

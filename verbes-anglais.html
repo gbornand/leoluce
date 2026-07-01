@@ -1,0 +1,1306 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Verbes Anglais <b style="font-size:14px;letter-spacing:-1px">EN</b></title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'><b style="font-size:14px;letter-spacing:-1px">EN</b></text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#4D96FF;--green:#6BCB77;--red:#E63946;--orange:#FF9F1C;
+  --purple:#C77DFF;--pink:#FF6B9D;--yellow:#FFD93D;--teal:#26de81;
+  --bg:#F0F7FF;--dark:#1a1a2e;--gray:#9CA3AF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:flex;justify-content:center;overflow:hidden;}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;height:100vh;}
+.screen.active{display:flex;}
+
+/* ══ HOME ══ */
+#sc-home{background:linear-gradient(160deg,#0d1b2e 0%,#1a2f4e 100%);padding-bottom:40px;overflow-y:auto;}
+.home-top{padding:44px 20px 20px;text-align:center;position:relative;}
+.back-hub{position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;}
+.home-flag{font-size:52px;display:block;animation:float 3s ease-in-out infinite;}
+.home-title{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#FF6B6B,#4ECDC4,#45B7D1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px;}
+.home-sub{color:rgba(255,255,255,.5);font-size:13px;margin-top:3px;}
+.home-body{padding:0 16px;display:flex;flex-direction:column;gap:12px;}
+
+.stats-banner{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.sb-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.sb-row{display:flex;justify-content:space-around;}
+.sb-stat{text-align:center;}
+.sb-val{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+.sb-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;}
+.sb-bar{height:5px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;margin-top:10px;}
+.sb-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:999px;transition:width .6s;}
+
+.modes-section{background:rgba(255,255,255,.07);border-radius:18px;padding:14px 16px;}
+.ms-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.modes-grid{display:flex;flex-direction:column;gap:8px;}
+.mode-row{border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;background:rgba(255,255,255,.04);}
+.mode-row.sel{border-color:var(--yellow);background:rgba(255,211,61,.1);}
+.mode-row:active{transform:scale(.98);}
+.mr-icon{font-size:22px;min-width:30px;text-align:center;}
+.mr-info{flex:1;}
+.mr-name{font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:#fff;}
+.mr-desc{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;}
+
+.errors-chip{background:rgba(230,57,70,.15);border:1px solid rgba(230,57,70,.3);border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.ec-title{font-size:13px;font-weight:800;color:#fff;}
+.ec-sub{font-size:11px;color:rgba(230,57,70,.8);margin-top:2px;}
+.ec-btn{background:rgba(230,57,70,.3);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+.start-btn{background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;border:none;border-radius:18px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 20px rgba(77,150,255,.4);transition:transform .15s;margin:0 16px;}
+.start-btn:active{transform:scale(.97);}
+
+/* ══ GAME NAV ══ */
+.gnav{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;}
+.gnav-back{background:rgba(0,0,0,.07);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:'Nunito',sans-serif;}
+.gnav-mode{background:#F3F4F6;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--gray);}
+.gnav-score{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--dark);}
+.pbar{height:5px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:0 16px 8px;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:999px;transition:width .4s;}
+
+/* ══ FLASHCARD ══ */
+.flashcard-wrap{margin:0 16px;perspective:1200px;}
+.flashcard{width:100%;min-height:200px;position:relative;transition:transform .55s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d;cursor:pointer;}
+.flashcard.flipped{transform:rotateY(180deg);}
+.card-face{position:absolute;width:100%;min-height:200px;border-radius:22px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;backface-visibility:hidden;box-shadow:0 6px 28px rgba(0,0,0,.1);}
+.card-front{background:#fff;}
+.card-back{background:linear-gradient(135deg,#1a2f4e,#0d1b2e);transform:rotateY(180deg);}
+.card-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.card-word{font-family:'Baloo 2',sans-serif;font-size:48px;font-weight:900;line-height:1.1;}
+.card-sub{font-size:15px;margin-top:6px;}
+.card-tap{font-size:12px;color:var(--gray);margin-top:14px;}
+.card-audio{background:rgba(77,150,255,.1);border:none;border-radius:12px;padding:8px 16px;font-size:16px;cursor:pointer;margin-top:8px;}
+.flip-hint{text-align:center;font-size:12px;color:var(--gray);font-weight:700;margin:8px 16px 0;}
+.selfcheck{margin:10px 16px 0;display:none;}
+.selfcheck.show{display:block;}
+.sc-label{text-align:center;font-size:13px;font-weight:700;color:var(--gray);margin-bottom:8px;}
+.sc-row{display:flex;gap:8px;}
+.sc-btn{flex:1;border:none;border-radius:14px;padding:13px 6px;font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:transform .1s;}
+.sc-btn:active{transform:scale(.95);}
+.sc-ok{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;}
+.sc-ko{background:linear-gradient(135deg,var(--red),var(--pink));color:#fff;}
+.sc-mid{background:linear-gradient(135deg,var(--orange),var(--yellow));color:#1a1a2e;}
+
+/* ══ RELIER ══ */
+#sc-relier{background:var(--bg);}
+.relier-wrap{margin:8px 16px 0;background:#fff;border-radius:22px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,.07);position:relative;}
+.relier-hint{font-size:13px;font-weight:700;color:var(--gray);text-align:center;margin-bottom:14px;}
+.relier-cols{display:flex;gap:0;align-items:stretch;}
+.relier-col{flex:1;display:flex;flex-direction:column;gap:10px;}
+.relier-col.right{align-items:flex-end;}
+.rel-item{padding:10px 12px;border-radius:12px;border:2px solid #E5E7EB;background:#F9FAFB;cursor:pointer;transition:all .2s;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;color:var(--dark);text-align:center;min-width:120px;position:relative;user-select:none;}
+.rel-item:active{transform:scale(.96);}
+.rel-item.selected{border-color:var(--blue);background:rgba(77,150,255,.1);color:var(--blue);}
+.rel-item.matched{border-color:var(--green);background:rgba(107,203,119,.15);color:#059669;cursor:default;}
+.rel-item.wrong-flash{border-color:var(--red);background:rgba(230,57,70,.1);animation:shake .3s ease;}
+.relier-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+.relier-next{background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:10px 16px 0;display:none;}
+.relier-score-row{display:flex;justify-content:center;gap:16px;margin:8px 16px 0;}
+.relier-dot{width:14px;height:14px;border-radius:50%;background:#E5E7EB;transition:all .2s;}
+.relier-dot.ok{background:var(--green);}
+.relier-dot.ko{background:var(--red);}
+
+/* ══ MICRO ══ */
+#sc-micro{background:var(--bg);}
+.micro-card{background:#fff;border-radius:22px;margin:8px 16px 0;padding:24px 20px;box-shadow:0 4px 18px rgba(0,0,0,.07);text-align:center;}
+.micro-label{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.micro-fr{font-family:'Baloo 2',sans-serif;font-size:40px;font-weight:900;color:var(--dark);}
+.micro-hint{font-size:13px;color:var(--gray);margin-top:6px;}
+.micro-reveal{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--blue);margin-top:8px;min-height:36px;}
+.mic-big{width:76px;height:76px;border-radius:50%;border:none;font-size:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:14px auto 0;transition:all .2s;}
+.mic-big.idle{background:linear-gradient(135deg,var(--blue),var(--purple));box-shadow:0 4px 18px rgba(77,150,255,.4);}
+.mic-big.on{background:linear-gradient(135deg,var(--red),var(--orange));animation:pulse .9s ease-in-out infinite;}
+.mic-big.done{background:linear-gradient(135deg,var(--green),var(--teal));}
+.mic-heard{font-size:18px;font-weight:800;color:var(--dark);text-align:center;min-height:28px;margin-top:6px;}
+.mic-status{font-size:13px;color:var(--gray);text-align:center;margin-top:4px;}
+.fb-bar{border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;text-align:center;margin:8px 16px 0;display:none;}
+.fb-bar.ok{background:#D1FAE5;color:#059669;}
+.fb-bar.ko{background:#FEE2E2;color:var(--red);}
+.next-btn{background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;border:none;border-radius:14px;padding:13px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;margin:8px 16px 0;display:none;}
+.skip-small{background:none;border:none;color:var(--gray);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:block;margin:6px auto 0;text-align:center;}
+
+/* ══ ÉCRIRE ══ */
+#sc-ecrire{background:var(--bg);}
+.ecrire-card{background:#fff;border-radius:22px;margin:8px 16px 0;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);text-align:center;}
+.ecrire-label{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.ecrire-word{font-family:'Baloo 2',sans-serif;font-size:44px;font-weight:900;color:var(--dark);}
+.ecrire-sub{font-size:14px;color:var(--gray);margin-top:4px;}
+.ecrire-audio{background:linear-gradient(135deg,var(--blue),var(--teal));border:none;border-radius:14px;padding:11px 22px;color:#fff;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;}
+.letter-boxes{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin:12px 16px 0;min-height:54px;align-items:center;}
+.lb{min-width:36px;height:48px;border-radius:10px;border:2px solid #E5E7EB;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--dark);background:#fff;transition:all .2s;padding:0 4px;}
+.lb.filled{border-color:var(--blue);background:rgba(77,150,255,.08);}
+.lb.cur{border-color:var(--blue);box-shadow:0 0 0 3px rgba(77,150,255,.2);}
+.lb.correct{border-color:var(--green);background:rgba(107,203,119,.15);color:#059669;}
+.lb.wrong{border-color:var(--red);background:rgba(230,57,70,.1);color:var(--red);}
+.azerty{display:flex;flex-direction:column;gap:4px;margin:8px 16px 0;}
+.azerty-row{display:flex;gap:4px;justify-content:center;}
+.azk{border:1.5px solid #E5E7EB;border-radius:9px;height:42px;min-width:30px;flex:1;max-width:38px;background:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:transform .1s;color:var(--dark);}
+.azk:active{transform:scale(.88);}
+.azk.del{background:#FEE2E2;border-color:#fca5a5;color:var(--red);max-width:48px;font-size:12px;}
+.azk.ok{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;max-width:54px;font-size:12px;}
+
+/* ══ RESULT ══ */
+#sc-result{padding:20px 16px;gap:12px;align-items:center;padding-bottom:40px;overflow-y:auto;}
+.res-emoji{font-size:64px;text-align:center;}
+.res-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-align:center;}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.res-s{background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.res-sv{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;}
+.res-sl{font-size:9px;color:var(--gray);font-weight:700;text-transform:uppercase;margin-top:2px;}
+.res-detail{background:#fff;border-radius:16px;padding:14px;width:100%;max-height:240px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.rd-title{font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.rd-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F3F4F6;font-size:13px;font-weight:700;}
+.rd-row:last-child{border:none;}
+.res-btns{display:flex;gap:8px;width:100%;}
+.btn-r{flex:1;background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+.btn-h{flex:1;background:#fff;border:2px solid var(--blue);color:var(--blue);border-radius:14px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.confetti-piece{position:fixed;top:-20px;width:10px;height:10px;pointer-events:none;z-index:999;animation:cfall 1.8s ease-in forwards;}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
+@media(min-width:768px){body{background:#1a1a2e;padding:20px 0;}#app{max-width:580px;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.35);height:calc(100vh - 40px);margin:0 auto;}}
+@media(min-width:1100px){#app{max-width:700px;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="sc-home" class="screen active">
+  <div class="home-top">
+    <button class="back-hub" onclick="goHub()">← Accueil</button>
+    <span class="home-flag"><b style="font-size:14px;letter-spacing:-1px">EN</b></span>
+    <div class="home-title">Verbes Irréguliers</div>
+    <div class="home-sub">Present · Past Simple · Traduction</div>
+  </div>
+  <div class="home-body">
+    <div class="stats-banner">
+      <div class="sb-title">Ma progression</div>
+      <div class="sb-row">
+        <div class="sb-stat"><div class="sb-val" id="stat-known">0</div><div class="sb-lbl">Maîtrisés</div></div>
+        <div class="sb-stat"><div class="sb-val" id="stat-total">55</div><div class="sb-lbl">Total</div></div>
+        <div class="sb-stat"><div class="sb-val" id="stat-streak">0🔥</div><div class="sb-lbl">Série</div></div>
+      </div>
+      <div class="sb-bar"><div class="sb-fill" id="stat-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="modes-section">
+      <div class="ms-title">🎮 Choisis un mode</div>
+      <div class="modes-grid">
+        <div class="mode-row sel" data-mode="memoire" onclick="pickMode(this)">
+          <span class="mr-icon">🧠</span>
+          <div class="mr-info"><div class="mr-name">Mémoire</div><div class="mr-desc">Écoute 3 verbes · ils disparaissent · répète-les !</div></div>
+        </div>
+        <div class="mode-row" data-mode="flashcard" onclick="pickMode(this)">
+          <span class="mr-icon">🃏</span>
+          <div class="mr-info"><div class="mr-name">Flashcards</div><div class="mr-desc">Retourne la carte · Auto-évaluation · Prononciation</div></div>
+        </div>
+        <div class="mode-row" data-mode="relier-past" onclick="pickMode(this)">
+          <span class="mr-icon">🔗</span>
+          <div class="mr-info"><div class="mr-name">Relier — Past Simple</div><div class="mr-desc">Relie l'infinitif à son passé</div></div>
+        </div>
+        <div class="mode-row" data-mode="relier-fr" onclick="pickMode(this)">
+          <span class="mr-icon">🇫🇷</span>
+          <div class="mr-info"><div class="mr-name">Relier — Traduction</div><div class="mr-desc">Relie l'infinitif à sa traduction</div></div>
+        </div>
+        <div class="mode-row" data-mode="micro" onclick="pickMode(this)">
+          <span class="mr-icon">🎤</span>
+          <div class="mr-info"><div class="mr-name">Micro — Prononciation</div><div class="mr-desc">On dit la traduction, tu prononces en anglais</div></div>
+        </div>
+        <div class="mode-row" data-mode="ecrire" onclick="pickMode(this)">
+          <span class="mr-icon">✍️</span>
+          <div class="mr-info"><div class="mr-name">Écrire le Past Simple</div><div class="mr-desc">On prononce le verbe, tu tapes son passé</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="errors-chip" id="errors-chip" style="display:none" onclick="startErrorMode()">
+      <div><div class="ec-title">🔁 Réviser mes erreurs</div><div class="ec-sub" id="errors-count">0 verbes à retravailler</div></div>
+      <button class="ec-btn">Réviser →</button>
+    </div>
+    <button class="start-btn" onclick="startGame()">🚀 C'est parti !</button>
+  </div>
+</div>
+
+<!-- FLASHCARD -->
+<div id="sc-flash" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode">🃏 Flashcards</span>
+    <span class="gnav-score" id="fl-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="fl-fill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:4px 0" id="fl-prog">1 / 15</div>
+  <div class="flashcard-wrap">
+    <div class="flashcard" id="flashcard" onclick="flipCard()">
+      <div class="card-face card-front">
+        <div class="card-label" style="color:var(--blue)">PRÉSENT SIMPLE</div>
+        <div class="card-word" id="fl-front-word" style="color:var(--dark)">Go</div>
+        <button class="card-audio" onclick="event.stopPropagation();speakEN(document.getElementById('fl-front-word').textContent)">🔊 Écouter</button>
+        <div class="card-tap">👆 Appuie pour voir le passé</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label" style="color:rgba(255,255,255,.5)">PAST SIMPLE</div>
+        <div class="card-word" id="fl-back-past" style="color:#fff">Went</div>
+        <div class="card-sub" id="fl-back-fr" style="color:rgba(255,255,255,.6)">aller</div>
+        <button class="card-audio" style="margin-top:8px" onclick="event.stopPropagation();speakEN(document.getElementById('fl-back-past').textContent)">🔊 Écouter</button>
+      </div>
+    </div>
+  </div>
+  <div class="flip-hint" id="fl-hint">Retourne la carte pour voir le passé</div>
+  <div class="selfcheck" id="selfcheck">
+    <div class="sc-label">Tu le savais ?</div>
+    <div class="sc-row">
+      <button class="sc-btn sc-ko" onclick="rateFlash(0)">❌ Non</button>
+      <button class="sc-btn sc-mid" onclick="rateFlash(1)">😅 Presque</button>
+      <button class="sc-btn sc-ok" onclick="rateFlash(2)">✅ Oui !</button>
+    </div>
+  </div>
+</div>
+
+<!-- RELIER -->
+<div id="sc-relier" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode" id="rel-mode-lbl">🔗 Relier</span>
+    <span class="gnav-score" id="rel-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="rel-fill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:4px 0" id="rel-prog"></div>
+  <div class="relier-wrap" id="relier-wrap">
+    <div class="relier-hint" id="rel-hint">Relie chaque verbe à son passé</div>
+    <div style="position:relative">
+      <svg class="relier-svg" id="rel-svg" style="pointer-events:none"></svg>
+      <div class="relier-cols">
+        <div class="relier-col left" id="rel-left"></div>
+        <div style="width:40px"></div>
+        <div class="relier-col right" id="rel-right"></div>
+      </div>
+    </div>
+  </div>
+  <div class="relier-score-row" id="rel-dots"></div>
+  <button class="relier-next" id="rel-next" onclick="nextRelier()">Groupe suivant →</button>
+</div>
+
+<!-- MICRO -->
+<div id="sc-micro" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode">🎤 Micro</span>
+    <span class="gnav-score" id="mic-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="mic-fill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:4px 0" id="mic-prog"></div>
+  <div class="micro-card">
+    <div class="micro-label">DIS CE VERBE EN ANGLAIS</div>
+    <div class="micro-fr" id="mic-fr">aller</div>
+    <div class="micro-hint">Prononce le verbe à l'infinitif en anglais</div>
+    <div class="micro-reveal" id="mic-reveal"></div>
+  </div>
+  <button class="mic-big idle" id="mic-btn" onclick="toggleMic()">🎤</button>
+  <div class="mic-heard" id="mic-heard"></div>
+  <div class="mic-status" id="mic-status">Appuie et parle</div>
+  <div class="fb-bar" id="mic-fb"></div>
+  <button class="next-btn" id="mic-next" onclick="nextMic()">Verbe suivant →</button>
+  <button class="skip-small" onclick="skipMic()">Passer ce verbe</button>
+</div>
+
+<!-- ÉCRIRE -->
+<div id="sc-ecrire" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode">✍️ Écrire</span>
+    <span class="gnav-score" id="ec-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="ec-fill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:4px 0" id="ec-prog"></div>
+  <div class="ecrire-card">
+    <div class="ecrire-label">ÉCRIS LE PAST SIMPLE</div>
+    <div class="ecrire-word" id="ec-word">Go</div>
+    <div class="ecrire-sub" id="ec-sub">aller</div>
+    <button class="ecrire-audio" onclick="speakEN(document.getElementById('ec-word').textContent)">🔊 Prononcer</button>
+  </div>
+  <div class="letter-boxes" id="letter-boxes"></div>
+  <div class="fb-bar" id="ec-fb"></div>
+  <button class="next-btn" id="ec-next" onclick="nextEcrire()">Verbe suivant →</button>
+  <div class="azerty" id="azerty"></div>
+</div>
+
+<!-- MÉMOIRE -->
+<div id="sc-memoire" class="screen">
+  <div class="gnav">
+    <button class="gnav-back" onclick="quitGame()">🏠</button>
+    <span class="gnav-mode">🧠 Mémoire</span>
+    <span class="gnav-score" id="mem-score">0 ⭐</span>
+  </div>
+  <div class="pbar"><div class="pfill" id="mem-fill" style="width:0%"></div></div>
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray);margin:4px 0" id="mem-prog">Série 1/5</div>
+
+  <!-- Phase écoute -->
+  <div id="mem-listen-phase" style="display:none;flex-direction:column;gap:10px;margin:8px 16px 0">
+    <div style="background:#fff;border-radius:22px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);text-align:center">
+      <div style="font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" id="mem-listen-label">ÉCOUTE ET MÉMORISE</div>
+      <div id="mem-words-display" style="display:flex;flex-direction:column;gap:10px;align-items:center"></div>
+      <div style="font-size:12px;color:var(--gray);font-weight:700;margin-top:14px" id="mem-listen-hint">Les verbes vont disparaître...</div>
+    </div>
+  </div>
+
+  <!-- Phase rappel -->
+  <div id="mem-recall-phase" style="display:none;flex-direction:column;gap:10px;margin:8px 16px 0">
+    <div style="background:#fff;border-radius:22px;padding:20px;box-shadow:0 4px 18px rgba(0,0,0,.07);text-align:center">
+      <div style="font-size:12px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">RAPPELLE-TOI !</div>
+      <div style="font-size:13px;color:var(--gray);font-weight:700;margin-bottom:14px">Dis les <span id="mem-count">3</span> verbes en anglais dans l'ordre</div>
+      <!-- Slots pour les réponses -->
+      <div id="mem-slots" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+    </div>
+    <!-- Micro -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <button class="mic-big idle" id="mem-mic-btn" onclick="toggleMemMic()">🎤</button>
+      <div style="font-size:13px;color:var(--gray);font-weight:700" id="mem-mic-status">Appuie et dis les verbes</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:var(--dark);min-height:26px;text-align:center" id="mem-heard"></div>
+    </div>
+    <div class="fb-bar" id="mem-fb"></div>
+    <button class="next-btn" id="mem-next" onclick="nextMemSeries()">Série suivante →</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="sc-result" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">Bravo !</div>
+  <div class="res-grid">
+    <div class="res-s"><div class="res-sv" id="rs-ok" style="color:var(--green)">0</div><div class="res-sl">✅ Connus</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-ko" style="color:var(--red)">0</div><div class="res-sl">❌ Ratés</div></div>
+    <div class="res-s"><div class="res-sv" id="rs-pct" style="color:var(--blue)">0%</div><div class="res-sl">Score</div></div>
+  </div>
+  <div class="res-detail" id="res-detail"></div>
+  <div class="res-btns">
+    <button class="btn-r" onclick="replayGame()">🔄 Rejouer</button>
+    <button class="btn-h" onclick="backHome()">🏠 Accueil</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ════════════════════════════════
+// DATA
+// ════════════════════════════════
+const VERBS = [
+  {inf:'Be',past:'Was / Were',fr:'être'},{inf:'Become',past:'Became',fr:'devenir'},
+  {inf:'Build',past:'Built',fr:'construire'},{inf:'Buy',past:'Bought',fr:'acheter'},
+  {inf:'Bring',past:'Brought',fr:'apporter'},{inf:'Come',past:'Came',fr:'venir'},
+  {inf:'Choose',past:'Chose',fr:'choisir'},{inf:'Do',past:'Did',fr:'faire'},
+  {inf:'Drink',past:'Drank',fr:'boire'},{inf:'Drive',past:'Drove',fr:'conduire'},
+  {inf:'Eat',past:'Ate',fr:'manger'},{inf:'Fall',past:'Fell',fr:'tomber'},
+  {inf:'Feel',past:'Felt',fr:'ressentir'},{inf:'Feed',past:'Fed',fr:'nourrir'},
+  {inf:'Find',past:'Found',fr:'trouver'},{inf:'Forget',past:'Forgot',fr:'oublier'},
+  {inf:'Fly',past:'Flew',fr:'voler'},{inf:'Get',past:'Got',fr:'obtenir'},
+  {inf:'Give',past:'Gave',fr:'donner'},{inf:'Go',past:'Went',fr:'aller'},
+  {inf:'Grow',past:'Grew',fr:'grandir'},{inf:'Hide',past:'Hid',fr:'cacher'},
+  {inf:'Hear',past:'Heard',fr:'entendre'},{inf:'Have',past:'Had',fr:'avoir'},
+  {inf:'Hold',past:'Held',fr:'tenir'},{inf:'Hurt',past:'Hurt',fr:'blesser'},
+  {inf:'Keep',past:'Kept',fr:'garder'},{inf:'Know',past:'Knew',fr:'savoir'},
+  {inf:'Leave',past:'Left',fr:'quitter'},{inf:'Lose',past:'Lost',fr:'perdre'},
+  {inf:'Make',past:'Made',fr:'fabriquer'},{inf:'Meet',past:'Met',fr:'rencontrer'},
+  {inf:'Put',past:'Put',fr:'mettre'},{inf:'Pay',past:'Paid',fr:'payer'},
+  {inf:'Read',past:'Read',fr:'lire'},{inf:'Run',past:'Ran',fr:'courir'},
+  {inf:'Say',past:'Said',fr:'dire'},{inf:'See',past:'Saw',fr:'voir'},
+  {inf:'Send',past:'Sent',fr:'envoyer'},{inf:'Sell',past:'Sold',fr:'vendre'},
+  {inf:'Show',past:'Showed',fr:'montrer'},{inf:'Sing',past:'Sang',fr:'chanter'},
+  {inf:'Sit',past:'Sat',fr:"s'asseoir"},{inf:'Sleep',past:'Slept',fr:'dormir'},
+  {inf:'Speak',past:'Spoke',fr:'parler'},{inf:'Swim',past:'Swam',fr:'nager'},
+  {inf:'Take',past:'Took',fr:'prendre'},{inf:'Tell',past:'Told',fr:'raconter'},
+  {inf:'Think',past:'Thought',fr:'penser'},{inf:'Throw',past:'Threw',fr:'lancer'},
+  {inf:'Understand',past:'Understood',fr:'comprendre'},{inf:'Wear',past:'Wore',fr:'porter'},
+  {inf:'Wake',past:'Woke',fr:'se réveiller'},{inf:'Win',past:'Won',fr:'gagner'},
+  {inf:'Write',past:'Wrote',fr:'écrire'},
+];
+
+// ════════════════════════════════
+// STORAGE
+// ════════════════════════════════
+function getDB(){try{return JSON.parse(localStorage.getItem('vb_en')||'{}')}catch(e){return{}}}
+function saveDB(db){localStorage.setItem('vb_en',JSON.stringify(db));}
+function getErrors(){return getDB().errors||{};}
+function addErr(inf){const db=getDB();if(!db.errors)db.errors={};db.errors[inf]=(db.errors[inf]||0)+1;saveDB(db);}
+function subErr(inf){const db=getDB();if(!db.errors)return;db.errors[inf]=Math.max(0,(db.errors[inf]||0)-1);saveDB(db);}
+function getKnown(){return getDB().known||[];}
+function setKnown(inf){const db=getDB();if(!db.known)db.known=[];if(!db.known.includes(inf))db.known.push(inf);saveDB(db);}
+
+// ════════════════════════════════
+// HOME
+// ════════════════════════════════
+let selMode='flashcard', errMode=false;
+
+function goHub(){const b=location.href.replace(/[^/]*$/,'');location.href=b+'index.html';}
+
+function buildHome(){
+  const known=getKnown(),errs=getErrors(),db=getDB();
+  const errCount=Object.values(errs).filter(v=>v>0).length;
+  document.getElementById('stat-known').textContent=known.length;
+  document.getElementById('stat-streak').textContent=(db.streak||0)+'🔥';
+  document.getElementById('stat-bar').style.width=(known.length/VERBS.length*100)+'%';
+  document.getElementById('errors-chip').style.display=errCount>0?'':'none';
+  if(errCount>0) document.getElementById('errors-count').textContent=errCount+' verbe'+(errCount>1?'s':'')+' à retravailler';
+}
+
+function pickMode(el){
+  document.querySelectorAll('.mode-row').forEach(r=>r.classList.remove('sel'));
+  el.classList.add('sel'); selMode=el.dataset.mode;
+}
+
+// ════════════════════════════════
+// QUEUE
+// ════════════════════════════════
+let queue=[],qIdx=0,correct=0,wrong=0,answers=[],qLocked=false;
+
+function buildQueue(errOnly=false){
+  const errs=getErrors();
+  let pool=[...VERBS];
+  if(errOnly) pool=pool.filter(v=>errs[v.inf]>0);
+  const boosted=[];
+  pool.forEach(v=>{boosted.push(v);const e=errs[v.inf]||0;if(e>=2)boosted.push(v);if(e>=4)boosted.push(v);});
+  return boosted.sort(()=>Math.random()-.5).slice(0,Math.min(15,boosted.length));
+}
+
+function startGame(){errMode=false;launch(buildQueue(false));}
+function startErrorMode(){errMode=true;launch(buildQueue(true));}
+function replayGame(){
+  if(selMode==='memoire')startMemoire();
+  else launch(buildQueue(errMode));
+}
+
+function launch(q){
+  queue=q;qIdx=0;correct=0;wrong=0;answers=[];qLocked=false;
+  if(selMode==='memoire')startMemoire();
+  else if(selMode==='flashcard')startFlash();
+  else if(selMode==='relier-past'||selMode==='relier-fr')startRelier();
+  else if(selMode==='micro')startMicro();
+  else if(selMode==='ecrire')startEcrire();
+}
+
+function quitGame(){backHome();}
+function backHome(){showScreen('sc-home');// ════════════════════════════════
+// MODE MÉMOIRE
+// ════════════════════════════════
+let memSeries=[], memSeriesIdx=0, memCurrentVerbs=[], memMicOn=false, memRecog=null, memLocked=false;
+let memCorrect=0, memWrong=0, memAnswers=[];
+
+function startMemoire(){
+  // Build series of 3 verbs each
+  const pool=buildQueue(false);
+  memSeries=[];
+  for(let i=0;i<pool.length;i+=3){
+    const group=pool.slice(i,i+3);
+    if(group.length>=2) memSeries.push(group); // min 2 verbs per series
+  }
+  memSeriesIdx=0; memCorrect=0; memWrong=0; memAnswers=[];
+  showScreen('sc-memoire');
+  showMemSeries();
+}
+
+function showMemSeries(){
+  if(memSeriesIdx>=memSeries.length){ endMemGame(); return; }
+  memCurrentVerbs=memSeries[memSeriesIdx];
+  memLocked=false;
+  const total=memSeries.length;
+  document.getElementById('mem-fill').style.width=(memSeriesIdx/total*100)+'%';
+  document.getElementById('mem-prog').textContent='Série '+(memSeriesIdx+1)+'/'+total;
+  document.getElementById('mem-score').textContent=memCorrect+' ⭐';
+  document.getElementById('mem-fb').style.display='none';
+  document.getElementById('mem-next').style.display='none';
+
+  // Show listen phase
+  document.getElementById('mem-listen-phase').style.display='flex';
+  document.getElementById('mem-recall-phase').style.display='none';
+
+  // Display verbs with translations
+  const display=document.getElementById('mem-words-display');
+  display.innerHTML='';
+  memCurrentVerbs.forEach((v,i)=>{
+    const row=document.createElement('div');
+    row.id='mem-word-'+i;
+    row.style.cssText='display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;background:#F0F7FF;border-radius:14px;width:100%;transition:all .5s;';
+    row.innerHTML=`<span style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--dark)">${v.inf}</span>
+      <span style="font-size:13px;color:var(--gray);font-weight:700">= ${v.fr}</span>`;
+    display.appendChild(row);
+  });
+
+  // Pronounce each verb in sequence
+  document.getElementById('mem-listen-label').textContent='ÉCOUTE ET MÉMORISE';
+  document.getElementById('mem-listen-hint').textContent='Écoute bien...';
+
+  let delay=400;
+  memCurrentVerbs.forEach((v,i)=>{
+    setTimeout(()=>{
+      // Highlight current
+      document.querySelectorAll('[id^="mem-word-"]').forEach(el=>el.style.background='#F0F7FF');
+      const el=document.getElementById('mem-word-'+i);
+      if(el) el.style.background='rgba(77,150,255,.15)';
+      speakEN(v.inf);
+    }, delay);
+    delay+=1400;
+  });
+
+  // After all pronounced, show countdown then hide
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='🫣 Ils vont disparaître dans 3...';
+  }, delay);
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='2...';
+  }, delay+1000);
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='1...';
+  }, delay+2000);
+  setTimeout(()=>{
+    // Hide all words with animation
+    memCurrentVerbs.forEach((_,i)=>{
+      const el=document.getElementById('mem-word-'+i);
+      if(el){ el.style.opacity='0'; el.style.transform='scale(.8)'; }
+    });
+    setTimeout(()=>showMemRecall(), 600);
+  }, delay+3000);
+}
+
+function showMemRecall(){
+  document.getElementById('mem-listen-phase').style.display='none';
+  document.getElementById('mem-recall-phase').style.display='flex';
+
+  // Build answer slots
+  const slots=document.getElementById('mem-slots');
+  slots.innerHTML='';
+  document.getElementById('mem-count').textContent=memCurrentVerbs.length;
+  memCurrentVerbs.forEach((_,i)=>{
+    const slot=document.createElement('div');
+    slot.id='mem-slot-'+i;
+    slot.style.cssText="padding:12px 16px;background:#F9FAFB;border-radius:14px;border:2px solid #E5E7EB;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:var(--gray);text-align:center;min-height:52px;transition:all .3s;";
+    slot.textContent='?';
+    slots.appendChild(slot);
+  });
+
+  document.getElementById('mem-mic-btn').className='mic-big idle';
+  document.getElementById('mem-mic-status').textContent="Appuie et dis les verbes dans l'ordre";
+  document.getElementById('mem-heard').textContent='';
+}
+
+let memSpokenWords=[];
+
+function toggleMemMic(){
+  if(memLocked)return;
+  if(memMicOn){ stopMemMic(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('mem-mic-status').textContent='Micro non disponible';
+    // Auto-eval as wrong
+    evalMemAnswer([]);
+    return;
+  }
+  memSpokenWords=[];
+  memRecog=new SR(); memRecog.lang='en-GB'; memRecog.continuous=true; memRecog.interimResults=true;
+  memRecog.onresult=e=>{
+    const transcript=Array.from(e.results).map(r=>r[0].transcript).join(' ').toLowerCase().trim();
+    document.getElementById('mem-heard').textContent='"'+transcript+'"';
+    // Extract individual words spoken
+    memSpokenWords=transcript.split(/\s+/).filter(w=>w.length>1);
+  };
+  memRecog.onerror=()=>{ stopMemMic(); };
+  memRecog.onend=()=>{ memMicOn=false; };
+  memRecog.start(); memMicOn=true;
+  document.getElementById('mem-mic-btn').className='mic-big on';
+  document.getElementById('mem-mic-status').textContent='🔴 Dis tous les verbes...';
+
+  // Auto-stop after 8 seconds
+  setTimeout(()=>{
+    if(memMicOn){ stopMemMic(); evalMemAnswer(memSpokenWords); }
+  }, 8000);
+}
+
+function stopMemMic(){
+  if(memRecog) memRecog.stop();
+  memMicOn=false;
+  document.getElementById('mem-mic-btn').className='mic-big done';
+  evalMemAnswer(memSpokenWords);
+}
+
+function evalMemAnswer(spoken){
+  if(memLocked)return; memLocked=true;
+  const norm=s=>s.toLowerCase().replace(/[^a-z]/g,'');
+  let seriesCorrect=0;
+
+  // Check each verb
+  memCurrentVerbs.forEach((v,i)=>{
+    const target=norm(v.inf);
+    // Check if target verb was spoken (fuzzy match)
+    const found=spoken.some(w=>{
+      const nw=norm(w);
+      return nw===target || (target.length>=3 && nw.startsWith(target.slice(0,3))) || (nw.length>=3 && target.startsWith(nw.slice(0,3)));
+    });
+    const slot=document.getElementById('mem-slot-'+i);
+    if(slot){
+      slot.textContent=v.inf+' ('+v.fr+')';
+      slot.style.borderColor=found?'var(--green)':'var(--red)';
+      slot.style.background=found?'rgba(107,203,119,.12)':'rgba(230,57,70,.08)';
+      slot.style.color=found?'#059669':'var(--red)';
+    }
+    if(found){ seriesCorrect++; memCorrect++; setKnown(v.inf); subErr(v.inf); }
+    else{ memWrong++; addErr(v.inf); }
+    memAnswers.push({verb:v, ok:found});
+    // Pronounce correct answer
+    setTimeout(()=>speakEN(v.inf), i*800+300);
+  });
+
+  const fb=document.getElementById('mem-fb');
+  fb.style.display='block';
+  fb.className='fb-bar '+(seriesCorrect===memCurrentVerbs.length?'ok':'ko');
+  fb.textContent=seriesCorrect===memCurrentVerbs.length
+    ?`✅ Parfait ! Tu les avais tous !`
+    :`${seriesCorrect}/${memCurrentVerbs.length} trouvés`;
+  document.getElementById('mem-score').textContent=memCorrect+' ⭐';
+  document.getElementById('mem-next').style.display='block';
+  document.getElementById('mem-mic-status').textContent='';
+}
+
+function nextMemSeries(){ memSeriesIdx++; showMemSeries(); }
+
+function endMemGame(){
+  const total=memCorrect+memWrong;
+  const pct=total>0?Math.round(memCorrect/total*100):0;
+  const db=getDB(); const today=new Date().toDateString();
+  if(db.lastPlay!==today) db.streak=(db.streak||0)+1;
+  db.lastPlay=today; saveDB(db);
+  const medals=[{min:90,i:'🏆',t:'Mémoire parfaite !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=memCorrect;
+  document.getElementById('rs-ko').textContent=memWrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  const det=document.getElementById('res-detail');
+  det.innerHTML='<div class="rd-title">Détail</div>';
+  // Group by series
+  let si=0;
+  for(let i=0;i<memAnswers.length;i+=3){
+    const group=memAnswers.slice(i,Math.min(i+3,memAnswers.length));
+    const row=document.createElement('div'); row.className='rd-row';
+    row.innerHTML=group.map(a=>`<span style="color:${a.ok?'var(--green)':'var(--red)'}">${a.ok?'✅':'❌'} ${a.verb.inf}</span>`).join(' · ');
+    det.appendChild(row);
+  }
+  if(pct>=70) launchConfetti();
+  showScreen('sc-result');
+}
+
+buildHome();}
+
+// ════════════════════════════════
+// TTS
+// ════════════════════════════════
+function speakEN(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='en-GB';u.rate=0.85;
+  window.speechSynthesis.speak(u);
+}
+function speakFR(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='fr-FR';u.rate=0.9;
+  window.speechSynthesis.speak(u);
+}
+
+// ════════════════════════════════
+// FLASHCARD
+// ════════════════════════════════
+let cardFlipped=false;
+
+function startFlash(){
+  showScreen('sc-flash');qIdx=0;correct=0;wrong=0;answers=[];
+  showFlash();
+}
+
+function showFlash(){
+  if(qIdx>=queue.length){endGame();return;}
+  const v=queue[qIdx];cardFlipped=false;qLocked=false;
+  document.getElementById('fl-fill').style.width=(qIdx/queue.length*100)+'%';
+  document.getElementById('fl-prog').textContent=(qIdx+1)+' / '+queue.length;
+  document.getElementById('fl-score').textContent=correct+' ⭐';
+  document.getElementById('flashcard').classList.remove('flipped');
+  document.getElementById('fl-front-word').textContent=v.inf;
+  document.getElementById('fl-back-past').textContent=v.past;
+  document.getElementById('fl-back-fr').textContent=v.fr;
+  document.getElementById('fl-hint').textContent='👆 Appuie pour voir le passé';
+  document.getElementById('selfcheck').classList.remove('show');
+  // Auto-pronounce
+  setTimeout(()=>speakEN(v.inf),300);
+}
+
+function flipCard(){
+  if(qLocked)return;
+  cardFlipped=!cardFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped',cardFlipped);
+  if(cardFlipped){
+    document.getElementById('fl-hint').textContent='Tu le savais ?';
+    document.getElementById('selfcheck').classList.add('show');
+    qLocked=true;
+    setTimeout(()=>speakEN(queue[qIdx].past),600);
+  }
+}
+
+function rateFlash(r){
+  const v=queue[qIdx];
+  if(r===2){correct++;setKnown(v.inf);subErr(v.inf);}
+  else if(r===1){addErr(v.inf);}
+  else{wrong++;addErr(v.inf);}
+  answers.push({verb:v,ok:r===2,partial:r===1});
+  qIdx++;setTimeout(showFlash,200);
+}
+
+// ════════════════════════════════
+// RELIER
+// ════════════════════════════════
+let relGroups=[],relGroupIdx=0,relSelected=null,relMatched=0,relGroupCorrect=0;
+
+function startRelier(){
+  showScreen('sc-relier');
+  document.getElementById('rel-mode-lbl').textContent=selMode==='relier-past'?'🔗 Relier — Past':'🇫🇷 Relier — Traduction';
+  document.getElementById('rel-hint').textContent=selMode==='relier-past'?'Relie chaque verbe à son passé':'Relie chaque verbe à sa traduction';
+  correct=0;wrong=0;answers=[];
+  // Split queue into groups of 5
+  relGroups=[];
+  for(let i=0;i<queue.length;i+=5) relGroups.push(queue.slice(i,i+5));
+  relGroupIdx=0;relGroupCorrect=0;
+  showRelierGroup();
+}
+
+function showRelierGroup(){
+  if(relGroupIdx>=relGroups.length){endGame();return;}
+  const grp=relGroups[relGroupIdx];
+  relSelected=null;relMatched=0;relGroupCorrect=0;
+  const total=relGroups.reduce((s,g)=>s+g.length,0);
+  const done=relGroups.slice(0,relGroupIdx).reduce((s,g)=>s+g.length,0);
+  document.getElementById('rel-fill').style.width=(done/total*100)+'%';
+  document.getElementById('rel-prog').textContent='Groupe '+(relGroupIdx+1)+' / '+relGroups.length+' — '+grp.length+' verbes';
+  document.getElementById('rel-score').textContent=correct+' ⭐';
+  document.getElementById('rel-next').style.display='none';
+
+  // Build dots
+  const dots=document.getElementById('rel-dots');dots.innerHTML='';
+  grp.forEach((_,i)=>{const d=document.createElement('div');d.className='relier-dot';d.id='rdot-'+i;dots.appendChild(d);});
+
+  // Left col: infinitives in order
+  const left=document.getElementById('rel-left');left.innerHTML='';
+  grp.forEach((v,i)=>{
+    const el=document.createElement('div');el.className='rel-item';el.dataset.idx=i;el.dataset.side='left';
+    el.textContent=v.inf;
+    el.onclick=()=>relClick(el,'left',i);
+    left.appendChild(el);
+    // Auto-pronounce on first group
+  });
+
+  // Right col: shuffled past/fr
+  const right=document.getElementById('rel-right');right.innerHTML='';
+  const shuffled=[...grp].map((v,i)=>({...v,origIdx:i})).sort(()=>Math.random()-.5);
+  shuffled.forEach((v,i)=>{
+    const el=document.createElement('div');el.className='rel-item';el.dataset.origIdx=v.origIdx;el.dataset.side='right';
+    el.textContent=selMode==='relier-past'?v.past:v.fr;
+    el.onclick=()=>relClick(el,'right',v.origIdx);
+    right.appendChild(el);
+  });
+
+  // Clear SVG
+  const svg=document.getElementById('rel-svg');svg.innerHTML='';
+  // Set SVG size after render
+  setTimeout(()=>{
+    const wrap=document.querySelector('#sc-relier .relier-wrap > div');
+    if(wrap){svg.setAttribute('viewBox','0 0 '+wrap.offsetWidth+' '+wrap.offsetHeight);svg.style.height=wrap.offsetHeight+'px';}
+  },100);
+}
+
+function relClick(el,side,idx){
+  if(el.classList.contains('matched'))return;
+  if(relSelected===null){
+    // First selection
+    relSelected={el,side,idx};
+    el.classList.add('selected');
+    // Pronounce if left side (infinitive)
+    if(side==='left') speakEN(queue[relGroupIdx*5+idx]?.inf||'');
+  } else {
+    if(relSelected.side===side){
+      // Same side — switch selection
+      relSelected.el.classList.remove('selected');
+      relSelected={el,side,idx};
+      el.classList.add('selected');
+      return;
+    }
+    // Different sides — check match
+    const leftIdx=side==='right'?relSelected.idx:idx;
+    const rightIdx=side==='right'?idx:relSelected.idx;
+    const ok=leftIdx===rightIdx;
+    relSelected.el.classList.remove('selected');
+    el.classList.remove('selected');
+    if(ok){
+      relSelected.el.classList.add('matched');
+      el.classList.add('matched');
+      relMatched++;relGroupCorrect++;correct++;
+      const dot=document.getElementById('rdot-'+leftIdx);if(dot)dot.className='relier-dot ok';
+      // Draw line
+      drawRelLine(relSelected.side==='left'?relSelected.el:el, relSelected.side==='right'?relSelected.el:el);
+      const v=relGroups[relGroupIdx][leftIdx];
+      answers.push({verb:v,ok:true});setKnown(v.inf);subErr(v.inf);
+      document.getElementById('rel-score').textContent=correct+' ⭐';
+      if(relMatched>=relGroups[relGroupIdx].length){
+        setTimeout(()=>document.getElementById('rel-next').style.display='block',400);
+      }
+    } else {
+      // Wrong — flash both red
+      relSelected.el.classList.add('wrong-flash');el.classList.add('wrong-flash');
+      wrong++;
+      const v=relGroups[relGroupIdx][leftIdx];
+      answers.push({verb:v,ok:false});addErr(v.inf);
+      setTimeout(()=>{relSelected.el.classList.remove('wrong-flash');el.classList.remove('wrong-flash');},500);
+    }
+    relSelected=null;
+  }
+}
+
+function drawRelLine(leftEl,rightEl){
+  const svg=document.getElementById('rel-svg');
+  const wrap=svg.parentElement.getBoundingClientRect();
+  const lR=leftEl.getBoundingClientRect();
+  const rR=rightEl.getBoundingClientRect();
+  const x1=lR.right-wrap.left, y1=lR.top+lR.height/2-wrap.top;
+  const x2=rR.left-wrap.left, y2=rR.top+rR.height/2-wrap.top;
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',x1);line.setAttribute('y1',y1);
+  line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+  line.setAttribute('stroke','var(--green)');line.setAttribute('stroke-width','3');
+  line.setAttribute('stroke-linecap','round');
+  svg.appendChild(line);
+}
+
+function nextRelier(){relGroupIdx++;showRelierGroup();}
+
+// ════════════════════════════════
+// MICRO
+// ════════════════════════════════
+let micOn=false,micRecog=null,micLocked=false;
+
+function startMicro(){
+  showScreen('sc-micro');qIdx=0;correct=0;wrong=0;answers=[];micLocked=false;
+  showMicQ();
+}
+
+function showMicQ(){
+  if(qIdx>=queue.length){endGame();return;}
+  const v=queue[qIdx];micLocked=false;
+  document.getElementById('mic-fill').style.width=(qIdx/queue.length*100)+'%';
+  document.getElementById('mic-prog').textContent=(qIdx+1)+' / '+queue.length;
+  document.getElementById('mic-score').textContent=correct+' ⭐';
+  document.getElementById('mic-fr').textContent=v.fr;
+  document.getElementById('mic-reveal').textContent='';
+  document.getElementById('mic-heard').textContent='';
+  document.getElementById('mic-fb').style.display='none';
+  document.getElementById('mic-next').style.display='none';
+  document.getElementById('mic-btn').className='mic-big idle';
+  document.getElementById('mic-status').textContent='Appuie et dis le verbe en anglais';
+  // Pronounce French
+  setTimeout(()=>speakFR(v.fr),300);
+}
+
+function toggleMic(){
+  if(micLocked)return;
+  if(micOn){stopMicRec();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('mic-status').textContent='Micro non disponible';document.getElementById('mic-next').style.display='block';micLocked=true;return;}
+  micRecog=new SR();micRecog.lang='en-GB';micRecog.continuous=false;micRecog.interimResults=true;
+  micRecog.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
+    document.getElementById('mic-heard').textContent='"'+t+'"';
+    if(e.results[e.results.length-1].isFinal) evalMic(t);
+  };
+  micRecog.onerror=()=>{stopMicRec();skipMic();};
+  micRecog.onend=()=>{micOn=false;if(!micLocked)document.getElementById('mic-btn').className='mic-big idle';};
+  micRecog.start();micOn=true;
+  document.getElementById('mic-btn').className='mic-big on';
+  document.getElementById('mic-status').textContent='🔴 J\'écoute…';
+}
+function stopMicRec(){if(micRecog)micRecog.stop();micOn=false;}
+
+function evalMic(heard){
+  stopMicRec();micLocked=true;
+  const v=queue[qIdx];
+  const norm=s=>s.toLowerCase().replace(/[^a-z]/g,'');
+  const ok=norm(heard)===norm(v.inf)||(norm(v.inf).length>=3&&norm(heard).startsWith(norm(v.inf).slice(0,3)));
+  document.getElementById('mic-btn').className='mic-big done';
+  document.getElementById('mic-reveal').textContent=v.inf+' → '+v.past;
+  const fb=document.getElementById('mic-fb');
+  fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?'✅ Bravo ! "'+v.inf+'" — '+v.past:'❌ C\'était "'+v.inf+'" — '+v.past;
+  if(ok){correct++;setKnown(v.inf);subErr(v.inf);speakEN(v.inf);}
+  else{wrong++;addErr(v.inf);setTimeout(()=>speakEN(v.inf),400);}
+  answers.push({verb:v,ok});
+  document.getElementById('mic-score').textContent=correct+' ⭐';
+  document.getElementById('mic-next').style.display='block';
+}
+
+function nextMic(){qIdx++;showMicQ();}
+function skipMic(){answers.push({verb:queue[qIdx],ok:false,skip:true});wrong++;qIdx++;showMicQ();}
+
+// ════════════════════════════════
+// ÉCRIRE
+// ════════════════════════════════
+let ecInput='',ecLocked=false;
+
+function startEcrire(){
+  showScreen('sc-ecrire');
+  buildAZERTY();
+  qIdx=0;correct=0;wrong=0;answers=[];ecLocked=false;
+  showEcrire();
+}
+
+function showEcrire(){
+  if(qIdx>=queue.length){endGame();return;}
+  const v=queue[qIdx];ecInput='';ecLocked=false;
+  document.getElementById('ec-fill').style.width=(qIdx/queue.length*100)+'%';
+  document.getElementById('ec-prog').textContent=(qIdx+1)+' / '+queue.length;
+  document.getElementById('ec-score').textContent=correct+' ⭐';
+  document.getElementById('ec-word').textContent=v.inf;
+  document.getElementById('ec-sub').textContent=v.fr;
+  document.getElementById('ec-fb').style.display='none';
+  document.getElementById('ec-next').style.display='none';
+  buildLetterBoxes(v.past);
+  setTimeout(()=>speakEN(v.inf),300);
+}
+
+function buildLetterBoxes(target){
+  const row=document.getElementById('letter-boxes');row.innerHTML='';
+  for(let i=0;i<target.length;i++){
+    const b=document.createElement('div');b.className='lb';b.id='ecb-'+i;
+    if(target[i]===' '||target[i]==='/'||target[i]==='-'){
+      b.textContent=target[i];b.style.background='#F3F4F6';b.style.border='none';b.style.minWidth='12px';
+    }
+    row.appendChild(b);
+  }
+}
+
+function updateLetterBoxes(input,target){
+  let ii=0;
+  for(let i=0;i<target.length;i++){
+    const b=document.getElementById('ecb-'+i);if(!b)continue;
+    if(target[i]===' '||target[i]==='/'||target[i]==='-') continue;
+    const ch=input[ii]||'';
+    b.textContent=ch;
+    b.className='lb'+(ii===input.length?' cur':ch?' filled':'');
+    ii++;
+  }
+}
+
+function buildAZERTY(){
+  const kb=document.getElementById('azerty');kb.innerHTML='';
+  const rows=[['a','z','e','r','t','y','u','i','o','p'],['q','s','d','f','g','h','j','k','l','m'],['DEL','w','x','c','v','b','n','OK']];
+  rows.forEach(row=>{
+    const div=document.createElement('div');div.className='azerty-row';
+    row.forEach(k=>{
+      const btn=document.createElement('button');
+      btn.className='azk'+(k==='DEL'?' del':k==='OK'?' ok':'');
+      btn.textContent=k==='DEL'?'⌫':k==='OK'?'✓':k;
+      btn.onpointerdown=e=>{e.preventDefault();ecKey(k);};
+      div.appendChild(btn);
+    });
+    kb.appendChild(div);
+  });
+}
+
+function ecKey(k){
+  if(ecLocked)return;
+  const v=queue[qIdx];
+  const target=v.past;
+  // Count typable chars (not spaces/slashes/dashes)
+  const typable=target.split('').filter(c=>c!==' '&&c!=='/'&&c!=='-').length;
+  if(k==='DEL'){ecInput=ecInput.slice(0,-1);}
+  else if(k==='OK'){if(ecInput.length>=typable)checkEcrire();}
+  else if(ecInput.length<typable){ecInput+=k;}
+  if(k!=='OK') updateLetterBoxes(ecInput,target);
+}
+
+function checkEcrire(){
+  ecLocked=true;
+  const v=queue[qIdx];
+  const norm=s=>s.toLowerCase().replace(/[^a-z]/g,'');
+  const ok=norm(ecInput)===norm(v.past);
+  // Color boxes
+  const target=v.past;
+  let ii=0;
+  for(let i=0;i<target.length;i++){
+    const b=document.getElementById('ecb-'+i);if(!b)continue;
+    if(target[i]===' '||target[i]==='/'||target[i]==='-') continue;
+    b.className='lb '+(norm(ecInput[ii]||'')===norm(target[i])?'correct':'wrong');
+    b.textContent=target[i];
+    ii++;
+  }
+  const fb=document.getElementById('ec-fb');
+  fb.style.display='block';fb.className='fb-bar '+(ok?'ok':'ko');
+  fb.textContent=ok?'✅ Bravo ! "'+v.past+'" — '+v.fr:'❌ Il fallait écrire "'+v.past+'"';
+  if(ok){correct++;setKnown(v.inf);subErr(v.inf);}else{wrong++;addErr(v.inf);}
+  answers.push({verb:v,ok});
+  document.getElementById('ec-score').textContent=correct+' ⭐';
+  document.getElementById('ec-next').style.display='block';
+  speakEN(v.past);
+}
+
+function nextEcrire(){qIdx++;showEcrire();}
+
+// ════════════════════════════════
+// RESULT
+// ════════════════════════════════
+function endGame(){
+  const total=correct+wrong,pct=total>0?Math.round(correct/total*100):0;
+  const db=getDB();const today=new Date().toDateString();
+  if(db.lastPlay!==today)db.streak=(db.streak||0)+1;
+  db.lastPlay=today;saveDB(db);
+  const medals=[{min:90,i:'🏆',t:'Parfait !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=correct;
+  document.getElementById('rs-ko').textContent=wrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  const det=document.getElementById('res-detail');
+  det.innerHTML='<div class="rd-title">Détail</div>';
+  answers.forEach(a=>{
+    const row=document.createElement('div');row.className='rd-row';
+    row.innerHTML=`<span style="color:${a.ok?'var(--green)':'var(--red)'}">${a.ok?'✅':'❌'} <b>${a.verb.inf}</b></span><span style="color:var(--gray)">${a.verb.past}</span><span style="color:var(--gray);font-size:11px">${a.verb.fr}</span>`;
+    det.appendChild(row);
+  });
+  if(pct>=70)launchConfetti();
+  showScreen('sc-result');
+}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function launchConfetti(){
+  const colors=['#4D96FF','#FF6B9D','#FFD93D','#6BCB77','#C77DFF'];
+  for(let i=0;i<35;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};border-radius:${i%2?'50%':'3px'};animation-delay:${Math.random()*.8}s;animation-duration:${1.2+Math.random()}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
+}
+
+// ════════════════════════════════
+// MODE MÉMOIRE
+// ════════════════════════════════
+let memSeries=[], memSeriesIdx=0, memCurrentVerbs=[], memMicOn=false, memRecog=null, memLocked=false;
+let memCorrect=0, memWrong=0, memAnswers=[];
+
+function startMemoire(){
+  // Build series of 3 verbs each
+  const pool=buildQueue(false);
+  memSeries=[];
+  for(let i=0;i<pool.length;i+=3){
+    const group=pool.slice(i,i+3);
+    if(group.length>=2) memSeries.push(group); // min 2 verbs per series
+  }
+  memSeriesIdx=0; memCorrect=0; memWrong=0; memAnswers=[];
+  showScreen('sc-memoire');
+  showMemSeries();
+}
+
+function showMemSeries(){
+  if(memSeriesIdx>=memSeries.length){ endMemGame(); return; }
+  memCurrentVerbs=memSeries[memSeriesIdx];
+  memLocked=false;
+  const total=memSeries.length;
+  document.getElementById('mem-fill').style.width=(memSeriesIdx/total*100)+'%';
+  document.getElementById('mem-prog').textContent='Série '+(memSeriesIdx+1)+'/'+total;
+  document.getElementById('mem-score').textContent=memCorrect+' ⭐';
+  document.getElementById('mem-fb').style.display='none';
+  document.getElementById('mem-next').style.display='none';
+
+  // Show listen phase
+  document.getElementById('mem-listen-phase').style.display='flex';
+  document.getElementById('mem-recall-phase').style.display='none';
+
+  // Display verbs with translations
+  const display=document.getElementById('mem-words-display');
+  display.innerHTML='';
+  memCurrentVerbs.forEach((v,i)=>{
+    const row=document.createElement('div');
+    row.id='mem-word-'+i;
+    row.style.cssText='display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;background:#F0F7FF;border-radius:14px;width:100%;transition:all .5s;';
+    row.innerHTML=`<span style="font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--dark)">${v.inf}</span>
+      <span style="font-size:13px;color:var(--gray);font-weight:700">= ${v.fr}</span>`;
+    display.appendChild(row);
+  });
+
+  // Pronounce each verb in sequence
+  document.getElementById('mem-listen-label').textContent='ÉCOUTE ET MÉMORISE';
+  document.getElementById('mem-listen-hint').textContent='Écoute bien...';
+
+  let delay=400;
+  memCurrentVerbs.forEach((v,i)=>{
+    setTimeout(()=>{
+      // Highlight current
+      document.querySelectorAll('[id^="mem-word-"]').forEach(el=>el.style.background='#F0F7FF');
+      const el=document.getElementById('mem-word-'+i);
+      if(el) el.style.background='rgba(77,150,255,.15)';
+      speakEN(v.inf);
+    }, delay);
+    delay+=1400;
+  });
+
+  // After all pronounced, show countdown then hide
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='🫣 Ils vont disparaître dans 3...';
+  }, delay);
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='2...';
+  }, delay+1000);
+  setTimeout(()=>{
+    document.getElementById('mem-listen-hint').textContent='1...';
+  }, delay+2000);
+  setTimeout(()=>{
+    // Hide all words with animation
+    memCurrentVerbs.forEach((_,i)=>{
+      const el=document.getElementById('mem-word-'+i);
+      if(el){ el.style.opacity='0'; el.style.transform='scale(.8)'; }
+    });
+    setTimeout(()=>showMemRecall(), 600);
+  }, delay+3000);
+}
+
+function showMemRecall(){
+  document.getElementById('mem-listen-phase').style.display='none';
+  document.getElementById('mem-recall-phase').style.display='flex';
+
+  // Build answer slots
+  const slots=document.getElementById('mem-slots');
+  slots.innerHTML='';
+  document.getElementById('mem-count').textContent=memCurrentVerbs.length;
+  memCurrentVerbs.forEach((_,i)=>{
+    const slot=document.createElement('div');
+    slot.id='mem-slot-'+i;
+    slot.style.cssText="padding:12px 16px;background:#F9FAFB;border-radius:14px;border:2px solid #E5E7EB;font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:800;color:var(--gray);text-align:center;min-height:52px;transition:all .3s;";
+    slot.textContent='?';
+    slots.appendChild(slot);
+  });
+
+  document.getElementById('mem-mic-btn').className='mic-big idle';
+  document.getElementById('mem-mic-status').textContent="Appuie et dis les verbes dans l'ordre";
+  document.getElementById('mem-heard').textContent='';
+}
+
+let memSpokenWords=[];
+
+function toggleMemMic(){
+  if(memLocked)return;
+  if(memMicOn){ stopMemMic(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('mem-mic-status').textContent='Micro non disponible';
+    // Auto-eval as wrong
+    evalMemAnswer([]);
+    return;
+  }
+  memSpokenWords=[];
+  memRecog=new SR(); memRecog.lang='en-GB'; memRecog.continuous=true; memRecog.interimResults=true;
+  memRecog.onresult=e=>{
+    const transcript=Array.from(e.results).map(r=>r[0].transcript).join(' ').toLowerCase().trim();
+    document.getElementById('mem-heard').textContent='"'+transcript+'"';
+    // Extract individual words spoken
+    memSpokenWords=transcript.split(/\s+/).filter(w=>w.length>1);
+  };
+  memRecog.onerror=()=>{ stopMemMic(); };
+  memRecog.onend=()=>{ memMicOn=false; };
+  memRecog.start(); memMicOn=true;
+  document.getElementById('mem-mic-btn').className='mic-big on';
+  document.getElementById('mem-mic-status').textContent='🔴 Dis tous les verbes...';
+
+  // Auto-stop after 8 seconds
+  setTimeout(()=>{
+    if(memMicOn){ stopMemMic(); evalMemAnswer(memSpokenWords); }
+  }, 8000);
+}
+
+function stopMemMic(){
+  if(memRecog) memRecog.stop();
+  memMicOn=false;
+  document.getElementById('mem-mic-btn').className='mic-big done';
+  evalMemAnswer(memSpokenWords);
+}
+
+function evalMemAnswer(spoken){
+  if(memLocked)return; memLocked=true;
+  const norm=s=>s.toLowerCase().replace(/[^a-z]/g,'');
+  let seriesCorrect=0;
+
+  // Check each verb
+  memCurrentVerbs.forEach((v,i)=>{
+    const target=norm(v.inf);
+    // Check if target verb was spoken (fuzzy match)
+    const found=spoken.some(w=>{
+      const nw=norm(w);
+      return nw===target || (target.length>=3 && nw.startsWith(target.slice(0,3))) || (nw.length>=3 && target.startsWith(nw.slice(0,3)));
+    });
+    const slot=document.getElementById('mem-slot-'+i);
+    if(slot){
+      slot.textContent=v.inf+' ('+v.fr+')';
+      slot.style.borderColor=found?'var(--green)':'var(--red)';
+      slot.style.background=found?'rgba(107,203,119,.12)':'rgba(230,57,70,.08)';
+      slot.style.color=found?'#059669':'var(--red)';
+    }
+    if(found){ seriesCorrect++; memCorrect++; setKnown(v.inf); subErr(v.inf); }
+    else{ memWrong++; addErr(v.inf); }
+    memAnswers.push({verb:v, ok:found});
+    // Pronounce correct answer
+    setTimeout(()=>speakEN(v.inf), i*800+300);
+  });
+
+  const fb=document.getElementById('mem-fb');
+  fb.style.display='block';
+  fb.className='fb-bar '+(seriesCorrect===memCurrentVerbs.length?'ok':'ko');
+  fb.textContent=seriesCorrect===memCurrentVerbs.length
+    ?`✅ Parfait ! Tu les avais tous !`
+    :`${seriesCorrect}/${memCurrentVerbs.length} trouvés`;
+  document.getElementById('mem-score').textContent=memCorrect+' ⭐';
+  document.getElementById('mem-next').style.display='block';
+  document.getElementById('mem-mic-status').textContent='';
+}
+
+function nextMemSeries(){ memSeriesIdx++; showMemSeries(); }
+
+function endMemGame(){
+  const total=memCorrect+memWrong;
+  const pct=total>0?Math.round(memCorrect/total*100):0;
+  const db=getDB(); const today=new Date().toDateString();
+  if(db.lastPlay!==today) db.streak=(db.streak||0)+1;
+  db.lastPlay=today; saveDB(db);
+  const medals=[{min:90,i:'🏆',t:'Mémoire parfaite !'},{min:70,i:'🥇',t:'Excellent !'},{min:50,i:'🥈',t:'Bien joué !'},{min:0,i:'💪',t:'Continue !'}];
+  const m=medals.find(x=>pct>=x.min);
+  document.getElementById('res-emoji').textContent=m.i;
+  document.getElementById('res-title').textContent=m.t;
+  document.getElementById('rs-ok').textContent=memCorrect;
+  document.getElementById('rs-ko').textContent=memWrong;
+  document.getElementById('rs-pct').textContent=pct+'%';
+  const det=document.getElementById('res-detail');
+  det.innerHTML='<div class="rd-title">Détail</div>';
+  // Group by series
+  let si=0;
+  for(let i=0;i<memAnswers.length;i+=3){
+    const group=memAnswers.slice(i,Math.min(i+3,memAnswers.length));
+    const row=document.createElement('div'); row.className='rd-row';
+    row.innerHTML=group.map(a=>`<span style="color:${a.ok?'var(--green)':'var(--red)'}">${a.ok?'✅':'❌'} ${a.verb.inf}</span>`).join(' · ');
+    det.appendChild(row);
+  }
+  if(pct>=70) launchConfetti();
+  showScreen('sc-result');
+}
+
+buildHome();
+</script>
+</body>
+</html>
+
