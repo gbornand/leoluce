@@ -1168,10 +1168,32 @@ function launchConfetti(){
 
 // Init
 document.addEventListener('DOMContentLoaded', function(){
+  // Inject ortho-configured text at the top of the list if present
+  const orthoTitle = sessionStorage.getItem('ortho_text_title');
+  const orthoBody  = sessionStorage.getItem('ortho_text_body');
+  if(orthoTitle && orthoBody){
+    const existing = BUILTIN_TEXTS.find(function(t){ return t.id==='ortho'; });
+    if(!existing){
+      BUILTIN_TEXTS.unshift({
+        id: 'ortho',
+        title: '⭐ ' + orthoTitle,
+        level: 'Ortho',
+        words: countWords(orthoBody),
+        body: orthoBody
+      });
+    }
+  }
   buildTextList();
 });
 // Fallback
-if(document.readyState !== 'loading') buildTextList();
+if(document.readyState !== 'loading'){
+  const orthoTitle = sessionStorage.getItem('ortho_text_title');
+  const orthoBody  = sessionStorage.getItem('ortho_text_body');
+  if(orthoTitle && orthoBody && !BUILTIN_TEXTS.find(function(t){ return t.id==='ortho'; })){
+    BUILTIN_TEXTS.unshift({ id:'ortho', title:'⭐ '+orthoTitle, level:'Ortho', words:countWords(orthoBody), body:orthoBody });
+  }
+  buildTextList();
+}
 
 </script>
 </body>
