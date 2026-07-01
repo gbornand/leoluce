@@ -1710,6 +1710,44 @@ function openProgressDashboard(){
   }
 }
 
+function buildPatientRows(patients){
+  return patients.map(function(p){
+    var scores = p.scores || {};
+    var sessions = Object.values(scores).reduce(function(s,v){ return s+(v.sessions||0); },0);
+    var topEntries = Object.entries(scores).sort(function(a,b){ return (b[1].sessions||0)-(a[1].sessions||0); });
+    var topApp = topEntries[0];
+    var activeApps = (p.activeApps||[]).length;
+    var daysSince = p.lastLogin ? Math.round((Date.now()-new Date(p.lastLogin).getTime())/(1000*3600*24)) : null;
+    var statusColor = daysSince===null?'rgba(255,255,255,.3)':daysSince<=7?'#6BCB77':daysSince<=30?'#FFD93D':'#FF4757';
+    var lastLabel = daysSince===null?'Jamais connecté':daysSince===0?'Aujourd\'hui':daysSince===1?'Hier':(daysSince+'j sans connexion');
+    var topHtml = topApp
+      ? '<span>🏆 '+(PROGRESS_APP_LABELS[topApp[0]]||topApp[0])+' ('+topApp[1].sessions+'×)</span>'
+      : '<span style="color:rgba(255,255,255,.3)">Pas encore joué</span>';
+    var scoresHtml = '';
+    if(sessions > 0){
+      var chips = Object.entries(scores).map(function(e){
+        return '<span style="font-size:10px;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:20px;color:rgba(255,255,255,.7)">'+(PROGRESS_APP_LABELS[e[0]]||e[0])+' '+e[1].sessions+'× ⭐'+(e[1].best||0)+'</span>';
+      }).join('');
+      scoresHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">'+chips+'</div>';
+    }
+    return '<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<div>'
+          +'<div style="font-weight:800;font-size:15px;color:#fff">'+p.name+'</div>'
+          +'<div style="font-size:10px;font-family:monospace;color:rgba(255,255,255,.35);margin-top:2px">'+p.code+'</div>'
+        +'</div>'
+        +'<div style="font-size:11px;font-weight:800;color:'+statusColor+';text-align:right">'+lastLabel+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:rgba(255,255,255,.6)">'
+        +'<span>🎮 '+sessions+' session'+(sessions>1?'s':'')+'</span>'
+        +topHtml
+        +'<span>📱 '+activeApps+' app'+(activeApps>1?'s':'')+' actives</span>'
+      +'</div>'
+      +scoresHtml
+    +'</div>';
+  }).join('');
+}
+
 async function loadOrthoProgressData(){
   if(!currentUser) return;
   const body = document.getElementById('ortho-progress-body');
@@ -1758,30 +1796,7 @@ async function loadOrthoProgressData(){
 
   <div style="background:rgba(255,255,255,.08);border-radius:18px;padding:16px">
     <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📋 Détail par patient</div>
-    ${patients.map(p => {
-      const scores = p.scores || {};
-      const sessions = Object.values(scores).reduce((s,v)=>s+(v.sessions||0),0);
-      const topApp = Object.entries(scores).sort((a,b)=>(b[1].sessions||0)-(a[1].sessions||0))[0];
-      const activeApps = (p.activeApps||[]).length;
-      const daysSince = p.lastLogin ? Math.round((Date.now()-new Date(p.lastLogin).getTime())/(1000*3600*24)) : null;
-      const statusColor = daysSince===null?'rgba(255,255,255,.3)':daysSince<=7?'#6BCB77':daysSince<=30?'#FFD93D':'#FF4757';
-      const lastLabel = daysSince===null?'Jamais connecté':daysSince===0?'Aujourd\'hui':daysSince===1?'Hier':daysSince+'j sans connexion';
-      return \`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
-            <div style="font-weight:800;font-size:15px;color:#fff">\${p.name}</div>
-            <div style="font-size:10px;font-family:monospace;color:rgba(255,255,255,.35);margin-top:2px">\${p.code}</div>
-          </div>
-          <div style="font-size:11px;font-weight:800;color:\${statusColor};text-align:right">\${lastLabel}</div>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:rgba(255,255,255,.6)">
-          <span>🎮 \${sessions} session\${sessions>1?'s':''}</span>
-          \${topApp?\`<span>🏆 \${PROGRESS_APP_LABELS[topApp[0]]||topApp[0]} (\${topApp[1].sessions}×)</span>\`:'<span style="color:rgba(255,255,255,.3)">Pas encore joué</span>'}
-          <span>📱 \${activeApps} app\${activeApps>1?'s':''} actives</span>
-        </div>
-        \${sessions>0?\`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">\${Object.entries(scores).map(([app,s])=>\`<span style="font-size:10px;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:20px;color:rgba(255,255,255,.7)">\${PROGRESS_APP_LABELS[app]||app} \${s.sessions}× ⭐\${s.best||0}</span>\`).join('')}</div>\`:''}
-      </div>\`;
-    }).join('')}
+    ${buildPatientRows(patients)}
   </div>`;
 }
 
