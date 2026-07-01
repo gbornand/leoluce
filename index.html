@@ -167,6 +167,21 @@ textarea.tinput{resize:none;min-height:80px;}
 @keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(60px)}}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:14px;font-size:14px;font-weight:700;z-index:1000;animation:slideUp .3s ease;white-space:nowrap;}
 @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+/* ══ GROUPE BADGE ══ */
+.group-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(77,150,255,.15);color:var(--blue);margin-left:6px;}
+/* ══ DIFFICULTE ══ */
+.diff-select{border:1.5px solid #E5E7EB;border-radius:8px;padding:4px 6px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;background:#fff;color:var(--dark);cursor:pointer;outline:none;}
+.diff-select.facile{border-color:#6BCB77;color:#059669;background:rgba(107,203,119,.08);}
+.diff-select.moyen{border-color:#FFD93D;color:#92400e;background:rgba(255,211,61,.08);}
+.diff-select.difficile{border-color:#FF4757;color:#be123c;background:rgba(255,71,87,.08);}
+/* ══ SEQUENCE SEANCE ══ */
+.seq-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;}
+.seq-handle{color:var(--gray);font-size:16px;cursor:grab;}
+.seq-arrows{display:flex;flex-direction:column;gap:1px;}
+.seq-btn{background:none;border:1px solid #E5E7EB;border-radius:4px;width:20px;height:16px;font-size:9px;cursor:pointer;color:var(--gray);line-height:1;padding:0;}
+/* ══ ENCOURAGEMENT BANNER ══ */
+#encourage-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:2000;background:linear-gradient(135deg,var(--purple),var(--blue));padding:16px 20px;text-align:center;animation:slideDown .4s ease;}
+@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -479,7 +494,12 @@ textarea.tinput{resize:none;min-height:80px;}
 
     <!-- Liste patients -->
     <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
-      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">👥 Mes patients</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px">👥 Mes patients</div>
+        <select id="group-filter" onchange="filterPatientsByGroup()" style="border:1.5px solid #E5E7EB;border-radius:8px;padding:4px 8px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;background:#fff;color:var(--gray);cursor:pointer;outline:none">
+          <option value="">Tous les groupes</option>
+        </select>
+      </div>
       <div id="patients-list">
         <div style="text-align:center;color:var(--gray);font-size:13px;padding:16px">Chargement...</div>
       </div>
@@ -534,6 +554,27 @@ textarea.tinput{resize:none;min-height:80px;}
   </div>
 </div>
 
+<!-- ENCOURAGEMENT BANNER -->
+<div id="encourage-banner">
+  <div style="font-size:20px;margin-bottom:4px">🩺</div>
+  <div id="encourage-text" style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:#fff"></div>
+  <button onclick="document.getElementById('encourage-banner').style.display='none'" style="margin-top:8px;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:6px 16px;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer">OK 👍</button>
+</div>
+
+<!-- QR CODE MODAL -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:24px;padding:24px;max-width:340px;width:100%;text-align:center">
+    <div style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;color:var(--dark);margin-bottom:4px" id="qr-patient-name"></div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:16px">Fais scanner ce QR code au patient pour le connecter automatiquement</div>
+    <img id="qr-img" src="" alt="QR Code" style="width:200px;height:200px;border-radius:12px;display:block;margin:0 auto 12px">
+    <div id="qr-url-display" style="font-size:10px;color:var(--gray);word-break:break-all;margin-bottom:16px;padding:8px;background:#F9FAFB;border-radius:8px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="downloadQR()" style="flex:1;background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:12px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer">⬇ Télécharger</button>
+      <button onclick="document.getElementById('qr-modal').style.display='none'" style="flex:1;background:#F3F4F6;border:none;border-radius:12px;padding:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--gray);cursor:pointer">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- PATIENT PICKER MODAL -->
 <div id="patient-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
   <div style="background:#fff;border-radius:20px;padding:20px;max-width:380px;width:100%;max-height:70vh;overflow-y:auto">
@@ -547,22 +588,52 @@ textarea.tinput{resize:none;min-height:80px;}
 <div id="sc-patient-config" class="screen" style="background:#F8F9FF;overflow-y:auto;padding-bottom:40px">
   <div style="background:linear-gradient(135deg,#1a1a2e,#2d1b4e);padding:44px 20px 20px;position:relative">
     <button onclick="showScreen('sc-ortho');loadOrthoData()" style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">← Patients</button>
+    <div style="display:flex;justify-content:flex-end;gap:6px;position:absolute;top:14px;right:16px">
+      <button onclick="showQRCode()" style="background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:7px 11px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">📱 QR</button>
+      <button onclick="exportPatientPDF()" style="background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:7px 11px;color:#fff;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer">📄 PDF</button>
+    </div>
     <div style="font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:#fff;text-align:center" id="config-patient-name">Patient</div>
     <div style="color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-top:2px" id="config-patient-code-display"></div>
   </div>
 
   <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
 
+    <!-- Groupe + Objectifs -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🗂️ Groupe & objectifs</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="patient-group" placeholder="Groupe (ex: CE1 dyslexie, Bégaiement...)" style="flex:1;border:2px solid #E5E7EB;border-radius:11px;padding:10px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none">
+      </div>
+      <textarea id="patient-objectives" placeholder="Objectifs thérapeutiques (ex: Discriminer les sons sourds/sonores, améliorer la fluence >80 mots/min...)" style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:none;min-height:70px"></textarea>
+    </div>
+
+    <!-- Message d'encouragement -->
+    <div style="background:linear-gradient(135deg,rgba(199,125,255,.06),rgba(77,150,255,.06));border:2px solid rgba(199,125,255,.2);border-radius:18px;padding:16px">
+      <div style="font-size:11px;font-weight:800;color:#6b21a8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">💬 Message d'encouragement</div>
+      <div style="font-size:12px;color:var(--gray);margin-bottom:8px">Affiché en bandeau à chaque connexion du patient</div>
+      <input id="patient-encourage" placeholder="Ex : Bravo pour ton travail de la semaine ! 🌟" style="width:100%;border:2px solid rgba(199,125,255,.3);border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none">
+    </div>
+
     <!-- Stats rapides -->
     <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
-      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Dernière activité</div>
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Activité & progrès</div>
       <div id="patient-stats" style="color:var(--gray);font-size:13px">Aucune session enregistrée</div>
     </div>
 
-    <!-- Apps actives -->
+    <!-- Apps actives + difficulté -->
     <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
-      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📱 Applications actives</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px">📱 Applications & difficulté</div>
+        <span style="font-size:10px;color:var(--gray)">Difficulté → transmise au jeu</span>
+      </div>
       <div id="apps-toggles" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Séquence de séance -->
+    <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⏱️ Séquence de séance</div>
+      <div style="font-size:12px;color:var(--gray);margin-bottom:10px">Ordre de passage et durée par activité (uniquement les apps actives)</div>
+      <div id="session-sequence"></div>
     </div>
 
     <!-- Sons à travailler -->
@@ -579,15 +650,27 @@ textarea.tinput{resize:none;min-height:80px;}
 
     <!-- Textes lecture -->
     <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
-      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🎙️ Lecture & Fluence — Texte personnalisé</div>
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🎙️ Lecture & Fluence — Texte</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:6px">📚 Bibliothèque de contes</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="contes-biblio-btns"></div>
+        <div style="font-size:11px;color:var(--gray);margin-top:6px">Cliquer pour pré-remplir le texte, ou saisir librement ci-dessous</div>
+      </div>
       <input id="patient-text-title" placeholder="Titre du texte" style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;margin-bottom:8px">
-      <textarea id="patient-text-body" placeholder="Colle ici le texte à lire..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:120px"></textarea>
+      <textarea id="patient-text-body" placeholder="Colle ici le texte à lire ou sélectionne un conte..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:140px"></textarea>
     </div>
 
-    <!-- Notes -->
+    <!-- Notes cliniques -->
     <div style="background:#fff;border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.06)">
-      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📝 Notes de suivi</div>
-      <textarea id="patient-notes-config" placeholder="Notes cliniques..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:80px"></textarea>
+      <div style="font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📝 Notes cliniques (privées)</div>
+      <textarea id="patient-notes-config" placeholder="Observations cliniques, points d'attention..." style="width:100%;border:2px solid #E5E7EB;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:80px"></textarea>
+    </div>
+
+    <!-- Cahier de liaison (visible par le patient/parent) -->
+    <div style="background:#FFF9C4;border:2px solid #FDE68A;border-radius:18px;padding:16px">
+      <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📒 Cahier de liaison (visible par le patient)</div>
+      <div style="font-size:12px;color:#92400e;margin-bottom:8px">Ce message est affiché dans l'espace du patient/parent</div>
+      <textarea id="patient-parent-notes" placeholder="Ex : Bien joué cette semaine ! Continue à travailler les sons AN/EN à la maison. Prochaine séance : vendredi 14h." style="width:100%;border:2px solid #FDE68A;border-radius:11px;padding:11px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;resize:none;min-height:80px;background:#FFFDE7"></textarea>
     </div>
 
     <button onclick="savePatientConfig()" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:16px;padding:16px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(199,125,255,.3)">💾 Enregistrer la configuration</button>
@@ -760,6 +843,8 @@ function forceOpenHub(){
   try { openHub(); } catch(e) { showScreen('sc-hub'); }
 }
 
+checkURLLoginParams();
+
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUser = user;
@@ -856,31 +941,64 @@ async function loginPatient(){
       patientId: patientDoc.id,
       name: patientData.name,
       orthoId,
+      orthoCode: document.getElementById('patient-ortho-code')?.value?.trim().toUpperCase() || '',
+      patientCode: patientCode,
       activeApps: patientData.activeApps || ['calcul','dictee','sons','lecture'],
       activeSons: patientData.activeSons || [],
+      difficulty: patientData.difficulty || {},
+      sessionSequence: patientData.sessionSequence || [],
+      parentNotes: patientData.parentNotes || '',
+      encouragementMessage: patientData.encouragementMessage || '',
       customWords: patientData.customWords || '',
       customTextTitle: patientData.customTextTitle || '',
       customTextBody: patientData.customTextBody || '',
     };
     localStorage.setItem('patient_session', JSON.stringify(session));
-    
+
     // Open hub as patient
     currentUser = null;
     currentUserData = { name: patientData.name, avatar: '🎯', role: 'patient_linked', session };
     applyPatientConfig(session);
+    // Show encouragement message if set
+    if(patientData.encouragementMessage){
+      var banner = document.getElementById('encourage-banner');
+      var txt = document.getElementById('encourage-text');
+      if(banner && txt){ txt.textContent = patientData.encouragementMessage; banner.style.display='block'; setTimeout(function(){ banner.style.display='none'; }, 7000); }
+    }
     openHub();
   } catch(e) { showErr('Erreur : '+e.message); }
 }
 
+function checkURLLoginParams(){
+  var params = new URLSearchParams(window.location.search);
+  var ortho = params.get('ortho');
+  var patient = params.get('patient');
+  if(!ortho || !patient) return;
+  var orthoEl = document.getElementById('patient-ortho-code');
+  var patientEl = document.getElementById('patient-code');
+  if(orthoEl) orthoEl.value = ortho.toUpperCase();
+  if(patientEl) patientEl.value = patient.toUpperCase();
+  switchTab('patient');
+  setTimeout(loginPatient, 300);
+}
+
 function applyPatientConfig(session){
-  // Hide apps not active for this patient
-  const allApps = ['calcul','dictee','sons','lecture','natures','adjectifs','fractions','verbes','japonais'];
-  allApps.forEach(app => {
-    const card = document.querySelector(`[onclick="openApp('${app}')"]`);
-    if(card){
-      card.style.display = session.activeApps.includes(app) ? '' : 'none';
-    }
+  var allApps = ['calcul','dictee','sons','lecture','natures','adjectifs','fractions','verbes','japonais'];
+  allApps.forEach(function(app){
+    var card = document.querySelector('[onclick="openApp(\''+app+'\')"]');
+    if(card) card.style.display = session.activeApps.includes(app) ? '' : 'none';
   });
+  // Show cahier de liaison if exists
+  var plDiv = document.getElementById('hub-parent-liaison');
+  if(!plDiv && session.parentNotes){
+    plDiv = document.createElement('div');
+    plDiv.id = 'hub-parent-liaison';
+    plDiv.style.cssText = 'margin:12px 16px 0;background:#FFF9C4;border:2px solid #FDE68A;border-radius:16px;padding:14px';
+    plDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px">📒 Message de votre orthophoniste</div>'
+      +'<div style="font-size:13px;color:var(--dark);line-height:1.5">'+session.parentNotes+'</div>';
+    var hubContent = document.querySelector('.hub-content');
+    if(hubContent) hubContent.insertBefore(plDiv, hubContent.firstChild);
+  }
 }
 
 function checkPatientSession(){
@@ -1068,9 +1186,10 @@ function openApp(app){
   if(!url){ console.log('URL not found for app:', app); alert('Appli introuvable : '+app); return; }
   const uid=currentUser?.uid||'guest';
   const name=encodeURIComponent(currentUserData?.name||'');
-  // Navigate with full path to avoid any base URL issues
+  const sess = currentUserData?.session;
+  const diff = sess?.difficulty?.[app] || '';
   const base=window.location.href.replace(/[^/]*$/, '');
-  window.location.href=base+url+'?uid='+uid+'&user='+name;
+  window.location.href=base+url+'?uid='+uid+'&user='+name+(diff?'&diff='+diff:'');
 }
 
 // ══ TEACHER DASHBOARD ══
@@ -1098,10 +1217,194 @@ const APPS_LIST = [
 ];
 
 const SONS_FAMILLES = [
-  'IEN/EIN/OIN','AILLE/EILLE','GE/GI/GN','CE/CI/CA','Y','Lettre S','Lettre C','IEN (2 voyelles)'
+  'AN/EN/ON','IEN/EIN/OIN','UN/IN','AU/EAU/O','OU','OI','EU/OEU',
+  'AILLE/EILLE/OUILLE','TION/SION','GE/GI/GN','CE/CI/CA/CU','Lettre S (entre 2 voyelles)',
+  'Lettre C (dur/doux)','CH / J','V / F','P / B','T / D','K / G (sourds/sonores)',
+  'R en finale','Syllabes complexes (CVCV)','Groupes consonantiques (br/pr/tr)',
+  'Mots plurisyllabiques','Liaisons','Y entre voyelles'
 ];
 
 let currentPatientId = null;
+
+const CONTES_BIBLIO = [
+  {
+    titre: 'La noisette d\'or',
+    auteur: 'D\'après Marguerite Soleillant',
+    texte: `Il y avait une fois un garçon au joli visage, en âge de se marier. C'était l'automne. Il y avait, dans la campagne, des arbres rouges et d'autres tout dorés. Ce garçon attendait sa fiancée sur la terrasse haute de sa maison. Il voit un panier de noisettes, et, pour passer le temps, il se met à lancer des noisettes sur les gens.
+
+Vient une vieille qu'on ne connaissait pas, courbée sur un bâton, bossue sous un châle à carreaux. Il relève le bras, et de tout son élan, lui jette une noisette sur le dos. Elle, sans se presser, tourne le cou, le regarde, se penche avec effort, ramasse la noisette, et la lui envoie juste sur le nez. Tous qui avaient vu la scène étaient étonnés de tant d'adresse, et plus étonnés encore, car à l'instant même, la vieille avait disparu.
+
+Cependant le nez du garçon se met à enfler, à déformer, à grandir sous le coup de la noisette. Rien n'y fait. Le garçon, tout désolé, saute sur son cheval et fuit loin du village. Pendant quatre ans, il a cherché la vieille.
+
+Enfin, un soir, il arrive au fond d'une vallée. Il frappe à la porte d'une masure branlante et retrouve la vieille.
+
+— Ah, rendez-moi mon joli nez, que je puisse épouser ma fiancée !
+— Il faudrait me rapporter la noisette que tu m'as lancée. Elle est maintenant toute dorée.
+
+Bien triste, le garçon s'assit sur une pierre. Il tire un croûton de sa poche. Une souris ramasse les miettes.
+
+— Tiens, pauvre petite bête, voici un gros morceau.
+— Merci, gentil garçon. Je vais t'aider à trouver la noisette.
+
+La souris part, parle à ses amies, et revient :
+
+— Les enfants du meunier l'ont trouvée. Elle est cachée sous un matelas.
+
+Dans la nuit, la souris grimpe, se glisse, ronge le sac et trouve la noisette d'or. Le garçon retourne chez la vieille.
+
+— Voici la noisette, brave vieille. Rendez-moi mon joli nez.
+
+La vieille le touche de son bâton et efface d'un seul coup le sortilège.
+
+— Emporte la noisette d'or. Ce sera un bijou pour ta fiancée.`
+  },
+  {
+    titre: 'Les trois souhaits',
+    auteur: 'D\'après Mme Leprince de Beaumont',
+    texte: `Il y avait une fois un bûcheron et une bûcheronne qui habitaient un joli petit village à l'orée d'une forêt. Ils n'étaient pas riches, mais ils possédaient une coquette maisonnette avec un jardin.
+
+Un soir d'hiver, une très belle dame apparut dans leur chambre.
+
+— Je suis une fée. Je vous promets d'accorder les trois premières choses que vous souhaiterez. Mais après trois souhaits, je ne vous accorderai plus rien.
+
+Les époux furent très embarrassés et se mirent à débattre. Pendant ce temps, la femme attisa le feu et dit sans y penser :
+
+— Voilà un bon feu. Je voudrais avoir un mètre de boudin pour notre souper !
+
+Aussitôt, il tomba un mètre de boudin par la cheminée. Le mari, furieux, s'écria :
+
+— Ne voilà-t-il pas un beau souhait ! Je suis si en colère que je voudrais que tu eusses le boudin au bout du nez !
+
+Aussitôt, le boudin sauta au bout du nez de la pauvre femme, qui ne put jamais l'arracher.
+
+— Il nous reste un souhait, dit le mari. Je vais souhaiter de grandes richesses.
+— Ah ! ne fais pas cela, répondit la femme. Je me tuerais s'il me fallait vivre avec ce boudin !
+
+Son mari qui l'aimait bien lui dit :
+
+— Je te donne la permission de souhaiter tout ce que tu voudras.
+— Eh bien, dit la femme, je souhaite que ce boudin tombe à terre.
+
+Aussitôt le boudin tomba. La femme, qui avait de l'esprit, dit à son mari :
+
+— La fée s'est moquée de nous, et elle a eu raison. Ne souhaitons rien et prenons les choses comme elles viennent. En attendant, soupons avec notre boudin.
+
+Le mari pensa que sa femme avait raison, et ils soupèrent gaiement.`
+  },
+  {
+    titre: 'Le renard et le hérisson',
+    auteur: 'D\'après Pierre Mille',
+    texte: `Un renard invite un hérisson à venir manger chez lui. Le hérisson arrive donc pour dîner. Le renard avait attrapé une oie énorme. Le hérisson tombe presque à la renverse quand il voit cette montagne de chair.
+
+— Renard, dit-il, jamais nous n'arriverons à manger tout cela !
+— Mais ce n'est pas tout, répond le renard fièrement, il y a aussi des œufs de pintade et des fruits !
+
+Le hérisson fait honneur aux œufs qu'il ne trouve pas mauvais. Quant à l'oie, il fait seulement semblant d'y toucher. Mais le renard s'en régale. Tout passe dans son ventre.
+
+Le hérisson, connaissant ses devoirs, invite le renard à son tour. Il court les potagers et les prairies : il rapporte des sauterelles, des hannetons, des limaces savoureuses.
+
+Le renard se présente au rendez-vous. Le hérisson présente les limaces, son plat de résistance.
+
+— Des limaces ! Des sauterelles ! Tu te moques de moi ? Et moi qui t'ai servi une oie !
+
+Il ouvre la gueule toute grande et engloutit le hérisson d'un seul coup.
+
+Mais les hérissons ne peuvent pas fuir. Dans la gueule du renard, notre hérisson se met en boule en hérissant tous ses piquants. Renard tousse, crache, se fourre les pattes dans la gorge. Tous les piquants le saignent jusqu'à la mort.
+
+Quand le hérisson sent que le renard ne bouge plus, il sort, et s'en va en répétant :
+
+— Le petit est venu à bout du grand !`
+  },
+  {
+    titre: 'Renard a mangé du poisson',
+    auteur: 'D\'après le Roman de Renard',
+    texte: `La terre est couverte de neige. Renard a grand faim et il ne trouve plus rien à manger.
+
+Il s'en va tristement, le ventre vide et la queue basse. Mais bientôt le vent glacé lui apporte une délicieuse odeur de poisson. C'est un marchand qui transporte à la ville ses paniers de poissons.
+
+Renard a vite fait d'imaginer une ruse. Il traverse des prés, saute des haies et se couche au beau milieu du chemin. Les yeux fermés, la langue pendante, il fait le mort.
+
+La voiture approche. Le marchand aperçoit l'animal sur la route. Il s'arrête et descend.
+
+— Mais c'est un renard ! Il a une belle fourrure, je le vendrai un bon prix.
+
+Tout heureux, le marchand jette Renard dans sa charrette, au beau milieu des paniers de poissons, et la voiture repart.
+
+Vous pensez si Renard est à son affaire ! Sans bruit, il se glisse dans un panier, puis dans un autre, et dévore les poissons.
+
+Quand il est enfin rassasié, il saute à terre et se sauve.
+
+Le marchand l'aperçoit qui court bien loin sur la route et comprend que Renard, le malin, s'est moqué de lui.`
+  },
+  {
+    titre: 'Les trois sous',
+    auteur: 'Contes de nuits d\'été',
+    texte: `Quand j'étais jeune, on m'avait placé dans une ferme. À la fin de ma première année de travail, mon maître m'a donné un sou. Je l'ai jeté dans le puits en me disant : si j'ai bien travaillé, qu'il remonte. La pièce est tombée au fond.
+
+Je suis resté une deuxième année. J'ai jeté le deuxième sou dans le puits. La pièce est tombée encore.
+
+Je suis resté une troisième année. Et cette fois, les trois pièces sont remontées à la surface.
+
+Mon argent en poche, je suis parti parcourir le monde. J'ai rencontré une souris :
+
+— Donne-moi un sou pour payer mes impôts. Un jour, je te rendrai service.
+
+J'ai donné un sou. Puis une écrevisse m'a demandé la même chose. J'ai donné. Puis un scarabée. J'ai donné mon dernier sou.
+
+Plus loin, un roi cherchait quelqu'un pour faire rire sa fille, la princesse la plus triste du monde. Celui qui y parviendrait recevrait sa main.
+
+J'ai appelé mes trois amis : la souris, l'écrevisse et le scarabée. J'ai demandé au scarabée de jouer de la musique, et aux deux autres de danser.
+
+Ce fut un spectacle si drôle que la princesse rit aux éclats. Le roi rit aussi, et toute la cour.
+
+J'ai épousé la princesse, sans un sou en poche. J'ai gouverné avec sagesse, j'ai soulagé les pauvres et j'ai aimé mes sujets, du plus humble au plus riche.`
+  },
+  {
+    titre: 'Le soleil et la lune',
+    auteur: 'Laurence Tixador',
+    texte: `Il y a très longtemps, il n'y avait pas de lune dans le ciel la nuit. Il n'y avait qu'un soleil qui brillait tout le temps, et ce soleil avait l'air toujours triste.
+
+Un jour, un oiseau alla à sa rencontre :
+— Pourquoi pleures-tu, soleil ?
+— Parce que j'ai beaucoup trop chaud. Je voudrais me rafraîchir un peu.
+
+L'oiseau prit de l'eau dans son bec et arrosa le soleil. Mais cela n'y fit rien.
+
+Un autre jour, un papillon vint le voir et battit des ailes très fort pour lui envoyer de l'air frais. Mais cela n'y fit rien non plus.
+
+Puis un jour, son amie la lune vint le voir :
+— Pourquoi pleures-tu, soleil ?
+— Parce que j'ai beaucoup trop chaud !
+— Pourquoi ne vas-tu pas te baigner dans l'océan ? Toute cette eau te rafraîchirait sûrement !
+— Mais qui veillerait sur la Terre si je partais ?
+— Ne te préoccupe pas de cela ! Si tu veux, pendant que tu te baignerais, je resterais dans le ciel et je veillerais sur la Terre.
+— C'est vrai ? Tu ferais ça ?
+— Bien sûr ! Tu es mon ami.
+
+Alors, le soleil s'en alla dans l'océan pour se rafraîchir. On appela ce moment le coucher du soleil. Et la lune prit sa place dans le ciel.
+
+Et c'est ainsi que, dans le ciel, il y a le soleil le jour et la lune la nuit.`
+  }
+];
+
+function initContesBiblio(){
+  const container = document.getElementById('contes-biblio-btns');
+  if(!container) return;
+  container.innerHTML = '';
+  CONTES_BIBLIO.forEach(function(conte, i){
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:6px 12px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;font-family:Nunito,sans-serif;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;transition:all .15s';
+    btn.textContent = conte.titre;
+    btn.title = conte.auteur;
+    btn.onclick = function(){
+      document.getElementById('patient-text-title').value = conte.titre + ' — ' + conte.auteur;
+      document.getElementById('patient-text-body').value = conte.texte;
+      container.querySelectorAll('button').forEach(function(b){ b.style.background='#fff'; b.style.color='var(--gray)'; b.style.borderColor='#E5E7EB'; });
+      btn.style.background='rgba(199,125,255,.12)'; btn.style.color='var(--purple)'; btn.style.borderColor='var(--purple)';
+    };
+    container.appendChild(btn);
+  });
+}
 
 function generatePatientCode(){
   const name = document.getElementById('new-patient-name')?.value?.trim() || '';
@@ -1134,28 +1437,66 @@ async function loadOrthoData(){
   await loadPublicConfigs();
 }
 
+let _allPatients = [];
+
 async function loadPatientsList(){
   const patientsSnap = await db.collection('patients')
     .where('orthoId', '==', currentUser.uid)
     .orderBy('createdAt', 'desc').get();
-  
+
+  _allPatients = patientsSnap.docs.map(function(d){ return {id:d.id, ...d.data()}; });
+
+  // Populate group filter
+  const groups = [...new Set(_allPatients.map(function(p){ return p.group||''; }).filter(Boolean))];
+  const gf = document.getElementById('group-filter');
+  if(gf){
+    gf.innerHTML = '<option value="">Tous les groupes</option>'
+      + groups.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('');
+  }
+
+  renderPatientsList(_allPatients);
+}
+
+function filterPatientsByGroup(){
+  const gf = document.getElementById('group-filter');
+  const group = gf ? gf.value : '';
+  const filtered = group ? _allPatients.filter(function(p){ return (p.group||'') === group; }) : _allPatients;
+  renderPatientsList(filtered);
+}
+
+function renderPatientsList(patients){
   const list = document.getElementById('patients-list');
-  if(patientsSnap.empty){
-    list.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:13px;padding:16px">Aucun patient encore — créez-en un !</div>';
+  if(!patients.length){
+    list.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:13px;padding:16px">Aucun patient dans ce groupe.</div>';
     return;
   }
   list.innerHTML = '';
-  patientsSnap.forEach(doc => {
-    const p = doc.data();
+  patients.forEach(function(p){
     const div = document.createElement('div');
-    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px;background:#F9FAFB;border-radius:14px;margin-bottom:8px;cursor:pointer';
-    div.innerHTML = `
-      <div>
-        <div style="font-weight:800;font-size:15px;color:var(--dark)">${p.name}</div>
-        <div style="font-size:11px;color:var(--gray);font-family:monospace;margin-top:2px">${p.code}</div>
-        ${p.lastLogin ? `<div style="font-size:11px;color:var(--gray)">Dernière connexion : ${new Date(p.lastLogin).toLocaleDateString('fr-FR')}</div>` : '<div style="font-size:11px;color:var(--gray)">Jamais connecté</div>'}
-      </div>
-      <button onclick="openPatientConfig('${doc.id}')" style="background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer">⚙️ Config</button>`;
+    div.dataset.patientid = p.id;
+    div.style.cssText = 'padding:12px;background:#F9FAFB;border-radius:14px;margin-bottom:8px';
+    const daysSince = p.lastLogin ? Math.round((Date.now()-new Date(p.lastLogin).getTime())/(1000*3600*24)) : null;
+    const actColor = daysSince===null?'#E5E7EB':daysSince<=7?'#6BCB77':daysSince<=30?'#FFD93D':'#FF4757';
+    const actLabel = daysSince===null?'Jamais':daysSince===0?'Auj.':daysSince===1?'Hier':daysSince+'j';
+    const sessions = Object.values(p.scores||{}).reduce(function(s,v){ return s+(v.sessions||0); },0);
+    div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      +'<div>'
+        +'<div style="font-weight:800;font-size:15px;color:var(--dark)">'
+          +p.name
+          +(p.group?'<span class="group-badge">'+p.group+'</span>':'')
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--gray);font-family:monospace;margin-top:1px">'+p.code+'</div>'
+        +(p.objectives?'<div style="font-size:10px;color:#6b21a8;margin-top:2px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎯 '+p.objectives+'</div>':'')
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="font-size:11px;font-weight:800;color:'+actColor+'">'+actLabel+'</div>'
+        +'<div style="font-size:10px;color:var(--gray)">'+sessions+' sessions</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px">'
+      +'<button onclick="openPatientConfig(\''+p.id+'\')" style="flex:1;background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:10px;padding:8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:800;cursor:pointer">⚙️ Config</button>'
+      +'<button onclick="showQRCodeForPatient(\''+p.id+'\',\''+p.name+'\',\''+p.code+'\')" style="background:#F3F4F6;border:none;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer" title="QR Code">📱</button>'
+    +'</div>';
     list.appendChild(div);
   });
 }
@@ -1217,32 +1558,50 @@ async function openPatientConfig(patientId){
     statsEl.textContent = 'Jamais connecté';
   }
   
-  // Apps toggles
+  // New fields
+  document.getElementById('patient-group').value = p.group || '';
+  document.getElementById('patient-objectives').value = p.objectives || '';
+  document.getElementById('patient-encourage').value = p.encouragementMessage || '';
+  document.getElementById('patient-parent-notes').value = p.parentNotes || '';
+
+  // Apps toggles + difficulty
   const appsEl = document.getElementById('apps-toggles');
   appsEl.innerHTML = '';
   const activeApps = p.activeApps || ['calcul','dictee','sons','lecture'];
+  const difficulty = p.difficulty || {};
   APPS_LIST.forEach(app => {
     const active = activeApps.includes(app.id);
+    const diff = difficulty[app.id] || 'moyen';
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F9FAFB;border-radius:12px';
-    row.innerHTML = `
-      <div>
-        <div style="font-weight:800;font-size:14px">${app.name}</div>
-        <div style="font-size:11px;color:var(--gray)">${app.desc}</div>
-      </div>
-      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
-        <input type="checkbox" id="app-toggle-${app.id}" ${active?'checked':''} style="opacity:0;width:0;height:0">
-        <span style="position:absolute;inset:0;border-radius:12px;background:${active?'var(--purple)':'#E5E7EB'};transition:.2s" id="app-toggle-bg-${app.id}"></span>
-        <span style="position:absolute;top:2px;left:${active?'22':'2'}px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)" id="app-toggle-knob-${app.id}"></span>
-      </label>`;
-    row.querySelector('input').addEventListener('change', e => {
+    row.innerHTML = '<div style="flex:1">'
+      +'<div style="font-weight:800;font-size:14px">'+app.name+'</div>'
+      +'<div style="font-size:11px;color:var(--gray)">'+app.desc+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<select id="diff-'+app.id+'" class="diff-select '+diff+'" onchange="this.className=\'diff-select \'+this.value" style="display:'+(active?'block':'none')+'">'
+      +'<option value="facile"'+(diff==='facile'?' selected':'')+'>Facile</option>'
+      +'<option value="moyen"'+(diff==='moyen'?' selected':'')+'>Moyen</option>'
+      +'<option value="difficile"'+(diff==='difficile'?' selected':'')+'>Difficile</option>'
+      +'</select>'
+      +'<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">'
+      +'<input type="checkbox" id="app-toggle-'+app.id+'" '+(active?'checked':'')+' style="opacity:0;width:0;height:0">'
+      +'<span style="position:absolute;inset:0;border-radius:12px;background:'+(active?'var(--purple)':'#E5E7EB')+';transition:.2s" id="app-toggle-bg-'+app.id+'"></span>'
+      +'<span style="position:absolute;top:2px;left:'+(active?'22':'2')+'px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)" id="app-toggle-knob-'+app.id+'"></span>'
+      +'</label></div>';
+    row.querySelector('input').addEventListener('change', function(e) {
       const bg = document.getElementById('app-toggle-bg-'+app.id);
       const knob = document.getElementById('app-toggle-knob-'+app.id);
-      if(e.target.checked){ bg.style.background='var(--purple)'; knob.style.left='22px'; }
-      else { bg.style.background='#E5E7EB'; knob.style.left='2px'; }
+      const diffSel = document.getElementById('diff-'+app.id);
+      if(e.target.checked){ bg.style.background='var(--purple)'; knob.style.left='22px'; if(diffSel) diffSel.style.display='block'; }
+      else { bg.style.background='#E5E7EB'; knob.style.left='2px'; if(diffSel) diffSel.style.display='none'; }
+      renderSessionSequence(p);
     });
     appsEl.appendChild(row);
   });
+
+  // Session sequence
+  renderSessionSequence(p);
   
   // Sons
   const sonsEl = document.getElementById('sons-config');
@@ -1268,6 +1627,7 @@ async function openPatientConfig(patientId){
   document.getElementById('patient-text-body').value = p.customTextBody || '';
   document.getElementById('patient-notes-config').value = p.notes || '';
   
+  initContesBiblio();
   showScreen('sc-patient-config');
 }
 
@@ -1289,9 +1649,31 @@ async function savePatientConfig(){
     }
   });
   
+  // Collect difficulty
+  const difficulty = {};
+  APPS_LIST.forEach(app => {
+    const sel = document.getElementById('diff-'+app.id);
+    if(sel) difficulty[app.id] = sel.value;
+  });
+
+  // Collect session sequence
+  const seqRows = document.querySelectorAll('#session-sequence .seq-row');
+  const sessionSequence = [];
+  seqRows.forEach(function(r) {
+    const appId = r.dataset.appid;
+    const mins = parseInt(r.querySelector('.seq-mins')?.value) || 5;
+    sessionSequence.push({appId: appId, minutes: mins});
+  });
+
   await db.collection('patients').doc(currentPatientId).update({
     activeApps,
     activeSons,
+    difficulty,
+    sessionSequence,
+    group: document.getElementById('patient-group').value,
+    objectives: document.getElementById('patient-objectives').value,
+    encouragementMessage: document.getElementById('patient-encourage').value,
+    parentNotes: document.getElementById('patient-parent-notes').value,
     customWords: document.getElementById('patient-words').value,
     customTextTitle: document.getElementById('patient-text-title').value,
     customTextBody: document.getElementById('patient-text-body').value,
@@ -1309,6 +1691,120 @@ async function deletePatient(){
   showToast('Patient supprimé');
   showScreen('sc-ortho');
   loadPatientsList();
+}
+
+function renderSessionSequence(p){
+  const seqEl = document.getElementById('session-sequence');
+  if(!seqEl) return;
+  const activeApps = APPS_LIST.filter(function(app){
+    const el = document.getElementById('app-toggle-'+app.id);
+    return el && el.checked;
+  });
+  const existing = (p.sessionSequence||[]).filter(function(s){ return activeApps.some(function(a){ return a.id===s.appId; }); });
+  const existingIds = existing.map(function(s){ return s.appId; });
+  const newApps = activeApps.filter(function(a){ return !existingIds.includes(a.id); });
+  const sequence = existing.concat(newApps.map(function(a){ return {appId:a.id, minutes:5}; }));
+
+  seqEl.innerHTML = '';
+  sequence.forEach(function(item, idx){
+    const app = APPS_LIST.find(function(a){ return a.id===item.appId; });
+    if(!app) return;
+    const row = document.createElement('div');
+    row.className = 'seq-row';
+    row.dataset.appid = item.appId;
+    row.innerHTML = '<span class="seq-handle">☰</span>'
+      +'<span style="flex:1;font-weight:800;font-size:13px">'+app.name+'</span>'
+      +'<input type="number" class="seq-mins" value="'+item.minutes+'" min="1" max="30" style="width:50px;border:1.5px solid #E5E7EB;border-radius:8px;padding:4px 6px;font-family:Nunito,sans-serif;font-size:13px;text-align:center"> min'
+      +'<button onclick="moveSeqRow(this,-1)" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 6px">▲</button>'
+      +'<button onclick="moveSeqRow(this,1)" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 6px">▼</button>';
+    seqEl.appendChild(row);
+  });
+}
+
+function moveSeqRow(btn, dir){
+  const row = btn.closest('.seq-row');
+  const parent = row.parentNode;
+  const rows = Array.from(parent.children);
+  const idx = rows.indexOf(row);
+  const target = idx + dir;
+  if(target < 0 || target >= rows.length) return;
+  if(dir === -1) parent.insertBefore(row, rows[target]);
+  else parent.insertBefore(rows[target], row);
+}
+
+var _qrPatientId = null;
+var _qrPatientName = '';
+var _qrOrthoCode = '';
+var _qrPatientCode = '';
+
+function showQRCodeForPatient(patientId, patientName, patientCode){
+  _qrPatientId = patientId;
+  _qrPatientName = patientName;
+  _qrPatientCode = patientCode;
+  _qrOrthoCode = document.getElementById('ortho-code-display').textContent;
+  var url = 'https://leoluce.com/?ortho='+_qrOrthoCode+'&patient='+patientCode;
+  var encoded = encodeURIComponent(url);
+  var qrImg = document.getElementById('qr-img');
+  var qrTitle = document.getElementById('qr-patient-name');
+  var qrUrl = document.getElementById('qr-url-display');
+  if(qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encoded;
+  if(qrTitle) qrTitle.textContent = 'QR Code — '+patientName;
+  if(qrUrl) qrUrl.textContent = url;
+  var modal = document.getElementById('qr-modal');
+  if(modal) modal.style.display = 'flex';
+}
+
+function showQRCode(){
+  if(!currentPatientId) return;
+  const snap = _allPatients.find(function(p){ return p.id===currentPatientId; });
+  if(snap) showQRCodeForPatient(snap.id, snap.name, snap.code);
+}
+
+function closeQRModal(){
+  var modal = document.getElementById('qr-modal');
+  if(modal) modal.style.display = 'none';
+}
+
+function downloadQR(){
+  var qrImg = document.getElementById('qr-img');
+  if(!qrImg || !qrImg.src) return;
+  var a = document.createElement('a');
+  a.href = qrImg.src;
+  a.download = 'qr-'+(_qrPatientName||'patient').toLowerCase().replace(/\s+/g,'-')+'.png';
+  a.target = '_blank';
+  a.click();
+}
+
+function exportPatientPDF(){
+  if(!currentPatientId) return;
+  var p = _allPatients.find(function(x){ return x.id===currentPatientId; });
+  if(!p){ showToast('Ouvrez la fiche depuis la liste patients'); return; }
+  var scores = p.scores || {};
+  var rows = Object.entries(scores).map(function(e){
+    var app = APPS_LIST.find(function(a){ return a.id===e[0]; });
+    return '<tr><td>'+(app?app.name:e[0])+'</td><td>'+(e[1].sessions||0)+'</td><td>'+(e[1].best||0)+'</td></tr>';
+  }).join('');
+  var orthoCode = document.getElementById('ortho-code-display').textContent;
+  var loginUrl = 'https://leoluce.com/?ortho='+orthoCode+'&patient='+p.code;
+  var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    +'<title>Fiche '+p.name+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:40px;color:#1F2937}h1{color:#7C3AED}table{border-collapse:collapse;width:100%}td,th{border:1px solid #E5E7EB;padding:8px 12px;text-align:left}th{background:#F3F4F6}img{display:block;margin:12px 0}.meta{font-size:13px;color:#6B7280;margin-bottom:24px}</style>'
+    +'</head><body>'
+    +'<h1>📋 Fiche patient — '+p.name+'</h1>'
+    +'<div class="meta">Code patient : <strong>'+p.code+'</strong>'
+      +(p.group?' · Groupe : <strong>'+p.group+'</strong>':'')
+      +(p.lastLogin?' · Dernière connexion : '+new Date(p.lastLogin).toLocaleDateString('fr-FR'):'')
+    +'</div>'
+    +(p.objectives?'<p><strong>🎯 Objectifs :</strong> '+p.objectives+'</p>':'')
+    +(rows?'<h2>Résultats</h2><table><tr><th>Jeu</th><th>Sessions</th><th>Meilleur score</th></tr>'+rows+'</table>':'<p>Pas encore de données.</p>')
+    +'<h2>Connexion rapide</h2>'
+    +'<p>URL : <code>'+loginUrl+'</code></p>'
+    +'<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='+encodeURIComponent(loginUrl)+'" alt="QR Code" width="150" height="150">'
+    +(p.notes?'<h2>Notes cliniques (privées)</h2><p>'+p.notes+'</p>':'')
+    +'<script>window.onload=function(){window.print()}<\/script>'
+    +'</body></html>';
+  var win = window.open('','_blank','width=800,height=900');
+  if(win){ win.document.open(); win.document.write(html); win.document.close(); }
 }
 
 async function loadTeacherData(){
