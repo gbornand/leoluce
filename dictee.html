@@ -806,9 +806,17 @@ function convertSpelling(text){
 
 function speakWord(w){
   if(!window.speechSynthesis)return;
+  if(window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(w); u.lang='fr-FR'; u.rate=0.8;
-  window.speechSynthesis.speak(u);
+  const doSpeak=()=>{
+    const u=new SpeechSynthesisUtterance(w);
+    u.lang='fr-FR'; u.rate=0.8;
+    const v=window.speechSynthesis.getVoices().find(v=>v.lang.startsWith('fr'));
+    if(v) u.voice=v;
+    window.speechSynthesis.speak(u);
+  };
+  if(window.speechSynthesis.getVoices().length>0){ setTimeout(doSpeak,50); }
+  else{ window.speechSynthesis.addEventListener('voiceschanged',()=>setTimeout(doSpeak,50),{once:true}); }
 }
 
 // ── ANSWER BOXES ──

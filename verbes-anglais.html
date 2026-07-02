@@ -701,20 +701,22 @@ buildHome();}
 // ════════════════════════════════
 // TTS
 // ════════════════════════════════
-function speakEN(text){
+function _doSpeak(text,lang,rate){
   if(!window.speechSynthesis)return;
+  if(window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='en-GB';u.rate=0.85;
-  window.speechSynthesis.speak(u);
+  const run=()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang=lang; u.rate=rate;
+    const v=window.speechSynthesis.getVoices().find(v=>v.lang.startsWith(lang.split('-')[0]));
+    if(v) u.voice=v;
+    window.speechSynthesis.speak(u);
+  };
+  if(window.speechSynthesis.getVoices().length>0){ setTimeout(run,50); }
+  else{ window.speechSynthesis.addEventListener('voiceschanged',()=>setTimeout(run,50),{once:true}); }
 }
-function speakFR(text){
-  if(!window.speechSynthesis)return;
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='fr-FR';u.rate=0.9;
-  window.speechSynthesis.speak(u);
-}
+function speakEN(text){ _doSpeak(text,'en-GB',0.85); }
+function speakFR(text){ _doSpeak(text,'fr-FR',0.9); }
 
 // ════════════════════════════════
 // FLASHCARD

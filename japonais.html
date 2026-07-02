@@ -1136,12 +1136,18 @@ function hide(id){ document.getElementById(id).style.display='none'; }
 
 function speakJP(text){
   if(!window.speechSynthesis)return;
+  if(window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='ja-JP'; u.rate=0.75;
-  // Fallback to fr-FR if ja-JP fails
-  u.onerror=()=>{ const u2=new SpeechSynthesisUtterance(text); u2.lang='fr-FR'; u2.rate=0.8; window.speechSynthesis.speak(u2); };
-  window.speechSynthesis.speak(u);
+  const run=()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ja-JP'; u.rate=0.75;
+    const vJP=window.speechSynthesis.getVoices().find(v=>v.lang.startsWith('ja'));
+    if(vJP){ u.voice=vJP; window.speechSynthesis.speak(u); return; }
+    const u2=new SpeechSynthesisUtterance(text); u2.lang='fr-FR'; u2.rate=0.8;
+    window.speechSynthesis.speak(u2);
+  };
+  if(window.speechSynthesis.getVoices().length>0){ setTimeout(run,50); }
+  else{ window.speechSynthesis.addEventListener('voiceschanged',()=>setTimeout(run,50),{once:true}); }
 }
 
 function launchConfetti(){
