@@ -1,0 +1,19 @@
+{
+  "projects": {
+    "default": "leoluce-edu",
+    "leoluce": "leoluce-edu"
+  },
+  "targets": {
+    "leoluce-edu": {
+      "hosting": {
+        "main": [
+          "leoluce-edu"
+        ],
+        "calendrier": [
+          "calendrier-leoluce"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

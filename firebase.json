@@ -1,12 +1,26 @@
 {
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  },
+  "hosting": [
+    {
+      "target": "main",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "calendrier/**",
+        "functions/**"
+      ]
+    },
+    {
+      "target": "calendrier",
+      "public": "calendrier",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules"
   }
