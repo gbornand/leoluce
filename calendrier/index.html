@@ -1,10 +1,120 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Calendrier Leoluce</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calendrier familial</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <p>Calendrier familial — en construction.</p>
+
+<!-- ÉCRAN CONNEXION -->
+<section id="screen-login" class="screen">
+  <div class="login-card">
+    <div class="login-emoji">🎂</div>
+    <h1>Calendrier familial</h1>
+    <p class="login-sub">Anniversaires de la famille</p>
+    <form id="login-form">
+      <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+      <label>Mot de passe <input type="password" id="login-password" required autocomplete="current-password"></label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button type="submit" class="btn-primary btn-block">Se connecter</button>
+    </form>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="screen-app" class="screen" hidden>
+  <header class="topbar">
+    <div class="topbar-title">🎂 Calendrier familial</div>
+    <div class="topbar-actions">
+      <input type="search" id="search-input" placeholder="Rechercher un prénom…" class="search-input">
+      <button id="btn-add" class="btn-fab" title="Ajouter un anniversaire">+</button>
+      <button id="btn-settings" class="btn-ghost" title="Réglages">⚙</button>
+      <button id="btn-logout" class="btn-ghost" title="Déconnexion">↪</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- PROCHAINS ANNIVERSAIRES -->
+    <section class="panel" id="panel-upcoming">
+      <h2>Prochains anniversaires <span class="panel-sub">(30 jours)</span></h2>
+      <div id="upcoming-list" class="upcoming-list"></div>
+    </section>
+
+    <!-- VUE ANNÉE / NAVIGATION MOIS -->
+    <section class="panel">
+      <div class="year-nav">
+        <button id="btn-prev-month" class="btn-ghost">←</button>
+        <h2 id="current-month-label"></h2>
+        <button id="btn-next-month" class="btn-ghost">→</button>
+        <button id="btn-view-year" class="btn-ghost view-toggle-btn">Vue année</button>
+        <button id="btn-view-month" class="btn-ghost view-toggle-btn active">Vue mois</button>
+      </div>
+      <div id="month-view" class="month-list"></div>
+      <div id="year-view" class="year-grid" hidden></div>
+    </section>
+
+    <!-- RÉSULTATS RECHERCHE -->
+    <section class="panel" id="panel-search" hidden>
+      <h2>Résultats de recherche</h2>
+      <div id="search-results" class="upcoming-list"></div>
+    </section>
+  </main>
+</section>
+
+<!-- MODALE AJOUT / ÉDITION -->
+<div id="modal-entry" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-entry-title">Nouvel anniversaire</h3>
+    <form id="form-entry">
+      <input type="hidden" id="entry-id">
+      <div class="form-row">
+        <label>Prénom <input type="text" id="entry-firstname" required></label>
+        <label>Nom <input type="text" id="entry-lastname"></label>
+      </div>
+      <div class="form-row">
+        <label>Jour <input type="number" id="entry-day" min="1" max="31" required></label>
+        <label>Mois
+          <select id="entry-month" required></select>
+        </label>
+        <label>Année de naissance <input type="number" id="entry-year" min="1900" max="2100" placeholder="optionnel"></label>
+      </div>
+      <div class="form-row">
+        <label>Catégorie
+          <select id="entry-category">
+            <option value="familial">🟢 Familial</option>
+            <option value="personnel">Personnel</option>
+          </select>
+        </label>
+        <label class="checkbox-label"><input type="checkbox" id="entry-alert"> Générer une alerte email</label>
+      </div>
+      <label>Notes <textarea id="entry-notes" rows="2"></textarea></label>
+      <p id="entry-status-badge" class="status-badge" hidden>⚠ À confirmer (import initial)</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-delete-entry" class="btn-danger" hidden>Supprimer</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn-ghost" onclick="closeModal('modal-entry')">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE RÉGLAGES -->
+<div id="modal-settings" class="modal-overlay" hidden>
+  <div class="modal" style="max-width:420px">
+    <h3>Mes réglages</h3>
+    <label class="checkbox-label"><input type="checkbox" id="settings-notify"> Recevoir les alertes email d'anniversaire</label>
+    <label>Heure de réception <select id="settings-hour"></select></label>
+    <div class="modal-actions">
+      <div class="spacer"></div>
+      <button type="button" class="btn-ghost" onclick="closeModal('modal-settings')">Fermer</button>
+      <button type="button" id="btn-save-settings" class="btn-primary">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
