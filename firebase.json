@@ -8,7 +8,10 @@
         "**/.*",
         "**/node_modules/**",
         "calendrier/**",
-        "functions/**"
+        "functions/**",
+        "scripts/**",
+        "*adminsdk*.json",
+        "*service-account*.json"
       ]
     },
     {

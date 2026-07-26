@@ -833,7 +833,7 @@ function relClick(el,side,idx){
     relSelected={el,side,idx};
     el.classList.add('selected');
     // Pronounce if left side (infinitive)
-    if(side==='left') speakEN(queue[relGroupIdx*5+idx]?.inf||'');
+    if(side==='left'){ const qItem=queue[relGroupIdx*5+idx]; speakEN((qItem&&qItem.inf)||''); }
   } else {
     if(relSelected.side===side){
       // Same side — switch selection

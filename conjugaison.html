@@ -220,9 +220,9 @@ function showQ(){
   document.getElementById('next-btn').style.display='none';
 
   const t=TEMPS.find(x=>x.id===q.temps);
-  document.getElementById('gnav-temps').textContent=t?.name||'';
+  document.getElementById('gnav-temps').textContent=(t&&t.name)||'';
   const badge=document.getElementById('temps-badge');
-  badge.textContent=t?.name||'';badge.style.background=t?.colorBg||'';badge.style.color=t?.color||'';
+  badge.textContent=(t&&t.name)||'';badge.style.background=(t&&t.colorBg)||'';badge.style.color=(t&&t.color)||'';
 
   // Build phrase with blank
   const isPC=q.temps==='passe_compose';
@@ -261,7 +261,8 @@ function checkAns(ok,btn,chips,q,fullForm){
   if(qLocked)return;qLocked=true;
   btn.classList.add(ok?'correct':'wrong');
   if(!ok) chips.querySelectorAll('.term-chip').forEach(c=>{
-    const isCorrect=q.temps==='passe_compose'?c.textContent.includes(q.correct+' '):c.querySelector('b')?.textContent===q.correct;
+    const bEl=c.querySelector('b');
+    const isCorrect=q.temps==='passe_compose'?c.textContent.includes(q.correct+' '):(bEl&&bEl.textContent)===q.correct;
     if(isCorrect)c.classList.add('reveal');
   });
   const trou=document.getElementById('trou');

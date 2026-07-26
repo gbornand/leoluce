@@ -362,7 +362,8 @@ function buildHome(){
   // Legend
   const legend=document.getElementById('legend-grid');
   legend.innerHTML='';
-  const curNatures=LEVELS.find(l=>l.id===selectedLevelId)?.natures||LEVELS[0].natures;
+  const curLevel=LEVELS.find(l=>l.id===selectedLevelId);
+  const curNatures=(curLevel&&curLevel.natures)||LEVELS[0].natures;
   curNatures.forEach(n=>{
     const nat=NATURES[n];
     const pill=document.createElement('span');
@@ -605,7 +606,8 @@ let colPhrase=[], colColors={}, colActivePalette=null;
 function startColoriage(){
   // Pick a phrase with many words from current level natures
   const eligible=PHRASES.filter(p=>p.text.filter(t=>t.n&&sessionNatures.includes(t.n)).length>=3);
-  colPhrase=eligible[Math.floor(Math.random()*eligible.length)]?.text||PHRASES[0].text;
+  const pickedPhrase=eligible[Math.floor(Math.random()*eligible.length)];
+  colPhrase=(pickedPhrase&&pickedPhrase.text)||PHRASES[0].text;
   colColors={}; colActivePalette=sessionNatures[0];
   showScreen('sc-coloriage');
   buildColPalette();
@@ -630,7 +632,8 @@ function buildColPalette(){
 function selectPalette(nat){
   colActivePalette=nat;
   document.querySelectorAll('.palette-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('pal-'+nat)?.classList.add('active');
+  const palBtn=document.getElementById('pal-'+nat);
+  if(palBtn) palBtn.classList.add('active');
 }
 
 function renderColText(){
@@ -642,7 +645,7 @@ function renderColText(){
     const s=document.createElement('span');
     s.className='cword'+(colColors[i]?' colored':'');
     s.textContent=' '+tok.w;
-    if(colColors[i]){ s.style.background=NATURES[colColors[i]]?.color||''; s.style.color='#fff'; s.style.borderColor='rgba(0,0,0,.1)'; }
+    if(colColors[i]){ const natCol=NATURES[colColors[i]]; s.style.background=(natCol&&natCol.color)||''; s.style.color='#fff'; s.style.borderColor='rgba(0,0,0,.1)'; }
     s.onclick=()=>colorWord(i,s);
     disp.appendChild(s);
   });
@@ -651,7 +654,8 @@ function renderColText(){
 function colorWord(idx,el){
   if(!colActivePalette)return;
   colColors[idx]=colActivePalette;
-  el.style.background=NATURES[colActivePalette]?.color||'';
+  const activeNatCol=NATURES[colActivePalette];
+  el.style.background=(activeNatCol&&activeNatCol.color)||'';
   el.style.color='#fff'; el.style.borderColor='rgba(0,0,0,.1)';
   el.classList.add('colored');
   updateColProgress();
