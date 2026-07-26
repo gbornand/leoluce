@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leoluce (version compatible anciens appareils)</title>
+<style>
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; }
+  .wrap { max-width:420px; margin:0 auto; padding:40px 20px; }
+  h1 { font-size:22px; text-align:center; margin-bottom:6px; }
+  p.sub { text-align:center; color:#aaa; font-size:13px; margin-bottom:24px; }
+  label { display:block; font-size:13px; color:#ccc; margin-bottom:4px; margin-top:14px; }
+  input { width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid #444; font-size:16px; }
+  button { width:100%; margin-top:20px; padding:12px; border-radius:20px; border:none; background:#e07a5f; color:#fff; font-size:15px; font-weight:bold; }
+  #err { color:#ff8a80; font-size:13px; margin-top:10px; text-align:center; }
+  #hub { display:none; }
+  .game-link { display:block; padding:14px 16px; margin:8px 0; background:#26263e; border-radius:8px; color:#fff; text-decoration:none; font-size:15px; }
+  .game-link.disabled { opacity:.4; }
+  #status { text-align:center; color:#888; font-size:12px; margin-top:30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="login-box">
+    <h1>Leoluce</h1>
+    <p class="sub">Version compatible anciens appareils</p>
+    <form id="login-form">
+      <label>Email</label>
+      <input type="email" id="email" required>
+      <label>Mot de passe</label>
+      <input type="password" id="password" required>
+      <button type="submit">Se connecter</button>
+      <p id="err"></p>
+    </form>
+  </div>
+
+  <div id="hub">
+    <h1 id="hub-title">Bonjour</h1>
+    <p class="sub">Choisis un jeu</p>
+    <a class="game-link" href="adjectifs.html">Adjectifs</a>
+    <a class="game-link" href="conjugaison.html">Conjugaison</a>
+    <a class="game-link" href="fonctions.html">Fonctions</a>
+    <a class="game-link" href="fractions.html">Fractions</a>
+    <a class="game-link" href="homophones.html">Homophones</a>
+    <a class="game-link" href="natures.html">Natures des mots</a>
+    <a class="game-link" href="lecture-voix.html">Lecture &amp; Fluence</a>
+    <a class="game-link" href="tables-leonie.html">Tables de multiplication</a>
+    <a class="game-link" href="verbes-anglais.html">Verbes anglais</a>
+    <p class="sub" style="margin-top:20px">Les jeux ci-dessous nécessitent une connexion internet moderne et peuvent ne pas fonctionner sur cet appareil :</p>
+    <a class="game-link disabled" href="calcul-chute.html">Calcul mental</a>
+    <a class="game-link disabled" href="dictee.html">Dictée</a>
+    <a class="game-link disabled" href="japonais.html">Japonais</a>
+    <a class="game-link disabled" href="sons-lecture.html">Sons &amp; Lecture</a>
+  </div>
+
+  <p id="status">Chargement…</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyBpKc6h0mjkTff5KJBD0_A4IBePsR4cU3w",
+    authDomain: "leoluce-edu.firebaseapp.com",
+    projectId: "leoluce-edu",
+    storageBucket: "leoluce-edu.firebasestorage.app",
+    messagingSenderId: "334537788019",
+    appId: "1:334537788019:web:f53426f0c480bfd771f806"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
+  document.getElementById("status").textContent = "SDK Firebase chargé (v8.10.1).";
+
+  document.getElementById("login-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("email").value;
+    var password = document.getElementById("password").value;
+    var errEl = document.getElementById("err");
+    errEl.textContent = "";
+    auth.signInWithEmailAndPassword(email, password).catch(function (err) {
+      errEl.textContent = "Connexion impossible : " + err.message;
+    });
+  });
+
+  auth.onAuthStateChanged(function (user) {
+    var loginBox = document.getElementById("login-box");
+    var hub = document.getElementById("hub");
+    var statusEl = document.getElementById("status");
+    if (user) {
+      loginBox.style.display = "none";
+      hub.style.display = "block";
+      document.getElementById("hub-title").textContent = "Bonjour " + (user.email || "");
+      statusEl.textContent = "Connecté.";
+    } else {
+      loginBox.style.display = "block";
+      hub.style.display = "none";
+      statusEl.textContent = "Non connecté.";
+    }
+  });
+</script>
+</body>
+</html>
