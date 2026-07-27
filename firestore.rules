@@ -54,9 +54,10 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid)) &&
         request.resource.data.ownerUid == request.auth.uid;
+      // Toute entrée est modifiable/supprimable par n'importe quel membre de la famille,
+      // quelle que soit sa catégorie ou son propriétaire (décision explicite Géraldine).
       allow update, delete: if request.auth != null &&
-        exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid)) &&
-        (resource.data.category == 'familial' || resource.data.ownerUid == request.auth.uid);
+        exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid));
     }
 
     match /bdayUsers/{uid} {

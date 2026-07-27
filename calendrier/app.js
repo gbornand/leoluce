@@ -25,6 +25,8 @@ const db = getFirestore(app);
 
 const MOIS_NOMS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const FAMILIAL_COLOR = "#4caf50";
+const AMIS_FAMILLE_COLOR = "#7a5cc0";
+const ENFANTS_AMIS_COLOR = "#c07a3f";
 
 let currentUser = null;
 let entries = [];
@@ -110,6 +112,8 @@ function renderAll() {
 // -------------------------------------------------------------
 function colorFor(entry) {
   if (entry.category === "familial") return FAMILIAL_COLOR;
+  if (entry.category === "amis_famille") return AMIS_FAMILLE_COLOR;
+  if (entry.category === "enfants_amis") return ENFANTS_AMIS_COLOR;
   return bdayUsers[entry.ownerUid]?.colorHex || "#999";
 }
 function ageAt(entry, targetDate) {
@@ -250,6 +254,7 @@ function openEntryModal(id) {
   document.getElementById("entry-month").value = e ? e.month - 1 : new Date().getMonth();
   document.getElementById("entry-year").value = e?.birthYear || "";
   document.getElementById("entry-category").value = e?.category || "familial";
+  document.getElementById("entry-group").value = e?.group || "";
   document.getElementById("entry-alert").checked = e ? !!e.alertEnabled : true;
   document.getElementById("entry-notes").value = e?.notes || "";
   document.getElementById("btn-delete-entry").hidden = !id;
@@ -273,6 +278,7 @@ document.getElementById("form-entry").addEventListener("submit", async (e) => {
     month: Number(document.getElementById("entry-month").value) + 1,
     birthYear: Number(document.getElementById("entry-year").value) || null,
     category: document.getElementById("entry-category").value,
+    group: document.getElementById("entry-group").value.trim() || null,
     alertEnabled: document.getElementById("entry-alert").checked,
     notes: document.getElementById("entry-notes").value.trim() || null,
     updatedAt: serverTimestamp(),
