@@ -7,9 +7,11 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦁</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-check-compat.js"></script>
 <style>
 :root{
   --pink:#FF6B9D;--purple:#C77DFF;--blue:#4D96FF;--green:#6BCB77;
@@ -554,6 +556,11 @@ textarea.tinput{resize:none;min-height:80px;}
   </div>
 </div>
 
+<!-- ONBOARDING ORTHO -->
+<div id="ortho-onboarding" style="display:none;position:fixed;inset:0;z-index:3000;background:linear-gradient(160deg,#0d0d1a 0%,#1a1a2e 40%,#16213e 100%);align-items:center;justify-content:center;padding:24px;overflow-y:auto">
+  <div style="width:100%;max-width:400px;text-align:center" id="ortho-onboarding-body"></div>
+</div>
+
 <!-- ENCOURAGEMENT BANNER -->
 <div id="encourage-banner">
   <div style="font-size:20px;margin-bottom:4px">🩺</div>
@@ -808,8 +815,13 @@ const firebaseConfig = {
   appId: "1:334537788019:web:f53426f0c480bfd771f806"
 };
 firebase.initializeApp(firebaseConfig);
+firebase.appCheck().activate(
+  new firebase.appCheck.ReCaptchaV3Provider('6LfszmctAAAAAGf6kh3NFF-Fq-8kDlwm5SURZnnn'),
+  true
+);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const functions = firebase.app().functions("europe-west1");
 
 // ADMIN emails (toi)
 const ADMIN_EMAILS = ['geraldine@leoluce.com', 'leoluce@gmail.com'];
@@ -821,16 +833,15 @@ let currentUser = null;
 let currentUserData = null;
 
 // ══ AUTH LISTENER ══
-// Fallback: force exit loading after 4 seconds no matter what
+// Fallback: force exit loading after 2.5 seconds no matter what
 setTimeout(() => {
   const loading = document.getElementById('sc-loading');
   if(loading && loading.classList.contains('active')){
     console.log('Firebase timeout - opening as guest');
-    currentUser = null;
-    currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+    if(!currentUserData) currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
     try { openHub(); } catch(e) { showScreen('sc-hub'); }
   }
-}, 4000);
+}, 2500);
 const firebaseTimeout = { clear: ()=>{} }; // dummy
 
 function forceOpenHub(){
@@ -842,33 +853,42 @@ function forceOpenHub(){
 checkURLLoginParams();
 
 auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    currentUser = user;
-    const userRef = db.collection('users').doc(user.uid);
-    const snap = await userRef.get();
-    if (!snap.exists) {
-      const newProfile = {
-        name: user.displayName || user.email.split('@')[0],
-        email: user.email,
-        avatar: '🦁',
-        role: ADMIN_EMAIL && user.email === ADMIN_EMAIL ? 'admin' : 'student',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        sessions: 0, scores: {}
-      };
-      await userRef.set(newProfile);
-      currentUserData = newProfile;
-    } else {
-      currentUserData = snap.data();
-    }
-    if (ADMIN_EMAIL && user.email === ADMIN_EMAIL) currentUserData.role = 'admin';
-    openHub();
-  } else {
-    // Check for patient session
-    if(!checkPatientSession()){
-      currentUser = null;
-      currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+  try {
+    if (user) {
+      currentUser = user;
+      const userRef = db.collection('users').doc(user.uid);
+      const snap = await userRef.get();
+      if (!snap.exists) {
+        const newProfile = {
+          name: user.displayName || user.email.split('@')[0],
+          email: user.email,
+          avatar: '🦁',
+          role: ADMIN_EMAIL && user.email === ADMIN_EMAIL ? 'admin' : 'student',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          sessions: 0, scores: {}
+        };
+        await userRef.set(newProfile);
+        currentUserData = newProfile;
+      } else {
+        currentUserData = snap.data();
+      }
+      if (ADMIN_EMAIL && user.email === ADMIN_EMAIL) currentUserData.role = 'admin';
       openHub();
+    } else {
+      if(!checkPatientSession()){
+        currentUser = null;
+        currentUserData = { name: 'Invité', avatar: '🌟', role: 'student' };
+        openHub();
+      }
     }
+  } catch(e) {
+    console.error('Auth state error:', e);
+    currentUser = user || null;
+    currentUserData = currentUser
+      ? { name: currentUser.displayName || currentUser.email || 'Utilisateur', avatar: '🦁',
+          role: ADMIN_EMAIL && currentUser.email === ADMIN_EMAIL ? 'admin' : 'student' }
+      : { name: 'Invité', avatar: '🌟', role: 'student' };
+    try { openHub(); } catch(e2) { showScreen('sc-hub'); }
   }
 });
 
@@ -911,43 +931,28 @@ async function loginPatient(){
   if(!orthoCode||!prenom||!patientCode){ showErr('Remplis tous les champs !'); return; }
   
   try {
-    // Find ortho with this code
-    const orthoSnap = await db.collection('users').where('orthoCode','==',orthoCode).limit(1).get();
-    if(orthoSnap.empty){ showErr('Code cabinet introuvable'); return; }
-    const orthoId = orthoSnap.docs[0].id;
-    
-    // Find patient
-    const patientSnap = await db.collection('patients')
-      .where('orthoId','==',orthoId)
-      .where('code','==',patientCode)
-      .limit(1).get();
-    if(patientSnap.empty){ showErr('Code patient introuvable'); return; }
-    
-    const patientDoc = patientSnap.docs[0];
-    const patientData = patientDoc.data();
-    
-    // Update last login
-    await db.collection('patients').doc(patientDoc.id).update({
-      lastLogin: new Date().toISOString()
-    });
-    
+    // La recherche cabinet+patient et l'écriture lastLogin se font côté serveur
+    // (Cloud Function), plus d'accès direct non-authentifié à Firestore.
+    const call = functions.httpsCallable('getPatientByCode');
+    const { data: patientData } = await call({ orthoCode, patientCode });
+
     // Set session as patient (no Firebase auth, use localStorage)
     const session = {
       type: 'patient',
-      patientId: patientDoc.id,
+      patientId: patientData.patientId,
       name: patientData.name,
-      orthoId,
-      orthoCode: document.getElementById('patient-ortho-code')?.value?.trim().toUpperCase() || '',
+      orthoId: patientData.orthoId,
+      orthoCode,
       patientCode: patientCode,
-      activeApps: patientData.activeApps || ['calcul','dictee','sons','lecture'],
-      activeSons: patientData.activeSons || [],
-      difficulty: patientData.difficulty || {},
-      sessionSequence: patientData.sessionSequence || [],
-      parentNotes: patientData.parentNotes || '',
-      encouragementMessage: patientData.encouragementMessage || '',
-      customWords: patientData.customWords || '',
-      customTextTitle: patientData.customTextTitle || '',
-      customTextBody: patientData.customTextBody || '',
+      activeApps: patientData.activeApps,
+      activeSons: patientData.activeSons,
+      difficulty: patientData.difficulty,
+      sessionSequence: patientData.sessionSequence,
+      parentNotes: patientData.parentNotes,
+      encouragementMessage: patientData.encouragementMessage,
+      customWords: patientData.customWords,
+      customTextTitle: patientData.customTextTitle,
+      customTextBody: patientData.customTextBody,
     };
     localStorage.setItem('patient_session', JSON.stringify(session));
     if(patientData.customTextTitle && patientData.customTextBody){
@@ -1251,6 +1256,12 @@ async function loadOrthoData(){
     document.getElementById('ortho-code-display').textContent = code;
   } else {
     document.getElementById('ortho-code-display').textContent = data.orthoCode;
+  }
+
+  // Onboarding première connexion
+  if (!data.hasSeenOnboarding) {
+    const code = document.getElementById('ortho-code-display')?.textContent || data.orthoCode || '';
+    showOrthoOnboarding(code);
   }
 
   // Load patients
@@ -2268,6 +2279,132 @@ function renderAppsDetail(scores){
 }
 
 checkInviteCode();
+
+// ══ ONBOARDING ORTHO ══
+const ONBOARDING_STEPS = [
+  {
+    emoji: '🦁',
+    title: 'Bienvenue sur Leoluce !',
+    body: 'Votre espace orthophoniste pour piloter les exercices de vos patients à distance — et suivre leurs progrès en temps réel.',
+    highlight: null
+  },
+  {
+    emoji: '🔑',
+    title: 'Votre code cabinet',
+    body: 'Chaque patient utilise votre <strong>code unique</strong> pour se connecter à votre espace. Vous pouvez aussi générer un QR code à imprimer ou envoyer.',
+    highlight: 'Partagez votre code en début de séance — le patient peut se connecter seul depuis chez lui en 10 secondes.'
+  },
+  {
+    emoji: '➕',
+    title: 'Créez vos patients',
+    body: 'Ajoutez un patient en saisissant son prénom. Un code d\'accès est généré automatiquement. Vous personnalisez ensuite les exercices et le niveau pour chacun.',
+    highlight: 'Vous pouvez aussi lui envoyer un lien direct ou générer un QR code — zéro friction pour le patient.'
+  },
+  {
+    emoji: '🎮',
+    title: 'Personnalisez les exercices',
+    body: 'Pour chaque patient : choisissez les modules actifs, le niveau de difficulté, et ajoutez un message personnalisé qui s\'affichera à sa connexion.',
+    highlight: 'Importez des configs de la bibliothèque communauté créées par d\'autres orthos — et partagez les vôtres !'
+  },
+  {
+    emoji: '📱',
+    title: 'Ce que voit votre patient',
+    body: 'Votre patient arrive sur un écran d\'accueil à son nom, avec uniquement les exercices que vous avez activés pour lui.',
+    highlight: null,
+    simulation: true
+  },
+  {
+    emoji: '📊',
+    title: 'Suivez les progrès',
+    body: 'Consultez en temps réel les sessions, scores et évolutions de chaque patient. Repérez rapidement ce qui avance et ce qui bloque.',
+    highlight: null
+  }
+];
+
+let _onboardingStep = 0;
+
+function showOrthoOnboarding(orthoCode) {
+  _onboardingStep = 0;
+  _renderOnboardingStep(orthoCode);
+  document.getElementById('ortho-onboarding').style.display = 'flex';
+}
+
+function _renderOnboardingStep(orthoCode) {
+  const step = ONBOARDING_STEPS[_onboardingStep];
+  const total = ONBOARDING_STEPS.length;
+  const isLast = _onboardingStep === total - 1;
+
+  const dots = ONBOARDING_STEPS.map((_, i) =>
+    `<div style="width:${i===_onboardingStep?24:8}px;height:8px;border-radius:4px;background:${i===_onboardingStep?'var(--yellow)':'rgba(255,255,255,.25)'};transition:all .3s"></div>`
+  ).join('');
+
+  const highlightHtml = step.highlight
+    ? `<div style="background:rgba(255,211,61,.12);border:1px solid rgba(255,211,61,.3);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:13px;color:rgba(255,255,255,.85);line-height:1.5">💡 ${step.highlight}</div>`
+    : '';
+
+  const codeHtml = _onboardingStep === 1 && orthoCode
+    ? `<div style="background:linear-gradient(135deg,var(--purple),var(--blue));border-radius:14px;padding:14px;text-align:center;margin-top:14px"><div style="font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:4px">${orthoCode}</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">Votre code cabinet</div></div>`
+    : '';
+
+  const simuHtml = step.simulation ? `
+    <div style="margin-top:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden">
+      <div style="background:rgba(255,255,255,.08);padding:8px 14px;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.05em;text-align:left">APERÇU — VUE PATIENT</div>
+      <div style="padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--pink),var(--purple));display:flex;align-items:center;justify-content:center;font-size:20px">🦊</div>
+          <div style="text-align:left">
+            <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:#fff">Bonjour Théo !</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5)">Élève · Lire un message de votre ortho</div>
+          </div>
+        </div>
+        <div style="background:rgba(255,211,61,.1);border:1px solid rgba(255,211,61,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;text-align:left;font-size:12px;color:rgba(255,255,255,.8)">
+          📒 <em>Travaille bien les sons cette semaine !</em>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:26px">📚</div>
+            <div style="font-size:11px;font-weight:800;color:#fff;margin-top:4px">Sons & Lecture</div>
+          </div>
+          <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:26px">✏️</div>
+            <div style="font-size:11px;font-weight:800;color:#fff;margin-top:4px">Dictée</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.4);text-align:center">Seuls les modules que vous activez sont visibles</div>
+      </div>
+    </div>` : '';
+
+  document.getElementById('ortho-onboarding-body').innerHTML = `
+    <div style="font-size:72px;margin-bottom:12px;animation:float 2s ease-in-out infinite">${step.emoji}</div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:#fff;margin-bottom:10px;line-height:1.2">${step.title}</div>
+    <div style="font-size:15px;color:rgba(255,255,255,.75);line-height:1.6">${step.body}</div>
+    ${codeHtml}
+    ${simuHtml}
+    ${highlightHtml}
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:24px">${dots}</div>
+    <button onclick="_onboardingNext()" style="width:100%;margin-top:16px;padding:16px;background:linear-gradient(135deg,var(--yellow),var(--orange));border:none;border-radius:16px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;color:var(--dark);cursor:pointer">
+      ${isLast ? '🚀 C\'est parti !' : 'Suivant →'}
+    </button>
+    <button onclick="_closeOnboarding()" style="margin-top:10px;background:none;border:none;color:rgba(255,255,255,.4);font-family:'Nunito',sans-serif;font-size:13px;cursor:pointer;padding:6px">${isLast ? '' : 'Passer l\'intro'}</button>
+  `;
+}
+
+function _onboardingNext() {
+  const orthoCode = document.getElementById('ortho-code-display')?.textContent;
+  if (_onboardingStep < ONBOARDING_STEPS.length - 1) {
+    _onboardingStep++;
+    _renderOnboardingStep(orthoCode);
+  } else {
+    _closeOnboarding();
+  }
+}
+
+function _closeOnboarding() {
+  document.getElementById('ortho-onboarding').style.display = 'none';
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).update({ hasSeenOnboarding: true }).catch(() => {});
+  }
+}
 </script>
 </body>
 </html>

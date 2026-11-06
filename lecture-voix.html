@@ -278,24 +278,6 @@ textarea.cinput{resize:none;min-height:90px;}
 </div>
 <script>
 
-// Firebase score sync helper
-async function syncScore(appName, scoreData) {
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get('uid');
-    if (!uid || uid === 'undefined') return;
-    if(typeof firebase === 'undefined') return;
-    const fdb = firebase.firestore();
-    await fdb.collection('users').doc(uid).update({
-      [`scores.${appName}`]: {
-        best: scoreData.best || 0,
-        sessions: firebase.firestore.FieldValue.increment(1),
-        lastPlay: new Date().toISOString(),
-        pct: scoreData.pct || 0
-      }
-    });
-  } catch(e) { /* silent fail */ }
-}
 // ══════════════════════════════════════════
 // TEXTS
 // ══════════════════════════════════════════

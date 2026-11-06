@@ -8,14 +8,11 @@ service cloud.firestore {
     }
 
     match /patients/{patientId} {
-      // Lecture libre — patients non-auth ont besoin d'accéder à leur config
-      allow read: if true;
-      // Création : ortho authentifiée seulement
-      allow create: if request.auth != null;
-      // Mise à jour : libre (patients non-auth mettent à jour lastLogin)
-      allow update: if true;
-      // Suppression : ortho propriétaire seulement
-      allow delete: if request.auth != null && resource.data.orthoId == request.auth.uid;
+      // La connexion patient par code (sans compte) passe désormais par la Cloud Function
+      // getPatientByCode (admin SDK, contourne ces règles) — plus d'accès direct non-auth.
+      allow read: if request.auth != null && resource.data.orthoId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.orthoId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.orthoId == request.auth.uid;
     }
 
     match /sharedConfigs/{configId} {
@@ -26,18 +23,27 @@ service cloud.firestore {
     }
 
     match /invitations/{invId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && resource.data.fromOrthoId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.fromOrthoId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.fromOrthoId == request.auth.uid;
     }
 
     match /wordLists/{listId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read: if request.auth != null && resource.data.teacherId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if request.auth != null &&
         resource.data.teacherId == request.auth.uid;
     }
 
     match /connLogs/{logId} {
-      allow read, write: if request.auth != null;
+      // Créé par l'élève authentifié lui-même ; lu par lui-même ou par son ortho ;
+      // seule mise à jour permise = durationMin (posé à la déconnexion).
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null &&
+        (resource.data.teacherId == request.auth.uid || resource.data.userId == request.auth.uid);
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['durationMin']);
+      allow delete: if false;
     }
 
     match /meta/{doc} {
@@ -51,9 +57,11 @@ service cloud.firestore {
     match /bdayEntries/{entryId} {
       allow read: if request.auth != null &&
         exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid));
+      // ownerUid est un simple tag d'attribution (alerte/couleur), pas une frontière de
+      // permission — n'importe lequel des 4 peut créer une entrée sans rattachement
+      // (ownerUid == null) ou rattachée à n'importe quel membre.
       allow create: if request.auth != null &&
-        exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid)) &&
-        request.resource.data.ownerUid == request.auth.uid;
+        exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid));
       // Toute entrée est modifiable/supprimable par n'importe quel membre de la famille,
       // quelle que soit sa catégorie ou son propriétaire (décision explicite Géraldine).
       allow update, delete: if request.auth != null &&

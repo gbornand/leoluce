@@ -178,7 +178,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:f
       </button>
       <button class="mode-btn" data-mode="vocal" onclick="pickMode(this)">
         <span class="mode-icon">🎤</span>
-        <div class="mode-info"><div class="mode-name">Prononciation <span class="mode-new">IA</span></div><div class="mode-desc">Lis le mot à voix haute → correction Duolingo</div></div>
+        <div class="mode-info"><div class="mode-name">Prononciation <span class="mode-new">IA</span></div><div class="mode-desc">Prononce le son (ex : ien, oin, ce) → correction Duolingo</div></div>
       </button>
     </div>
   </div>
@@ -275,35 +275,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:f
 </div>
 
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 
-// Firebase score sync helper
-async function syncScore(appName, scoreData) {
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get('uid');
-    if (!uid || uid === 'undefined') return;
-    const firebase_app = window._fb_app || (window._fb_app = (() => {
-      if (!firebase.apps.length) firebase.initializeApp({
-        apiKey:"AIzaSyAVRC2nu8xEbYlFdhyGjKtY-RiIsA3fQ1o",
-        authDomain:"leoluce-ad497.firebaseapp.com",
-        projectId:"leoluce-ad497"
-      });
-      return firebase.app();
-    })());
-    const fdb = firebase.firestore();
-    await fdb.collection('users').doc(uid).update({
-      [`scores.${appName}`]: {
-        best: scoreData.best || 0,
-        sessions: firebase.firestore.FieldValue.increment(1),
-        lastPlay: new Date().toISOString(),
-        pct: scoreData.pct || 0
-      }
-    });
-  } catch(e) { /* silent fail */ }
-}
 // ══════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════
@@ -407,7 +380,7 @@ function buildQuestions(){
   const fams=FAMILIES.filter(f=>selFamilies.has(f.id));
   const pool=[];
   fams.forEach(f=>{
-    if(chosenMode==='qcm') f.syllabes.forEach(s=>pool.push({type:'qcm',fam:f,item:s}));
+    if(chosenMode==='qcm'||chosenMode==='vocal') f.syllabes.forEach(s=>pool.push({type:'qcm',fam:f,item:s}));
     else f.mots.forEach(m=>pool.push({type:'spell',fam:f,item:m}));
   });
   return pool.sort(()=>Math.random()-.5).slice(0,TOTAL_Q);
@@ -443,8 +416,13 @@ function showQCM(q){
   setModeBadge('🎯 QCM'); show('qcm-grid');
   document.getElementById('card-content').innerHTML=
     `<div class="card-syllabe">${q.item}</div><div class="card-hint">Quelle syllabe lis-tu ?</div>`;
-  const all=FAMILIES.flatMap(f=>f.syllabes).filter(s=>s!==q.item);
-  const distractors=[...new Set(all.sort(()=>Math.random()-.5))].slice(0,3);
+  // Les intrus doivent d'abord venir de la MÊME famille de sons (ex: ien/ein/oin/ion — vraiment
+  // ressemblants, ça oblige à vraiment lire) plutôt que des syllabes d'une famille totalement
+  // différente qu'on peut écarter au premier coup d'œil sans les lire.
+  const sameFam=q.fam.syllabes.filter(s=>s!==q.item);
+  const otherFam=FAMILIES.filter(f=>f.id!==q.fam.id).flatMap(f=>f.syllabes).filter(s=>s!==q.item);
+  const pool=[...new Set([...sameFam,...otherFam])];
+  const distractors=pool.sort(()=>Math.random()-.5).slice(0,3);
   const choices=[q.item,...distractors].sort(()=>Math.random()-.5);
   const grid=document.getElementById('qcm-grid'); grid.innerHTML='';
   choices.forEach(c=>{
@@ -582,7 +560,7 @@ let recognition=null, micActive=false;
 function showVocal(q){
   setModeBadge('🎤 Prononciation'); show('vocal-area');
   document.getElementById('card-content').innerHTML=
-    `<div class="card-word">${q.item}</div><div class="card-hint">Lis ce mot à voix haute</div>`;
+    `<div class="card-word">${q.item}</div><div class="card-hint">Prononce ce son à voix haute</div>`;
   document.getElementById('mic-btn').className='mic-btn idle';
   document.getElementById('vocal-status').textContent='Appuie sur le micro pour parler';
   document.getElementById('vocal-heard').textContent='';

@@ -320,35 +320,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);height:100vh;display:f
 </div>
 
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 
-// Firebase score sync helper
-async function syncScore(appName, scoreData) {
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get('uid');
-    if (!uid || uid === 'undefined') return;
-    const firebase_app = window._fb_app || (window._fb_app = (() => {
-      if (!firebase.apps.length) firebase.initializeApp({
-        apiKey:"AIzaSyAVRC2nu8xEbYlFdhyGjKtY-RiIsA3fQ1o",
-        authDomain:"leoluce-ad497.firebaseapp.com",
-        projectId:"leoluce-ad497"
-      });
-      return firebase.app();
-    })());
-    const fdb = firebase.firestore();
-    await fdb.collection('users').doc(uid).update({
-      [`scores.${appName}`]: {
-        best: scoreData.best || 0,
-        sessions: firebase.firestore.FieldValue.increment(1),
-        lastPlay: new Date().toISOString(),
-        pct: scoreData.pct || 0
-      }
-    });
-  } catch(e) { /* silent fail */ }
-}
 // ══════════════════════════════════════════
 // DATA & STORAGE
 // ══════════════════════════════════════════

@@ -75,3 +75,8 @@ node_modules/
 # Playwright
 test-results/
 playwright-report/
+
+# Sauvegardes de données (personnelles) et script contenant un mot de passe temporaire
+backup-*.json
+scripts/create-family-accounts.cjs
+/firebase

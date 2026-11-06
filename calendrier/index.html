@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calendrier familial</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#e07a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Anniv'">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,7 +23,12 @@
     <p class="login-sub">Anniversaires de la famille</p>
     <form id="login-form">
       <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
-      <label>Mot de passe <input type="password" id="login-password" required autocomplete="current-password"></label>
+      <label>Mot de passe
+        <div class="password-field">
+          <input type="password" id="login-password" required autocomplete="current-password">
+          <button type="button" id="btn-toggle-password" class="btn-toggle-password" title="Afficher le mot de passe" aria-label="Afficher le mot de passe">👁</button>
+        </div>
+      </label>
       <p id="login-error" class="login-error" hidden></p>
       <button type="submit" class="btn-primary btn-block">Se connecter</button>
     </form>
@@ -31,19 +43,32 @@
       <input type="search" id="search-input" placeholder="Rechercher un prénom…" class="search-input">
       <button id="btn-add" class="btn-fab" title="Ajouter un anniversaire">+</button>
       <button id="btn-settings" class="btn-ghost" title="Réglages">⚙</button>
-      <button id="btn-logout" class="btn-ghost" title="Déconnexion">↪</button>
+      <button id="btn-logout" class="btn-ghost btn-whoami" title="Se déconnecter">👤 <span id="whoami-name"></span> ↪</button>
     </div>
   </header>
 
   <main class="content">
+    <!-- FILTRE GLOBAL -->
+    <div class="scope-filter">
+      <button class="btn-ghost scope-btn active" data-scope="all">Tout voir</button>
+      <button class="btn-ghost scope-btn" data-scope="us">Familial + Personnel + Amis</button>
+    </div>
+
+    <!-- RÉSULTATS RECHERCHE -->
+    <section class="panel" id="panel-search" hidden>
+      <h2>Résultats de recherche</h2>
+      <div id="search-results" class="upcoming-list"></div>
+    </section>
+
     <!-- PROCHAINS ANNIVERSAIRES -->
     <section class="panel" id="panel-upcoming">
       <h2>Prochains anniversaires <span class="panel-sub">(30 jours)</span></h2>
+      <p class="alert-legend">☑ à droite = alerte email active ce jour-là</p>
       <div id="upcoming-list" class="upcoming-list"></div>
     </section>
 
     <!-- VUE ANNÉE / NAVIGATION MOIS -->
-    <section class="panel">
+    <section class="panel" id="panel-month-year">
       <div class="year-nav">
         <button id="btn-prev-month" class="btn-ghost">←</button>
         <h2 id="current-month-label"></h2>
@@ -51,14 +76,9 @@
         <button id="btn-view-year" class="btn-ghost view-toggle-btn">Vue année</button>
         <button id="btn-view-month" class="btn-ghost view-toggle-btn active">Vue mois</button>
       </div>
+      <p class="alert-legend">☑ à droite = alerte email active ce jour-là</p>
       <div id="month-view" class="month-list"></div>
       <div id="year-view" class="year-grid" hidden></div>
-    </section>
-
-    <!-- RÉSULTATS RECHERCHE -->
-    <section class="panel" id="panel-search" hidden>
-      <h2>Résultats de recherche</h2>
-      <div id="search-results" class="upcoming-list"></div>
     </section>
   </main>
 </section>
@@ -92,6 +112,11 @@
         <label>Groupe <input type="text" id="entry-group" placeholder="ex : 15ème"></label>
       </div>
       <div class="form-row">
+        <label>Appartient à
+          <select id="entry-owner"></select>
+        </label>
+      </div>
+      <div class="form-row">
         <label class="checkbox-label"><input type="checkbox" id="entry-alert"> Générer une alerte email</label>
       </div>
       <label>Notes <textarea id="entry-notes" rows="2"></textarea></label>
@@ -112,6 +137,7 @@
     <h3>Mes réglages</h3>
     <label class="checkbox-label"><input type="checkbox" id="settings-notify"> Recevoir les alertes email d'anniversaire</label>
     <label>Heure de réception <select id="settings-hour"></select></label>
+    <label class="checkbox-label"><input type="checkbox" id="settings-monthly"> Recevoir le récap du mois prochain (dernier jour du mois)</label>
     <div class="modal-actions">
       <div class="spacer"></div>
       <button type="button" class="btn-ghost" onclick="closeModal('modal-settings')">Fermer</button>

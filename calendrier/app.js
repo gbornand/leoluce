@@ -9,6 +9,11 @@ import {
   getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyBpKc6h0mjkTff5KJBD0_A4IBePsR4cU3w",
@@ -20,6 +25,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LfszmctAAAAAGf6kh3NFF-Fq-8kDlwm5SURZnnn'),
+  isTokenAutoRefreshEnabled: true,
+});
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -34,6 +43,21 @@ let bdayUsers = {}; // uid -> {displayName, colorHex, notifyEnabled, preferredHo
 let unsubEntries = null, unsubUsers = null;
 let currentMonth = new Date().getMonth(); // 0-11
 let currentView = "month"; // "month" | "year"
+let currentScope = "all"; // "all" | "us" (familial + personnel seulement)
+
+function visibleEntries() {
+  if (currentScope === "us") return entries.filter(e => e.category === "familial" || e.category === "personnel" || e.category === "amis_famille");
+  return entries;
+}
+
+document.querySelectorAll(".scope-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".scope-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentScope = btn.dataset.scope;
+    renderAll();
+  });
+});
 
 document.getElementById("entry-month").innerHTML = MOIS_NOMS.map((m,i) => `<option value="${i}">${m}</option>`).join("");
 document.getElementById("settings-hour").innerHTML = Array.from({length:24}, (_,h) => `<option value="${h}">${String(h).padStart(2,"0")}h</option>`).join("");
@@ -41,6 +65,15 @@ document.getElementById("settings-hour").innerHTML = Array.from({length:24}, (_,
 // -------------------------------------------------------------
 // AUTH
 // -------------------------------------------------------------
+document.getElementById("btn-toggle-password").addEventListener("click", () => {
+  const input = document.getElementById("login-password");
+  const btn = document.getElementById("btn-toggle-password");
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  btn.textContent = showing ? "👁" : "🙈";
+  btn.title = showing ? "Afficher le mot de passe" : "Masquer le mot de passe";
+});
+
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("login-email").value.trim();
@@ -67,6 +100,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
     currentUser = user;
+    document.getElementById("whoami-name").textContent = myDoc.data().displayName || user.email;
     showApp();
     startListeners();
   } else {
@@ -124,6 +158,23 @@ function ageAt(entry, targetDate) {
 function fullName(entry) {
   return [entry.firstName, entry.lastName].filter(Boolean).join(" ");
 }
+function alertCheckboxHtml(entry) {
+  const disabled = entry.ownerUid ? "" : "disabled";
+  const title = entry.ownerUid ? "Recevoir une alerte email" : "Rattache un anniversaire à quelqu'un pour activer l'alerte";
+  return `<input type="checkbox" class="alert-toggle" data-alert-id="${entry.id}" ${entry.alertEnabled ? "checked" : ""} ${disabled} title="${title}">`;
+}
+function wireAlertCheckboxes(container) {
+  container.querySelectorAll(".alert-toggle").forEach(cb => {
+    cb.addEventListener("click", (ev) => ev.stopPropagation());
+    cb.addEventListener("change", async (ev) => {
+      ev.stopPropagation();
+      await updateDoc(doc(db, "bdayEntries", cb.dataset.alertId), {
+        alertEnabled: cb.checked,
+        updatedAt: serverTimestamp(),
+      });
+    });
+  });
+}
 function nextOccurrence(entry, from) {
   // Prochaine date (cette année ou l'an prochain) où tombe cet anniversaire, à partir de `from` (minuit)
   let year = from.getFullYear();
@@ -138,7 +189,7 @@ function nextOccurrence(entry, from) {
 function renderUpcoming() {
   const today = new Date(); today.setHours(0,0,0,0);
   const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30);
-  const list = entries
+  const list = visibleEntries()
     .map(e => ({ e, date: nextOccurrence(e, today) }))
     .filter(x => x.date <= horizon)
     .sort((a, b) => a.date - b.date);
@@ -152,9 +203,11 @@ function renderUpcoming() {
       <span class="upcoming-name">${escapeHtml(fullName(e))}${e.status === "aConfirmer" ? " ⚠" : ""}</span>
       <span class="upcoming-date">${date.getDate()} ${MOIS_NOMS[date.getMonth()]}</span>
       ${age !== null ? `<span class="upcoming-age">${age} ans</span>` : ""}
+      ${alertCheckboxHtml(e)}
     </div>`;
   }).join("");
   el.querySelectorAll("[data-id]").forEach(row => row.addEventListener("click", () => openEntryModal(row.dataset.id)));
+  wireAlertCheckboxes(el);
 }
 
 // -------------------------------------------------------------
@@ -167,7 +220,7 @@ document.getElementById("btn-prev-month").addEventListener("click", () => { curr
 document.getElementById("btn-next-month").addEventListener("click", () => { currentMonth = (currentMonth + 1) % 12; renderAll(); });
 
 function entriesForMonth(monthIndex /* 0-11 */) {
-  return entries.filter(e => e.month === monthIndex + 1).sort((a, b) => a.day - b.day);
+  return visibleEntries().filter(e => e.month === monthIndex + 1).sort((a, b) => a.day - b.day);
 }
 
 function renderMonthView() {
@@ -180,8 +233,10 @@ function renderMonthView() {
       <span class="month-entry-dot" style="background:${colorFor(e)}"></span>
       <span class="month-entry-name">${escapeHtml(fullName(e))}${e.birthYear ? ` <span style="color:var(--muted);font-weight:400">(${e.birthYear})</span>` : ""}</span>
       ${e.status === "aConfirmer" ? `<span class="month-entry-notconfirmed">À confirmer</span>` : ""}
+      ${alertCheckboxHtml(e)}
     </div>`).join("");
   el.querySelectorAll("[data-id]").forEach(row => row.addEventListener("click", () => openEntryModal(row.dataset.id)));
+  wireAlertCheckboxes(el);
 }
 
 // -------------------------------------------------------------
@@ -226,9 +281,18 @@ document.getElementById("btn-view-month").addEventListener("click", () => {
 document.getElementById("search-input").addEventListener("input", (e) => {
   const q = e.target.value.trim().toLowerCase();
   const panelSearch = document.getElementById("panel-search");
-  if (!q) { panelSearch.hidden = true; return; }
+  const panelUpcoming = document.getElementById("panel-upcoming");
+  const panelMonthYear = document.getElementById("panel-month-year");
+  if (!q) {
+    panelSearch.hidden = true;
+    panelUpcoming.hidden = false;
+    panelMonthYear.hidden = false;
+    return;
+  }
   panelSearch.hidden = false;
-  const matches = entries.filter(en => fullName(en).toLowerCase().includes(q));
+  panelUpcoming.hidden = true;
+  panelMonthYear.hidden = true;
+  const matches = visibleEntries().filter(en => fullName(en).toLowerCase().includes(q));
   const el = document.getElementById("search-results");
   el.innerHTML = matches.length ? matches.map(en => `
     <div class="upcoming-item" data-id="${en.id}">
@@ -244,6 +308,22 @@ document.getElementById("search-input").addEventListener("input", (e) => {
 // -------------------------------------------------------------
 document.getElementById("btn-add").addEventListener("click", () => openEntryModal(null));
 
+function populateOwnerOptions() {
+  const sel = document.getElementById("entry-owner");
+  const opts = ['<option value="">— Aucun (pas d\'alerte) —</option>'];
+  Object.entries(bdayUsers).forEach(([uid, u]) => {
+    opts.push(`<option value="${uid}">${u.displayName || "?"}</option>`);
+  });
+  sel.innerHTML = opts.join("");
+}
+
+function updateAlertAvailability() {
+  const hasOwner = !!document.getElementById("entry-owner").value;
+  const alertCb = document.getElementById("entry-alert");
+  alertCb.disabled = !hasOwner;
+  if (!hasOwner) alertCb.checked = false;
+}
+
 function openEntryModal(id) {
   const e = id ? entries.find(x => x.id === id) : null;
   document.getElementById("modal-entry-title").textContent = e ? "Modifier l'anniversaire" : "Nouvel anniversaire";
@@ -255,7 +335,10 @@ function openEntryModal(id) {
   document.getElementById("entry-year").value = e?.birthYear || "";
   document.getElementById("entry-category").value = e?.category || "familial";
   document.getElementById("entry-group").value = e?.group || "";
+  populateOwnerOptions();
+  document.getElementById("entry-owner").value = e ? (e.ownerUid || "") : currentUser.uid;
   document.getElementById("entry-alert").checked = e ? !!e.alertEnabled : true;
+  updateAlertAvailability();
   document.getElementById("entry-notes").value = e?.notes || "";
   document.getElementById("btn-delete-entry").hidden = !id;
   document.getElementById("entry-status-badge").hidden = !(e?.status === "aConfirmer");
@@ -266,11 +349,15 @@ document.getElementById("entry-category").addEventListener("change", (e) => {
   if (!document.getElementById("entry-id").value) {
     document.getElementById("entry-alert").checked = e.target.value === "familial";
   }
+  updateAlertAvailability();
 });
+
+document.getElementById("entry-owner").addEventListener("change", updateAlertAvailability);
 
 document.getElementById("form-entry").addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = document.getElementById("entry-id").value;
+  const ownerUid = document.getElementById("entry-owner").value || null;
   const payload = {
     firstName: document.getElementById("entry-firstname").value.trim(),
     lastName: document.getElementById("entry-lastname").value.trim() || null,
@@ -279,14 +366,14 @@ document.getElementById("form-entry").addEventListener("submit", async (e) => {
     birthYear: Number(document.getElementById("entry-year").value) || null,
     category: document.getElementById("entry-category").value,
     group: document.getElementById("entry-group").value.trim() || null,
-    alertEnabled: document.getElementById("entry-alert").checked,
+    ownerUid,
+    alertEnabled: !!ownerUid && document.getElementById("entry-alert").checked,
     notes: document.getElementById("entry-notes").value.trim() || null,
     updatedAt: serverTimestamp(),
   };
   if (id) {
     await updateDoc(doc(db, "bdayEntries", id), payload);
   } else {
-    payload.ownerUid = currentUser.uid;
     payload.status = "ok";
     payload.createdAt = serverTimestamp();
     await addDoc(collection(db, "bdayEntries"), payload);
@@ -309,6 +396,7 @@ document.getElementById("btn-settings").addEventListener("click", () => {
   const my = bdayUsers[currentUser.uid] || {};
   document.getElementById("settings-notify").checked = my.notifyEnabled !== false;
   document.getElementById("settings-hour").value = my.preferredHour ?? 7;
+  document.getElementById("settings-monthly").checked = my.monthlyDigestEnabled !== false;
   openModal("modal-settings");
 });
 
@@ -316,6 +404,7 @@ document.getElementById("btn-save-settings").addEventListener("click", async () 
   await updateDoc(doc(db, "bdayUsers", currentUser.uid), {
     notifyEnabled: document.getElementById("settings-notify").checked,
     preferredHour: Number(document.getElementById("settings-hour").value),
+    monthlyDigestEnabled: document.getElementById("settings-monthly").checked,
   });
   closeModal("modal-settings");
 });
