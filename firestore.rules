@@ -79,5 +79,28 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/bdayUsers/$(request.auth.uid));
     }
 
+    // ═══════════════════════════════════════
+    // ANGLAIS LUCIE (feature isolée, ajoutée le 2026-11-13) — outil mono-utilisateur,
+    // accès restreint à l'uid de Lucie (même constante que DIRECT_FAMILY_UIDS côté functions).
+    // ═══════════════════════════════════════
+    function isLucieAnglais() {
+      return request.auth != null && request.auth.uid == "BmPJ62Hhb0V572vQgzwzybbnU8s2";
+    }
+
+    match /coursAnglais/{id} {
+      allow read: if isLucieAnglais();
+      allow write: if isLucieAnglais();
+    }
+
+    match /exercicesAnglais/{id} {
+      allow read: if isLucieAnglais();
+      allow write: if isLucieAnglais();
+    }
+
+    match /progressionAnglais/{id} {
+      allow read: if isLucieAnglais();
+      allow write: if isLucieAnglais();
+    }
+
   }
 }

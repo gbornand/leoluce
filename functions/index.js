@@ -6,6 +6,7 @@ const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const nodemailer = require("nodemailer");
+const Anthropic = require("@anthropic-ai/sdk");
 
 initializeApp();
 const db = getFirestore();
@@ -275,5 +276,180 @@ exports.monthlyBirthdayDigest = onSchedule(
         text: `Bonjour ${u.displayName || ""},\n\nÀ venir le mois prochain :\n${textLines}\n\n— Calendrier familial Leoluce`,
       });
     }
+  }
+);
+
+// ═══════════════════════════════════════
+// ENGLISH TIME — outil d'anglais quotidien pour Lucie (feature isolée, ajoutée le 2026-11-13)
+// ═══════════════════════════════════════
+const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
+
+function requireLucie(request) {
+  if (!request.auth || request.auth.uid !== LUCIE_UID) {
+    throw new HttpsError("permission-denied", "Accès réservé.");
+  }
+}
+
+function slugAnglais(s) {
+  return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+function extractJsonAnglais(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new HttpsError("internal", "Réponse IA illisible (pas de JSON).");
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    throw new HttpsError("internal", "Réponse IA illisible (JSON invalide).");
+  }
+}
+
+const EXTRACTION_PROMPT_ANGLAIS = `Tu es un(e) prof d'anglais qui prépare le travail d'une collégienne française.
+Analyse la ou les photos de cours d'anglais fournies et extrais-en le contenu pédagogique.
+
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact suivant :
+{
+  "titre": "titre court du cours (ex: 'Present perfect - unit 4')",
+  "recap": "récapitulatif clair et pédagogique du cours, en français, qui réexplique la ou les règles comme à une collégienne (3-8 phrases)",
+  "vocabulaire": [
+    { "mot": "mot ou expression en anglais", "traduction": "traduction en français", "exemple": "phrase d'exemple en anglais" }
+  ],
+  "grammaire": [
+    { "titre": "nom court de la notion de grammaire", "explication": "explication pédagogique en français de la règle", "exemples": ["phrase d'exemple en anglais"] }
+  ]
+}
+
+Ne mets que ce qui est réellement présent/déductible sur la photo. Si le cours ne contient pas de grammaire (ou pas de vocabulaire), le tableau correspondant peut être vide. Niveau collège/lycée français.`;
+
+// Reçoit une ou plusieurs photos d'un cours, les fait analyser par l'IA (vocabulaire +
+// grammaire), stocke le cours puis crée une fiche de suivi (répétition espacée) pour
+// chaque notion nouvelle, due dès aujourd'hui.
+exports.extraireCoursAnglais = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY] },
+  async (request) => {
+    requireLucie(request);
+    const images = Array.isArray(request.data?.images) ? request.data.images : [];
+    const content = images
+      .filter(img => img?.data && img?.mimeType)
+      .map(img => ({ type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } }));
+    if (!content.length) throw new HttpsError("invalid-argument", "Au moins une photo valide est requise.");
+    content.push({ type: "text", text: EXTRACTION_PROMPT_ANGLAIS });
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const parsed = extractJsonAnglais(textBlock.text);
+
+    const docRef = await db.collection("coursAnglais").add({
+      titre: parsed.titre || "Cours d'anglais",
+      recap: parsed.recap || "",
+      vocabulaire: parsed.vocabulaire || [],
+      grammaire: parsed.grammaire || [],
+      dateAjout: new Date().toISOString(),
+    });
+
+    const today = todayISOAnglais();
+    const batch = db.batch();
+    for (const v of parsed.vocabulaire || []) {
+      const id = `vocab_${docRef.id}_${slugAnglais(v.mot)}`;
+      batch.set(db.collection("progressionAnglais").doc(id), {
+        type: "vocabulaire", label: v.mot, coursId: docRef.id,
+        niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
+      }, { merge: true });
+    }
+    for (const g of parsed.grammaire || []) {
+      const id = `gram_${docRef.id}_${slugAnglais(g.titre)}`;
+      batch.set(db.collection("progressionAnglais").doc(id), {
+        type: "grammaire", label: g.titre, coursId: docRef.id,
+        niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
+      }, { merge: true });
+    }
+    await batch.commit();
+
+    return { coursId: docRef.id, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [] };
+  }
+);
+
+function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
+
+const GENERATION_PROMPT_HEADER_ANGLAIS = `Tu es un(e) prof d'anglais ludique qui prépare une séance quotidienne de 10-15 minutes pour une collégienne française. Voici les notions à travailler aujourd'hui (vocabulaire et grammaire déjà vus en cours, certaines jamais testées, d'autres déjà ratées une fois) :\n\n`;
+
+const GENERATION_PROMPT_FOOTER_ANGLAIS = `
+
+Génère une séance du jour. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact :
+{
+  "comprehensionEcrite": {
+    "texte": "court texte en anglais (5-8 phrases), niveau collège/lycée, amusant, qui réutilise si possible du vocabulaire ci-dessus",
+    "questions": [ { "question": "question de compréhension en français", "choix": ["...", "...", "..."], "bonneReponse": 0 } ]
+  },
+  "vocabulaire": [ { "notionId": "<reprendre exactement l'id donné ci-dessus>", "question": "question ludique en français pour tester ce mot (traduction, intrus, compléter la phrase...)", "choix": ["...", "...", "..."], "bonneReponse": 0 } ],
+  "grammaire": [ { "notionId": "<id>", "question": "question ludique en français pour tester cette règle", "choix": ["...", "...", "..."], "bonneReponse": 0 } ]
+}
+Chaque "choix" contient 3 ou 4 propositions, "bonneReponse" est l'index (0-based) de la bonne. Un exercice par notion vocabulaire/grammaire listée ci-dessus, pas plus. Ton enjoué, jamais scolaire-ennuyeux.`;
+
+// Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
+// dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
+exports.genererExercicesDuJour = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY] },
+  async (request) => {
+    requireLucie(request);
+    const today = todayISOAnglais();
+    const existingRef = db.collection("exercicesAnglais").doc(today);
+    const existing = await existingRef.get();
+    if (existing.exists && !request.data?.regenerer) {
+      return existing.data();
+    }
+
+    const dueSnap = await db.collection("progressionAnglais")
+      .where("prochaineDate", "<=", today)
+      .orderBy("prochaineDate")
+      .limit(30).get();
+    if (dueSnap.empty) {
+      throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
+    }
+
+    const notions = dueSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => a.niveau - b.niveau)
+      .slice(0, 8);
+    const coursIds = [...new Set(notions.map(n => n.coursId))];
+    const coursDocs = await Promise.all(coursIds.map(id => db.collection("coursAnglais").doc(id).get()));
+    const coursById = Object.fromEntries(coursDocs.filter(d => d.exists).map(d => [d.id, d.data()]));
+
+    const lignes = notions.map(n => {
+      const cours = coursById[n.coursId];
+      if (n.type === "vocabulaire") {
+        const v = (cours?.vocabulaire || []).find(x => x.mot === n.label);
+        return `- [id:${n.id}] VOCABULAIRE "${n.label}"${v ? ` = ${v.traduction} (ex: ${v.exemple})` : ""}`;
+      }
+      const g = (cours?.grammaire || []).find(x => x.titre === n.label);
+      return `- [id:${n.id}] GRAMMAIRE "${n.label}"${g ? ` : ${g.explication}` : ""}`;
+    }).join("\n");
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: GENERATION_PROMPT_HEADER_ANGLAIS + lignes + GENERATION_PROMPT_FOOTER_ANGLAIS }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const parsed = extractJsonAnglais(textBlock.text);
+
+    const sessionDoc = {
+      date: today,
+      comprehensionEcrite: parsed.comprehensionEcrite || null,
+      vocabulaire: parsed.vocabulaire || [],
+      grammaire: parsed.grammaire || [],
+      genereLe: new Date().toISOString(),
+    };
+    await existingRef.set(sessionDoc);
+    return sessionDoc;
   }
 );

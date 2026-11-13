@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>English Time</title>
+<meta name="theme-color" content="#5b6ee8">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ÉCRAN CONNEXION -->
+<section id="screen-login" class="screen">
+  <div class="login-card">
+    <div class="login-emoji">🦉</div>
+    <h1>English Time</h1>
+    <p class="login-sub">10 minutes par jour, c'est tout.</p>
+    <form id="login-form">
+      <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+      <label>Mot de passe <input type="password" id="login-password" required autocomplete="current-password"></label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button type="submit" class="btn-primary btn-block">C'est parti !</button>
+    </form>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="screen-app" class="screen" hidden>
+  <header class="topbar">
+    <div class="topbar-title">🦉 English Time</div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
+      <button class="tab-btn" data-tab="add">+ Un cours</button>
+      <button class="tab-btn" data-tab="notions">Mes notions</button>
+    </nav>
+    <button id="btn-logout" class="btn-ghost">↪</button>
+  </header>
+
+  <main class="content">
+
+    <!-- ONGLET AUJOURD'HUI -->
+    <section id="tab-today" class="tab-panel">
+      <div id="today-loading" class="panel-info">Chargement de ta séance du jour…</div>
+      <div id="today-empty" class="panel-info" hidden>
+        Pas encore de notion à réviser aujourd'hui — va dans <strong>+ Un cours</strong> pour ajouter ton premier cours 📸
+      </div>
+      <div id="today-content" hidden>
+
+        <section class="exo-block" id="block-comprehension">
+          <h2>📖 Compréhension écrite</h2>
+          <p id="ce-texte" class="ce-texte"></p>
+          <div id="ce-questions"></div>
+        </section>
+
+        <section class="exo-block" id="block-vocabulaire">
+          <h2>🔤 Vocabulaire</h2>
+          <div id="vocab-questions"></div>
+        </section>
+
+        <section class="exo-block" id="block-grammaire">
+          <h2>📐 Grammaire</h2>
+          <div id="gram-questions"></div>
+        </section>
+
+        <div id="today-score" class="today-score" hidden></div>
+      </div>
+    </section>
+
+    <!-- ONGLET AJOUTER UN COURS -->
+    <section id="tab-add" class="tab-panel" hidden>
+      <h2>Ajoute une photo de cours</h2>
+      <p class="muted">Une ou plusieurs photos du même cours (vocabulaire, règle de grammaire…).</p>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" multiple>
+      <div id="photo-preview" class="photo-preview"></div>
+      <button id="btn-envoyer-cours" class="btn-primary" disabled>Envoyer à la prof IA</button>
+      <div id="add-status" class="panel-info" hidden></div>
+      <div id="add-result" hidden></div>
+    </section>
+
+    <!-- ONGLET MES NOTIONS -->
+    <section id="tab-notions" class="tab-panel" hidden>
+      <h2>Mes notions</h2>
+      <p class="muted">🔴 à travailler · 🟡 en progrès · 🟢 maîtrisée</p>
+      <div id="notions-list"></div>
+    </section>
+
+  </main>
+</section>
+
+<!-- MODALE RÉCAP NOTION -->
+<div id="modal-notion" class="modal" hidden>
+  <div class="modal-card">
+    <button id="modal-close" class="btn-ghost modal-close">✕</button>
+    <h3 id="modal-titre"></h3>
+    <div id="modal-corps"></div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

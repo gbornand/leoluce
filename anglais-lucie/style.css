@@ -1,0 +1,114 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+  background: #f4f0ff;
+  color: #2d2a4a;
+}
+.screen { min-height: 100vh; }
+.screen[hidden] { display: none; }
+
+/* LOGIN */
+#screen-login {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #5b6ee8, #8f6fe8);
+}
+.login-card {
+  background: #fff; border-radius: 24px; padding: 36px 28px;
+  width: 100%; max-width: 360px; text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.login-emoji { font-size: 52px; }
+.login-card h1 { margin: 6px 0 2px; font-size: 26px; }
+.login-sub { color: #6a6690; margin: 0 0 20px; font-size: 14px; }
+.login-card form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.login-card label { font-size: 13px; font-weight: 600; color: #4a4670; }
+.login-card input {
+  width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid #ddd6f8; font-size: 15px;
+}
+.login-error { color: #d14b4b; font-size: 13px; margin: 0; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; background: #fff; border-bottom: 1px solid #e6e1fb;
+  position: sticky; top: 0; z-index: 5;
+}
+.topbar-title { font-weight: 800; font-size: 18px; margin-right: 8px; }
+.tabs { display: flex; gap: 6px; flex: 1; overflow-x: auto; }
+.tab-btn {
+  border: none; background: #f0ecff; color: #5b6ee8; font-weight: 700;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; white-space: nowrap;
+}
+.tab-btn.active { background: #5b6ee8; color: #fff; }
+.btn-ghost { border: none; background: transparent; cursor: pointer; font-size: 16px; color: #6a6690; }
+
+.content { max-width: 720px; margin: 0 auto; padding: 18px 16px 60px; }
+.tab-panel[hidden] { display: none; }
+.muted { color: #827cab; font-size: 14px; }
+.panel-info {
+  background: #fff; border-radius: 16px; padding: 18px; text-align: center;
+  color: #6a6690; box-shadow: 0 2px 10px rgba(91,110,232,.08);
+}
+
+/* BOUTONS */
+.btn-primary {
+  background: #5b6ee8; color: #fff; border: none; border-radius: 14px;
+  padding: 12px 20px; font-weight: 800; font-size: 15px; cursor: pointer;
+}
+.btn-primary:disabled { background: #c9c4ea; cursor: not-allowed; }
+.btn-block { width: 100%; }
+
+/* EXERCICES */
+.exo-block {
+  background: #fff; border-radius: 18px; padding: 18px; margin-bottom: 16px;
+  box-shadow: 0 2px 10px rgba(91,110,232,.08);
+}
+.exo-block h2 { margin: 0 0 10px; font-size: 16px; }
+.ce-texte { font-style: italic; background: #f6f4ff; border-radius: 12px; padding: 12px; line-height: 1.5; }
+
+.question-card { border-top: 1px solid #efecff; padding: 12px 0; }
+.question-card:first-child { border-top: none; }
+.question-label { font-weight: 700; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.btn-revoir { font-size: 12px; background: #fff4df; color: #a3710c; border: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.choix-list { display: flex; flex-direction: column; gap: 8px; }
+.choix-btn {
+  text-align: left; padding: 10px 14px; border-radius: 12px; border: 2px solid #e6e1fb;
+  background: #fff; cursor: pointer; font-size: 14px;
+}
+.choix-btn:hover { border-color: #5b6ee8; }
+.choix-btn.correct { border-color: #4caf50; background: #e9f7ec; }
+.choix-btn.incorrect { border-color: #d14b4b; background: #fbe9e9; }
+.choix-btn:disabled { cursor: default; }
+
+.today-score {
+  text-align: center; font-weight: 800; font-size: 18px; padding: 16px;
+  background: #e9f7ec; color: #2e7d32; border-radius: 16px;
+}
+
+/* AJOUTER COURS */
+#tab-add input[type=file] { margin: 14px 0; display: block; }
+.photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.photo-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; }
+
+/* NOTIONS */
+.notion-row {
+  display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px;
+  padding: 12px 14px; margin-bottom: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(91,110,232,.06);
+}
+.notion-badge { font-size: 16px; }
+.notion-type { font-size: 11px; text-transform: uppercase; color: #a39ecf; font-weight: 700; }
+
+/* MODALE */
+.modal {
+  position: fixed; inset: 0; background: rgba(30,20,70,.5);
+  display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+}
+.modal[hidden] { display: none; }
+.modal-card {
+  background: #fff; border-radius: 18px; padding: 24px; max-width: 480px; width: 100%;
+  max-height: 80vh; overflow-y: auto; position: relative;
+}
+.modal-close { position: absolute; top: 12px; right: 14px; font-size: 18px; }
+.modal-card .exemple { font-style: italic; color: #5b6ee8; margin-top: 6px; }
