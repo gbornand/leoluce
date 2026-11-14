@@ -382,10 +382,10 @@ exports.extraireCoursAnglais = onCall(
 function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
 
 const FORMATS_EXOS_ANGLAIS = `Trois types d'exercices possibles (champ "type") :
-- "qcm" : { "type": "qcm", "question": "consigne en français", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } — 3 ou 4 choix, "bonneReponse" = index 0-based, varie sa position.
-- "trou" : { "type": "trou", "question": "consigne en français (ex: Complète avec le bon verbe)", "phrase": "phrase en anglais avec ___ à la place du mot manquant", "reponses": ["réponse attendue", "variante acceptée"], "explication": "..." } — réponse courte (1 à 3 mots), mets toutes les variantes correctes (formes contractées incluses).
-- "ordre" : { "type": "ordre", "question": "Remets les mots dans l'ordre", "mots": ["mots", "de", "la", "phrase", "mélangés"], "reponse": "La phrase correcte complète", "explication": "..." } — 4 à 9 mots, sans ponctuation finale dans "mots", vraiment mélangés.
-"explication" = une phrase courte en français qui explique la bonne réponse.`;
+- "qcm" : { "type": "qcm", "question": "consigne/question EN ANGLAIS", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } — 3 ou 4 choix en anglais, "bonneReponse" = index 0-based, varie sa position.
+- "trou" : { "type": "trou", "question": "consigne EN ANGLAIS (ex: Complete with the right verb.)", "phrase": "phrase en anglais avec ___ à la place du mot manquant", "reponses": ["réponse attendue", "variante acceptée"], "explication": "..." } — réponse courte (1 à 3 mots), mets toutes les variantes correctes (formes contractées incluses).
+- "ordre" : { "type": "ordre", "question": "Put the words in the right order.", "mots": ["words", "of", "the", "sentence", "shuffled"], "reponse": "The full correct sentence", "explication": "..." } — 4 à 9 mots, sans ponctuation finale dans "mots", vraiment mélangés.
+LANGUE : tout ce que l'élève lit pour répondre (question, phrase, choix, mots) est EN ANGLAIS simple, niveau collège. Exception : pour tester le sens d'un mot de vocabulaire, une question peut demander la traduction d'un mot français vers l'anglais (ex: How do you say "un château" in English?). Seule "explication" est EN FRANÇAIS : une phrase courte qui explique la bonne réponse.`;
 
 const GENERATION_PROMPT_HEADER_ANGLAIS = `Tu es un(e) prof d'anglais ludique qui prépare une séance quotidienne de 10-15 minutes pour une collégienne française. Voici les notions à travailler aujourd'hui (vocabulaire et grammaire déjà vus en cours, certaines jamais testées, d'autres déjà ratées une fois) :\n\n`;
 
@@ -395,7 +395,7 @@ Génère une séance du jour. Réponds UNIQUEMENT avec un objet JSON (pas de tex
 {
   "comprehensionEcrite": {
     "texte": "court texte en anglais (5-8 phrases), niveau collège/lycée, amusant, qui réutilise si possible du vocabulaire ci-dessus",
-    "questions": [ { "type": "qcm", "question": "question de compréhension en français", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } ]
+    "questions": [ { "type": "qcm", "question": "comprehension question in English", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } ]
   },
   "vocabulaire": [ { "notionId": "<reprendre exactement l'id donné ci-dessus>", ...un exercice } ],
   "grammaire": [ { "notionId": "<id>", ...un exercice } ]
@@ -431,6 +431,7 @@ exports.exercicesNotionAnglais = onCall(
 ${contexte}
 
 Génère 5 exercices progressifs (du plus simple au plus exigeant) uniquement sur cette notion, en mélangant les types : au moins 1 "qcm", au moins 2 "trou" et au moins 1 "ordre".
+Vocabulaire autorisé : celui du cours de l'élève (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) et des mots anglais très basiques de niveau débutant. N'introduis aucun mot nouveau ou rare, y compris dans les mauvaises réponses.
 
 ${FORMATS_EXOS_ANGLAIS}
 
@@ -458,7 +459,7 @@ exports.genererExercicesDuJour = onCall(
     const today = todayISOAnglais();
     const existingRef = db.collection("exercicesAnglais").doc(today);
     const existing = await existingRef.get();
-    if (existing.exists && existing.data().version === 2 && !request.data?.regenerer) {
+    if (existing.exists && existing.data().version === 3 && !request.data?.regenerer) {
       return existing.data();
     }
 
@@ -487,18 +488,22 @@ exports.genererExercicesDuJour = onCall(
       return `- [id:${n.id}] GRAMMAIRE "${n.label}"${g ? ` : ${g.explication}` : ""}`;
     }).join("\n");
 
+    const tousCours = await db.collection("coursAnglais").get();
+    const vocabConnu = [...new Set(tousCours.docs.flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
+    const cadreVocab = `\n\nVOCABULAIRE DÉJÀ APPRIS EN CLASSE (le seul autorisé en plus des mots anglais très basiques de niveau débutant — articles, pronoms, verbes et noms du quotidien) :\n${vocabConnu.join(", ")}\n\nRÈGLE STRICTE : n'introduis AUCUN mot de vocabulaire nouveau ou rare qui ne soit ni dans cette liste ni basique, y compris dans le texte de compréhension et dans les mauvaises réponses des QCM.`;
+
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
       model: "claude-opus-5-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: GENERATION_PROMPT_HEADER_ANGLAIS + lignes + GENERATION_PROMPT_FOOTER_ANGLAIS }],
+      max_tokens: 8000,
+      messages: [{ role: "user", content: GENERATION_PROMPT_HEADER_ANGLAIS + lignes + cadreVocab + GENERATION_PROMPT_FOOTER_ANGLAIS }],
     });
     const textBlock = response.content.find(b => b.type === "text");
     if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
     const parsed = extractJsonAnglais(textBlock.text);
 
     const sessionDoc = {
-      version: 2,
+      version: 3,
       date: today,
       comprehensionEcrite: parsed.comprehensionEcrite || null,
       vocabulaire: parsed.vocabulaire || [],

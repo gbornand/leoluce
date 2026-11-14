@@ -120,7 +120,7 @@ async function loadToday() {
   try {
     const snap = await getDoc(doc(db, "exercicesAnglais", todayISO()));
     let data;
-    if (snap.exists() && snap.data().version === 2) {
+    if (snap.exists() && snap.data().version === 3) {
       data = snap.data();
     } else {
       const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
