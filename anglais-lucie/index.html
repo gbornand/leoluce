@@ -52,8 +52,10 @@
       <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
       <button class="tab-btn" data-tab="add">+ Un cours</button>
       <button class="tab-btn" data-tab="notions">Mes notions</button>
+      <button class="tab-btn" data-tab="entrainer">🎯 S'entraîner</button>
       <button class="tab-btn" data-tab="chansons">🎵 Chansons</button>
     </nav>
+    <div id="streak" class="streak" title="Jours d'affilée" hidden></div>
     <button id="btn-logout" class="btn-ghost">↪</button>
   </header>
 
@@ -117,6 +119,20 @@
     <!-- ONGLET MES NOTIONS -->
     <section id="tab-notions" class="tab-panel" hidden>
       <div id="notions-list"></div>
+    </section>
+
+    <!-- ONGLET S'ENTRAÎNER -->
+    <section id="tab-entrainer" class="tab-panel" hidden>
+      <div class="train-grid">
+        <button class="train-card tc-pron" id="btn-pron"><span class="tc-emoji">🎤</span><span class="tc-title">Prononciation</span><span class="tc-sub">Lis des phrases à voix haute, l'outil vérifie</span></button>
+        <button class="train-card tc-dictee" id="btn-dictee"><span class="tc-emoji">✍️</span><span class="tc-title">Dictée</span><span class="tc-sub">Écoute une phrase et écris-la</span></button>
+        <button class="train-card tc-controle" id="btn-controle"><span class="tc-emoji">📝</span><span class="tc-title">Contrôle blanc</span><span class="tc-sub">Révise un cours précis avant l'interro</span></button>
+      </div>
+      <div class="recap-parent">
+        <span>📧 Récap hebdo envoyé chaque dimanche à 18 h</span>
+        <button class="btn-ghost-small" id="btn-recap-test">Envoyer un aperçu maintenant</button>
+        <span class="muted" id="recap-status"></span>
+      </div>
     </section>
 
     <!-- ONGLET CHANSONS -->

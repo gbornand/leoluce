@@ -580,6 +580,141 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
     .map(a => ({ ligne: a.ligne, expression: String(a.expression), sens: String(a.sens || ""), explication: String(a.explication || "") }));
 }
 
+// Contrôle blanc sur un cours précis : 15 exercices couvrant ses notions, les plus faibles d'abord.
+exports.controleCoursAnglais = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 240, invoker: "public" },
+  async (request) => {
+    requireLucie(request);
+    const coursId = String(request.data?.coursId || "");
+    const coursSnap = await db.collection("coursAnglais").doc(coursId).get();
+    if (!coursSnap.exists) throw new HttpsError("not-found", "Cours introuvable.");
+    const cours = coursSnap.data();
+    const progSnap = await db.collection("progressionAnglais").where("coursId", "==", coursId).get();
+    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const gram = toutes.filter(n => n.type === "grammaire");
+    const vocab = toutes.filter(n => n.type === "vocabulaire")
+      .sort((a, b) => (a.dernierResultat === false ? -1 : 0) - (b.dernierResultat === false ? -1 : 0) || (a.niveau || 0) - (b.niveau || 0) || Math.random() - .5)
+      .slice(0, Math.max(6, 15 - Math.min(gram.length, 7)));
+    const notions = [...gram.slice(0, 7), ...vocab].slice(0, 15);
+
+    const lignes = notions.map(n => {
+      if (n.type === "vocabulaire") {
+        const v = (cours.vocabulaire || []).find(x => x.mot === n.label);
+        return `- [id:${n.id}] VOCABULAIRE "${n.label}"${v ? ` = ${v.traduction}` : ""}`;
+      }
+      const g = (cours.grammaire || []).find(x => x.titre === n.label);
+      return `- [id:${n.id}] GRAMMAIRE "${n.label}"${g ? ` : ${g.explication}` : ""}`;
+    }).join("\n");
+
+    const prompt = `Tu es un(e) prof d'anglais qui prépare un CONTRÔLE BLANC pour une collégienne française, sur le cours « ${cours.titre} ». Notions à évaluer :
+${lignes}
+
+Vocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) + mots anglais très basiques.
+Génère exactement un exercice par notion ci-dessus, du plus simple au plus difficile, niveau d'une vraie interro de collège. Pour la grammaire, privilégie "trou" et "ordre" ; pour le vocabulaire, "trou" (traduction FR → EN dans la consigne autorisée) et "qcm".
+
+${FORMATS_EXOS_ANGLAIS}
+
+Chaque exercice a en plus "notionId" = l'id exact donné ci-dessus. Réponds UNIQUEMENT avec un objet JSON : { "exercices": [ ... ] }`;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 8000,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const { exercices = [] } = extractJsonAnglais(textBlock.text);
+    const ids = new Set(notions.map(n => n.id));
+    const reparer = brut => {
+      const s = String(brut || "").replace(/^\[?\s*id\s*:\s*/i, "").replace(/\]$/, "").trim();
+      return ids.has(s) ? s : (notions.find(n => s && (s.includes(n.id) || n.id.includes(s)))?.id || null);
+    };
+    return { titre: cours.titre, exercices: exercices.map(e => ({ ...e, notionId: reparer(e.notionId) })) };
+  }
+);
+
+// Récap hebdomadaire envoyé au parent.
+const RECAP_ANGLAIS_DESTINATAIRE = "gbornand@gmail.com";
+
+async function construireRecapAnglais() {
+  const depuis = new Date(Date.now() - 7 * 86400000).toISOString();
+  const [repSnap, seanceSnap, progSnap] = await Promise.all([
+    db.collection("reponsesAnglais").where("at", ">=", depuis).get(),
+    db.collection("seancesAnglais").where("finieLe", ">=", depuis).get(),
+    db.collection("progressionAnglais").get(),
+  ]);
+  const reponses = repSnap.docs.map(d => d.data());
+  const seances = seanceSnap.docs.map(d => d.data());
+  const progression = progSnap.docs.map(d => d.data());
+  const jours = [...new Set(reponses.map(r => r.date))].sort();
+  let minutes = 0;
+  for (const j of jours) {
+    const heures = reponses.filter(r => r.date === j).map(r => Date.parse(r.at)).sort((a, b) => a - b);
+    minutes += Math.min(60, Math.max(2, Math.round((heures[heures.length - 1] - heures[0]) / 60000)));
+  }
+  const bonnes = reponses.filter(r => r.correct).length;
+  const coincent = progression.filter(n => n.dernierResultat === false).map(n => n.label).slice(0, 10);
+  const maitrisees = progression.filter(n => (n.niveau || 0) >= 4).length;
+  const seancesJour = seances.filter(s => !s.type || s.type === "jour");
+  return {
+    joursActifs: jours.length, minutes, reponses: reponses.length,
+    reussite: reponses.length ? Math.round(bonnes / reponses.length * 100) : 0,
+    seances: seancesJour.length, parties: seances.filter(s => s.type === "vitesse").length,
+    moyenneSeance: seancesJour.length ? `${Math.round(seancesJour.reduce((s, x) => s + x.score / Math.max(1, x.total), 0) / seancesJour.length * 100)} %` : "—",
+    maitrisees, totalNotions: progression.length, coincent,
+  };
+}
+
+function htmlRecapAnglais(r) {
+  const ligne = (label, val) => `<tr><td style="padding:8px 0;color:#6a6690;border-bottom:1px solid #eee;">${label}</td><td style="padding:8px 0;text-align:right;font-weight:800;color:#2d2a4a;border-bottom:1px solid #eee;">${val}</td></tr>`;
+  return `<div style="font-family:Segoe UI,Arial,sans-serif;background:#f4f0ff;padding:24px;">
+  <div style="max-width:520px;margin:auto;background:#fff;border-radius:20px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#5b6ee8,#a152d6);color:#fff;padding:22px 24px;">
+      <div style="font-size:13px;opacity:.85;">🦉 English Time · récap de la semaine</div>
+      <div style="font-size:22px;font-weight:900;margin-top:4px;">${r.joursActifs} jour${r.joursActifs > 1 ? "s" : ""} d'anglais sur 7</div>
+    </div>
+    <div style="padding:20px 24px;">
+      <table style="width:100%;border-collapse:collapse;font-size:15px;">
+        ${ligne("Temps estimé", `≈ ${r.minutes} min`)}
+        ${ligne("Séances du jour terminées", r.seances)}
+        ${ligne("Score moyen des séances", r.moyenneSeance)}
+        ${ligne("Parties de jeu de vitesse", r.parties)}
+        ${ligne("Réponses données", `${r.reponses} (${r.reussite} % justes)`)}
+        ${ligne("Notions maîtrisées", `${r.maitrisees} / ${r.totalNotions}`)}
+      </table>
+      ${r.coincent.length ? `<div style="margin-top:18px;font-weight:800;color:#c0392b;">À reprendre</div>
+      <div style="margin-top:6px;color:#2d2a4a;font-size:14px;line-height:1.6;">${r.coincent.map(escapeHtml).join(" · ")}</div>` : ""}
+      <a href="https://anglais-leoluce.web.app" style="display:inline-block;margin-top:20px;background:#5b6ee8;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px;">Ouvrir English Time</a>
+    </div>
+  </div></div>`;
+}
+
+async function envoyerRecapAnglais(sujetPrefixe = "") {
+  const r = await construireRecapAnglais();
+  await transporter().sendMail({
+    from: `"English Time" <${SMTP_USER}>`,
+    to: RECAP_ANGLAIS_DESTINATAIRE,
+    subject: `${sujetPrefixe}🦉 Anglais de Lucie : ${r.joursActifs} jour${r.joursActifs > 1 ? "s" : ""} sur 7, ${r.reussite} % de réussite`,
+    html: htmlRecapAnglais(r),
+  });
+  return r;
+}
+
+exports.recapAnglaisHebdo = onSchedule(
+  { schedule: "0 18 * * 0", timeZone: "Europe/Paris", region: "europe-west1", secrets: [SMTP_PASS] },
+  async () => { await envoyerRecapAnglais(); }
+);
+
+exports.recapAnglaisTest = onCall(
+  { region: "europe-west1", secrets: [SMTP_PASS], invoker: "public" },
+  async (request) => {
+    requireLucie(request);
+    const r = await envoyerRecapAnglais("[APERÇU] ");
+    return { ok: true, destinataire: RECAP_ANGLAIS_DESTINATAIRE, ...r };
+  }
+);
+
 // Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
 // dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
 exports.genererExercicesDuJour = onCall(

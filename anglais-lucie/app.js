@@ -103,6 +103,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
     if (btn.dataset.tab === "chansons") loadChansons();
+    if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
   });
 });
@@ -656,6 +657,7 @@ async function loadNotions() {
       <div class="stat stat-alert"><div class="stat-val">${ratees}</div><div class="stat-lbl">à reprendre (✗)</div></div>
     </div>
     ${graphiqueActivite(reponses)}
+    ${htmlBadges(calculerMotivation({ reponses, seances, rows }))}
     <h3 class="section-title">📐 Grammaire <span>${grammaire.length}</span></h3>
     <div class="gram-grid">${grammaire.map(n => {
       const st = statutNiveau(n.niveau || 0);
@@ -1101,3 +1103,300 @@ document.getElementById("modal-close").addEventListener("click", () => {
   modalNotionId = null;
 });
 
+
+// ------------------------------------------------------------
+// MOTIVATION : série de jours + badges
+// ------------------------------------------------------------
+function calculerMotivation({ reponses, seances, rows }) {
+  const jours = new Set(reponses.map(r => r.date));
+  let serie = 0;
+  const d = new Date();
+  if (!jours.has(todayISO())) d.setDate(d.getDate() - 1);
+  while (jours.has(d.toISOString().slice(0, 10))) { serie += 1; d.setDate(d.getDate() - 1); }
+  const maitrisees = rows.filter(n => (n.niveau || 0) >= 4).length;
+  const seancesJour = seances.filter(s => !s.type || s.type === "jour");
+  const meilleurJeu = Math.max(0, ...seances.filter(s => s.type === "vitesse").map(s => s.score || 0));
+  const sources = new Set(reponses.map(r => r.source));
+  const badges = [
+    { id: "premiere", emoji: "🌱", nom: "Première séance", ok: seancesJour.length >= 1 },
+    { id: "sansfaute", emoji: "🏆", nom: "Sans-faute", ok: seancesJour.some(s => s.total && s.score === s.total) },
+    { id: "serie3", emoji: "🔥", nom: "3 jours d'affilée", ok: serie >= 3 },
+    { id: "serie7", emoji: "⚡", nom: "7 jours d'affilée", ok: serie >= 7 },
+    { id: "serie30", emoji: "👑", nom: "30 jours d'affilée", ok: serie >= 30 },
+    { id: "m10", emoji: "⭐", nom: "10 notions maîtrisées", ok: maitrisees >= 10 },
+    { id: "m50", emoji: "🌟", nom: "50 notions maîtrisées", ok: maitrisees >= 50 },
+    { id: "m100", emoji: "💫", nom: "100 notions maîtrisées", ok: maitrisees >= 100 },
+    { id: "r100", emoji: "💯", nom: "100 réponses", ok: reponses.length >= 100 },
+    { id: "r500", emoji: "🚀", nom: "500 réponses", ok: reponses.length >= 500 },
+    { id: "vitesse15", emoji: "🏎️", nom: "15 au jeu de vitesse", ok: meilleurJeu >= 15 },
+    { id: "voix", emoji: "🎤", nom: "Première prononciation", ok: sources.has("prononciation") },
+    { id: "dictee", emoji: "✍️", nom: "Première dictée", ok: sources.has("dictee") },
+    { id: "controle", emoji: "📝", nom: "Premier contrôle blanc", ok: sources.has("controle") },
+    { id: "chanson", emoji: "🎵", nom: "Première chanson", ok: sources.has("chanson") },
+  ];
+  majSerie(serie, jours.has(todayISO()));
+  annoncerNouveauxBadges(badges.filter(b => b.ok).map(b => b.id), badges);
+  return { serie, badges };
+}
+
+function majSerie(serie, faitAujourdhui) {
+  const el = document.getElementById("streak");
+  el.hidden = serie === 0;
+  el.className = `streak${faitAujourdhui ? "" : " streak-attente"}`;
+  el.textContent = `🔥 ${serie}`;
+  el.title = faitAujourdhui ? `${serie} jour(s) d'affilée` : `${serie} jour(s) d'affilée — fais ta séance aujourd'hui pour continuer !`;
+}
+
+function annoncerNouveauxBadges(obtenus, badges) {
+  let vus = null;
+  try { vus = JSON.parse(localStorage.getItem("badges-vus") || "null"); } catch {}
+  try { localStorage.setItem("badges-vus", JSON.stringify(obtenus)); } catch {}
+  if (!vus) return;
+  obtenus.filter(id => !vus.includes(id)).forEach((id, i) => {
+    const b = badges.find(x => x.id === id);
+    setTimeout(() => toast(`${b.emoji} Nouveau badge : ${b.nom} !`), i * 1800);
+  });
+}
+
+function toast(texte) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = texte;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add("toast-out"), 3200);
+  setTimeout(() => t.remove(), 3800);
+}
+
+function htmlBadges({ serie, badges }) {
+  const n = badges.filter(b => b.ok).length;
+  return `<h3 class="section-title">🏅 Badges <span>${n}/${badges.length}</span>${serie ? ` <span class="serie-pill">🔥 ${serie} jour${serie > 1 ? "s" : ""} d'affilée</span>` : ""}</h3>
+    <div class="badges">${badges.map(b => `<div class="badge${b.ok ? " ok" : ""}" title="${esc(b.nom)}"><span class="badge-emoji">${b.ok ? b.emoji : "🔒"}</span><span class="badge-nom">${esc(b.nom)}</span></div>`).join("")}</div>`;
+}
+
+// ------------------------------------------------------------
+// S'ENTRAÎNER : phrases d'exemple des cours (prononciation, dictée)
+// ------------------------------------------------------------
+function phrasesEntrainement(n = 8) {
+  const pool = [];
+  Object.values(notionsById).forEach(no => {
+    const cours = coursById[no.coursId];
+    if (!cours) return;
+    const ex = no.type === "vocabulaire"
+      ? [cours.vocabulaire?.find(x => x.mot === no.label)?.exemple]
+      : (cours.grammaire?.find(x => x.titre === no.label)?.exemples || []);
+    ex.filter(Boolean).forEach(texte => {
+      const nb = texte.split(/\s+/).length;
+      if (nb >= 3 && nb <= 16) pool.push({ notionId: no.id, texte, niveau: no.niveau || 0, rate: no.dernierResultat === false ? 1 : 0 });
+    });
+  });
+  const tries = melanger(pool).sort((a, b) => (b.rate - a.rate) || (a.niveau - b.niveau)).slice(0, n * 3);
+  return melanger(tries).slice(0, n);
+}
+
+function motsDe(s) { return normaliser(s).split(" ").filter(Boolean); }
+
+function comparerMots(attendu, donne) {
+  const restant = motsDe(donne);
+  const resultat = motsDe(attendu).map(m => {
+    const i = restant.indexOf(m);
+    if (i >= 0) { restant.splice(i, 1); return { m, ok: true }; }
+    return { m, ok: false };
+  });
+  return { resultat, taux: resultat.length ? resultat.filter(x => x.ok).length / resultat.length : 0 };
+}
+
+function dire(texte, rate = 0.95) {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texte);
+  const v = voixAnglaise();
+  if (v) u.voice = v;
+  u.lang = v?.lang || "en-GB";
+  u.rate = rate;
+  speechSynthesis.speak(u);
+}
+
+function finEntrainement(corps, titre, bonnes, total, relancer) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${bonnes / total >= 0.7 ? "" : " score-low"}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="tr-encore">🔁 Encore une série</button>`;
+  corps.querySelector("#tr-encore").addEventListener("click", relancer);
+  loadNotions();
+}
+
+// PRONONCIATION
+document.getElementById("btn-pron").addEventListener("click", lancerPrononciation);
+
+function lancerPrononciation() {
+  const Reco = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const corps = ouvrirLibre(`<div class="game-head hdr-pron"><div class="modal-kicker">🎤 Prononciation</div><h3 id="pr-compteur"></h3></div><div class="game-body"></div>`);
+  if (!Reco) {
+    corps.querySelector(".game-body").innerHTML = `<div class="panel-info">La reconnaissance vocale n'est pas disponible sur ce navigateur. Utilise Chrome (ordinateur ou Android) ou Safari sur un iPhone récent.</div>`;
+    return;
+  }
+  const phrases = phrasesEntrainement(8);
+  if (!phrases.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ajoute d'abord un cours 📸</div>`; return; }
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= phrases.length) return finEntrainement(corps, "🎤 Phrases bien prononcées", bonnes, phrases.length, lancerPrononciation);
+    const p = phrases[i];
+    corps.querySelector("#pr-compteur").textContent = `${i + 1} / ${phrases.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="pr-phrase">${motsCliquables(p.texte)}</div>
+      <div class="pr-actions">
+        <button class="btn-ghost-small" id="pr-ecouter">🔊 Écouter le modèle</button>
+        <button class="pr-micro" id="pr-micro">🎤</button>
+      </div>
+      <div class="pr-etat muted" id="pr-etat">Appuie sur le micro et lis la phrase à voix haute.</div>
+      <div id="pr-resultat"></div>`;
+    corps.querySelector("#pr-ecouter").addEventListener("click", () => dire(p.texte));
+    let essais = 0;
+    corps.querySelector("#pr-micro").addEventListener("click", (e) => {
+      const micro = e.currentTarget;
+      const reco = new Reco();
+      reco.lang = "en-GB";
+      reco.interimResults = false;
+      reco.maxAlternatives = 3;
+      micro.classList.add("ecoute");
+      corps.querySelector("#pr-etat").textContent = "Je t'écoute…";
+      reco.onresult = (ev) => {
+        const alternatives = [...ev.results[0]].map(a => a.transcript);
+        const meilleur = alternatives.map(t => ({ t, ...comparerMots(p.texte, t) })).sort((a, b) => b.taux - a.taux)[0];
+        essais += 1;
+        const ok = meilleur.taux >= 0.8;
+        const fini = ok || essais >= 3;
+        corps.querySelector("#pr-etat").textContent = "";
+        corps.querySelector("#pr-resultat").innerHTML = `
+          <div class="pr-mots">${meilleur.resultat.map(x => `<span class="${x.ok ? "pm-ok" : "pm-ko"}">${esc(x.m)}</span>`).join(" ")}</div>
+          <div class="pr-entendu">J'ai entendu : « ${esc(meilleur.t)} »</div>
+          <div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bien prononcé !" : fini ? "On passe à la suite, cette phrase reviendra." : "🔁 Pas tout à fait : écoute le modèle et réessaie (mots en rouge)."}</div>
+          ${fini ? `<button class="btn-primary btn-block" id="pr-suivant">Phrase suivante →</button>` : ""}`;
+        if (fini) {
+          enregistrerReponse(p.notionId, ok, { source: "prononciation", question: p.texte, reponse: meilleur.t });
+          if (ok) bonnes += 1;
+          corps.querySelector("#pr-suivant").addEventListener("click", () => { i += 1; afficher(); });
+        }
+      };
+      reco.onerror = (ev) => {
+        corps.querySelector("#pr-etat").textContent = ev.error === "not-allowed"
+          ? "Autorise l'accès au micro dans le navigateur, puis réessaie."
+          : "Je n'ai rien entendu, réessaie.";
+      };
+      reco.onend = () => { micro.classList.remove("ecoute"); };
+      reco.start();
+    });
+  };
+  afficher();
+}
+
+// DICTÉE
+document.getElementById("btn-dictee").addEventListener("click", lancerDictee);
+
+function lancerDictee() {
+  const phrases = phrasesEntrainement(6);
+  const corps = ouvrirLibre(`<div class="game-head hdr-dictee"><div class="modal-kicker">✍️ Dictée</div><h3 id="di-compteur"></h3></div><div class="game-body"></div>`);
+  if (!phrases.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ajoute d'abord un cours 📸</div>`; return; }
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= phrases.length) return finEntrainement(corps, "✍️ Phrases sans faute", bonnes, phrases.length, lancerDictee);
+    const p = phrases[i];
+    corps.querySelector("#di-compteur").textContent = `${i + 1} / ${phrases.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="pr-actions">
+        <button class="pr-micro di-play" id="di-play">🔊</button>
+        <button class="btn-ghost-small" id="di-lent">🐢 Plus lentement</button>
+      </div>
+      <textarea id="di-saisie" class="di-saisie" rows="2" placeholder="Écris ce que tu entends…" autocapitalize="off" spellcheck="false"></textarea>
+      <button class="btn-primary btn-block" id="di-valider">Valider</button>
+      <div id="di-resultat"></div>`;
+    corps.querySelector("#di-play").addEventListener("click", () => dire(p.texte));
+    corps.querySelector("#di-lent").addEventListener("click", () => dire(p.texte, 0.65));
+    setTimeout(() => dire(p.texte), 300);
+    corps.querySelector("#di-valider").addEventListener("click", (e) => {
+      const saisie = corps.querySelector("#di-saisie").value.trim();
+      if (!saisie) return;
+      const { resultat, taux } = comparerMots(p.texte, saisie);
+      const ok = taux === 1 && motsDe(saisie).length === motsDe(p.texte).length;
+      if (ok) bonnes += 1;
+      enregistrerReponse(p.notionId, ok, { source: "dictee", question: p.texte, reponse: saisie });
+      e.currentTarget.remove();
+      corps.querySelector("#di-saisie").disabled = true;
+      corps.querySelector("#di-resultat").innerHTML = `
+        <div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Parfait !" : `${Math.round(taux * 100)} % des mots justes`}</div>
+        <div class="di-correction"><span class="muted">La phrase :</span> ${resultat.map(x => `<span class="${x.ok ? "pm-ok" : "pm-ko"}">${esc(x.m)}</span>`).join(" ")}</div>
+        <button class="btn-primary btn-block" id="di-suivant">Phrase suivante →</button>`;
+      corps.querySelector("#di-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    });
+  };
+  afficher();
+}
+
+// CONTRÔLE BLANC
+document.getElementById("btn-controle").addEventListener("click", async () => {
+  if (!Object.keys(coursById).length) await loadNotions();
+  const cours = Object.entries(coursById).sort((a, b) => (b[1].dateAjout || "").localeCompare(a[1].dateAjout || ""));
+  const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">📝 Contrôle blanc</div><h3>Quel cours réviser ?</h3></div>
+    <div class="game-body">${cours.length ? cours.map(([id, c]) => `<button class="cours-choix" data-cours="${esc(id)}"><span>${esc(c.titre)}</span><span class="muted">${(c.vocabulaire || []).length} mots · ${(c.grammaire || []).length} règles</span></button>`).join("") : `<div class="panel-info">Ajoute d'abord un cours 📸</div>`}</div>`);
+  corps.querySelectorAll("[data-cours]").forEach(b => b.addEventListener("click", () => lancerControle(b.dataset.cours)));
+});
+
+async function lancerControle(coursId) {
+  const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">📝 Contrôle blanc</div><h3>${esc(coursById[coursId]?.titre || "")}</h3></div>
+    <div class="game-body"><div class="loading-exos">✍️ La prof IA prépare ton contrôle… (environ une minute)</div></div>`);
+  try {
+    const controleCoursAnglais = httpsCallable(functions, "controleCoursAnglais", { timeout: 240000 });
+    const { exercices } = await controleCoursAnglais({ coursId }).then(r => r.data);
+    const body = corps.querySelector(".game-body");
+    body.innerHTML = `<p class="muted">${exercices.length} questions, comme en classe. Les explications s'affichent après chaque réponse.</p>`;
+    let repondues = 0, bonnes = 0;
+    const erreurs = [];
+    exercices.forEach((ex, idx) => {
+      const titre = document.createElement("div");
+      titre.className = "exemples-title";
+      titre.textContent = `Question ${idx + 1}`;
+      body.appendChild(titre);
+      body.appendChild(renderExercise(ex, {
+        onAnswered: (correct, donnee) => {
+          repondues += 1;
+          if (correct) bonnes += 1; else if (ex.notionId) erreurs.push(ex.notionId);
+          if (ex.notionId) enregistrerReponse(ex.notionId, correct, { source: "controle", question: ex.phrase || ex.question || "", reponse: donnee });
+          else journaliser({ correct, source: "controle", question: ex.question || "", reponse: donnee });
+          if (repondues < exercices.length) return;
+          const note = Math.round(bonnes / exercices.length * 20 * 2) / 2;
+          const fin = document.createElement("div");
+          fin.className = "bilan";
+          fin.innerHTML = `<div class="bilan-head"><div class="bilan-score">${String(note).replace(".", ",")}<span>/20</span></div>
+            <div><div class="bilan-msg">${note >= 16 ? "🏆 Prête pour le contrôle !" : note >= 12 ? "👍 Bien, encore un petit effort" : "💪 À retravailler avant le contrôle"}</div>
+            <div class="bilan-sub">${bonnes} bonnes réponses sur ${exercices.length}</div></div></div>
+            ${erreurs.length ? `<div class="exemples-title">À revoir</div><div class="bilan-erreurs">${[...new Set(erreurs)].map(id => `<button class="bilan-erreur" data-revoir="${esc(id)}"><span>${esc(notionsById[id]?.label || id)}</span><span class="bilan-go">💡 Revoir</span></button>`).join("")}</div>` : ""}
+            <div class="bilan-actions"><button class="btn-primary" id="ct-refaire">🔁 Un autre contrôle sur ce cours</button></div>`;
+          body.appendChild(fin);
+          fin.querySelectorAll("[data-revoir]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.revoir)));
+          fin.querySelector("#ct-refaire").addEventListener("click", () => lancerControle(coursId));
+          fin.scrollIntoView({ behavior: "smooth", block: "center" });
+          loadNotions();
+        },
+      }));
+    });
+  } catch (err) {
+    console.error(err);
+    corps.querySelector(".game-body").innerHTML = `<div class="panel-info">❌ Impossible de préparer le contrôle. Réessaie dans un instant.</div>`;
+  }
+}
+
+// RÉCAP PARENT (aperçu)
+document.getElementById("btn-recap-test").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  const status = document.getElementById("recap-status");
+  btn.disabled = true;
+  status.textContent = "Envoi…";
+  try {
+    const recapAnglaisTest = httpsCallable(functions, "recapAnglaisTest", { timeout: 60000 });
+    const r = await recapAnglaisTest({}).then(res => res.data);
+    status.textContent = `✅ Aperçu envoyé à ${r.destinataire}`;
+  } catch (err) {
+    console.error(err);
+    status.textContent = "❌ Envoi impossible";
+  } finally {
+    btn.disabled = false;
+  }
+});
