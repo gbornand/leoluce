@@ -514,16 +514,25 @@ exports.genererExercicesDuJour = onCall(
       return existing.data();
     }
 
-    const dueSnap = await db.collection("progressionAnglais")
+    let dueSnap = await db.collection("progressionAnglais")
       .where("prochaineDate", "<=", today)
       .orderBy("prochaineDate")
-      .limit(30).get();
+      .limit(500).get();
+    if (dueSnap.empty) {
+      dueSnap = await db.collection("progressionAnglais").orderBy("niveau").limit(30).get();
+    }
     if (dueSnap.empty) {
       throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
     }
 
-    const notions = dueSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => a.niveau - b.niveau)
+    // Priorité : notions ratées à la dernière réponse, puis jamais vues, puis les plus faibles.
+    const rang = n => (n.dernierResultat === false ? 0 : n.dernierVu ? 2 : 1);
+    const candidates = dueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const ratees = candidates.filter(n => n.dernierResultat === false);
+    const autres = candidates.filter(n => n.dernierResultat !== false);
+    for (let i = autres.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [autres[i], autres[j]] = [autres[j], autres[i]]; }
+    const notions = [...ratees, ...autres]
+      .sort((a, b) => rang(a) - rang(b) || (a.niveau || 0) - (b.niveau || 0))
       .slice(0, 8);
     const coursIds = [...new Set(notions.map(n => n.coursId))];
     const coursDocs = await Promise.all(coursIds.map(id => db.collection("coursAnglais").doc(id).get()));

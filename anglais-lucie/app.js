@@ -6,7 +6,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -142,7 +142,13 @@ function renderToday(data) {
   document.getElementById("today-loading").hidden = true;
   document.getElementById("today-content").hidden = false;
   document.getElementById("today-score").hidden = true;
-  score = { bonnes: 0, total: 0, repondues: 0 };
+  score = { bonnes: 0, total: 0, repondues: 0, erreurs: [] };
+  ["block-comprehension", "block-vocabulaire", "block-grammaire"].forEach(id => { document.getElementById(id).hidden = false; });
+  if (data.terminee && data.resultat) {
+    ["block-comprehension", "block-vocabulaire", "block-grammaire"].forEach(id => { document.getElementById(id).hidden = true; });
+    afficherBilan(data.resultat);
+    return;
+  }
 
   const ceBlock = document.getElementById("block-comprehension");
   if (data.comprehensionEcrite?.texte) {
@@ -221,14 +227,63 @@ function renderTodayList(containerId, items, suiviNotion) {
         score.repondues += 1;
         if (correct) score.bonnes += 1;
         if (suiviNotion && item.notionId) enregistrerReponse(item.notionId, correct);
-        if (score.repondues === score.total) {
-          const s = document.getElementById("today-score");
-          s.hidden = false;
-          s.textContent = `🎉 Séance terminée : ${score.bonnes}/${score.total} bonnes réponses !`;
-        }
+        if (!correct) score.erreurs.push({ question: item.question || "", phrase: item.phrase || "", notionId: suiviNotion ? item.notionId || null : null });
+        if (score.repondues === score.total) finSeance();
       },
     }));
   });
+}
+
+async function finSeance() {
+  const resultat = { score: score.bonnes, total: score.total, erreurs: score.erreurs, finieLe: new Date().toISOString() };
+  afficherBilan(resultat);
+  try {
+    await addDoc(collection(db, "seancesAnglais"), { date: todayISO(), ...resultat });
+    await updateDoc(doc(db, "exercicesAnglais", todayISO()), { terminee: true, resultat });
+  } catch (err) {
+    console.error("Enregistrement séance", err);
+  }
+}
+
+function afficherBilan(resultat) {
+  const s = document.getElementById("today-score");
+  const pct = resultat.total ? resultat.score / resultat.total : 0;
+  const message = pct === 1 ? "🏆 Sans faute, bravo !" : pct >= 0.7 ? "🎉 Très bien joué !" : pct >= 0.5 ? "👍 Pas mal, on continue !" : "💪 Courage, ça va venir !";
+  const aRevoir = resultat.erreurs.filter(e => e.notionId);
+  s.hidden = false;
+  s.className = "bilan";
+  s.innerHTML = `
+    <div class="bilan-head">
+      <div class="bilan-score">${resultat.score}<span>/${resultat.total}</span></div>
+      <div><div class="bilan-msg">${message}</div><div class="bilan-sub">Séance enregistrée.${resultat.erreurs.length ? " Les notions ratées reviendront en priorité." : ""}</div></div>
+    </div>
+    ${aRevoir.length ? `<div class="exemples-title">À retravailler</div>
+      <div class="bilan-erreurs">${aRevoir.map(e => {
+        const n = notionsById[e.notionId];
+        return `<button class="bilan-erreur" data-revoir="${esc(e.notionId)}"><span>${esc(n?.label || e.phrase || e.question)}</span><span class="bilan-go">💡 Revoir et s'entraîner</span></button>`;
+      }).join("")}</div>` : ""}
+    <div class="bilan-actions">
+      <button class="btn-primary" id="btn-nouvelle-seance">🔁 Nouvelle séance${resultat.erreurs.length ? " (on reprend tes erreurs)" : ""}</button>
+    </div>`;
+  s.querySelectorAll("[data-revoir]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.revoir)));
+  s.querySelector("#btn-nouvelle-seance").addEventListener("click", nouvelleSeance);
+  s.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function nouvelleSeance() {
+  const btn = document.getElementById("btn-nouvelle-seance");
+  btn.disabled = true;
+  btn.textContent = "La prof IA prépare une nouvelle séance… ✍️";
+  try {
+    const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
+    const data = await genererExercicesDuJour({ regenerer: true }).then(r => r.data);
+    renderToday(data);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = "❌ Échec, réessayer";
+  }
 }
 
 function normaliser(s) {

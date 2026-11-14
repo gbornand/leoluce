@@ -102,6 +102,11 @@ service cloud.firestore {
       allow write: if isLucieAnglais();
     }
 
+    match /seancesAnglais/{id} {
+      allow read: if isLucieAnglais();
+      allow write: if isLucieAnglais();
+    }
+
     match /chansonsAnglais/{id} {
       allow read: if isLucieAnglais();
       allow write: if isLucieAnglais();
