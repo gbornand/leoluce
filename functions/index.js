@@ -381,6 +381,12 @@ exports.extraireCoursAnglais = onCall(
 
 function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
 
+const FORMATS_EXOS_ANGLAIS = `Trois types d'exercices possibles (champ "type") :
+- "qcm" : { "type": "qcm", "question": "consigne en français", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } — 3 ou 4 choix, "bonneReponse" = index 0-based, varie sa position.
+- "trou" : { "type": "trou", "question": "consigne en français (ex: Complète avec le bon verbe)", "phrase": "phrase en anglais avec ___ à la place du mot manquant", "reponses": ["réponse attendue", "variante acceptée"], "explication": "..." } — réponse courte (1 à 3 mots), mets toutes les variantes correctes (formes contractées incluses).
+- "ordre" : { "type": "ordre", "question": "Remets les mots dans l'ordre", "mots": ["mots", "de", "la", "phrase", "mélangés"], "reponse": "La phrase correcte complète", "explication": "..." } — 4 à 9 mots, sans ponctuation finale dans "mots", vraiment mélangés.
+"explication" = une phrase courte en français qui explique la bonne réponse.`;
+
 const GENERATION_PROMPT_HEADER_ANGLAIS = `Tu es un(e) prof d'anglais ludique qui prépare une séance quotidienne de 10-15 minutes pour une collégienne française. Voici les notions à travailler aujourd'hui (vocabulaire et grammaire déjà vus en cours, certaines jamais testées, d'autres déjà ratées une fois) :\n\n`;
 
 const GENERATION_PROMPT_FOOTER_ANGLAIS = `
@@ -389,12 +395,15 @@ Génère une séance du jour. Réponds UNIQUEMENT avec un objet JSON (pas de tex
 {
   "comprehensionEcrite": {
     "texte": "court texte en anglais (5-8 phrases), niveau collège/lycée, amusant, qui réutilise si possible du vocabulaire ci-dessus",
-    "questions": [ { "question": "question de compréhension en français", "choix": ["...", "...", "..."], "bonneReponse": 0 } ]
+    "questions": [ { "type": "qcm", "question": "question de compréhension en français", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } ]
   },
-  "vocabulaire": [ { "notionId": "<reprendre exactement l'id donné ci-dessus>", "question": "question ludique en français pour tester ce mot (traduction, intrus, compléter la phrase...)", "choix": ["...", "...", "..."], "bonneReponse": 0 } ],
-  "grammaire": [ { "notionId": "<id>", "question": "question ludique en français pour tester cette règle", "choix": ["...", "...", "..."], "bonneReponse": 0 } ]
+  "vocabulaire": [ { "notionId": "<reprendre exactement l'id donné ci-dessus>", ...un exercice } ],
+  "grammaire": [ { "notionId": "<id>", ...un exercice } ]
 }
-Chaque "choix" contient 3 ou 4 propositions, "bonneReponse" est l'index (0-based) de la bonne. Un exercice par notion vocabulaire/grammaire listée ci-dessus, pas plus. Ton enjoué, jamais scolaire-ennuyeux.`;
+
+${FORMATS_EXOS_ANGLAIS}
+
+Un exercice par notion vocabulaire/grammaire listée ci-dessus, pas plus, chacun avec son "notionId". Mélange les types : pour le vocabulaire surtout "qcm" et "trou" ; pour la grammaire surtout "trou" et "ordre". Les questions de compréhension sont des "qcm" (3 questions). Ton enjoué, jamais scolaire-ennuyeux.`;
 
 // Exercices à la demande sur une seule notion (depuis « Mes notions ») — non stockés.
 exports.exercicesNotionAnglais = onCall(
@@ -421,9 +430,11 @@ exports.exercicesNotionAnglais = onCall(
     const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut s'entraîner sur cette notion précise :
 ${contexte}
 
-Génère 4 exercices variés et progressifs (du plus simple au plus exigeant) uniquement sur cette notion. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
-{ "exercices": [ { "question": "consigne en français, phrase à compléter ou à traduire si besoin", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "une phrase courte en français qui explique pourquoi c'est la bonne réponse" } ] }
-3 ou 4 choix par question, "bonneReponse" = index 0-based. Varie la position de la bonne réponse.`;
+Génère 5 exercices progressifs (du plus simple au plus exigeant) uniquement sur cette notion, en mélangant les types : au moins 1 "qcm", au moins 2 "trou" et au moins 1 "ordre".
+
+${FORMATS_EXOS_ANGLAIS}
+
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) : { "exercices": [ ... ] }`;
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
@@ -447,7 +458,7 @@ exports.genererExercicesDuJour = onCall(
     const today = todayISOAnglais();
     const existingRef = db.collection("exercicesAnglais").doc(today);
     const existing = await existingRef.get();
-    if (existing.exists && !request.data?.regenerer) {
+    if (existing.exists && existing.data().version === 2 && !request.data?.regenerer) {
       return existing.data();
     }
 
@@ -487,6 +498,7 @@ exports.genererExercicesDuJour = onCall(
     const parsed = extractJsonAnglais(textBlock.text);
 
     const sessionDoc = {
+      version: 2,
       date: today,
       comprehensionEcrite: parsed.comprehensionEcrite || null,
       vocabulaire: parsed.vocabulaire || [],
