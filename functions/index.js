@@ -280,15 +280,35 @@ exports.monthlyBirthdayDigest = onSchedule(
 );
 
 // ═══════════════════════════════════════
-// ENGLISH TIME — outil d'anglais quotidien pour Lucie (feature isolée, ajoutée le 2026-11-13)
+// RÉVISIONS (ex-English Time) — Lucie (collège) et Léonie (CE2), plusieurs matières, accès parent.
+// Les collections gardent leur nom historique (*Anglais) ; chaque doc porte `eleve` (uid) et `matiere`.
 // ═══════════════════════════════════════
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const PARENT_UID = "GoxalGBKNWcyC6OkdENgz8j1u883";
 const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
+const RECAP_DESTINATAIRE = "gbornand@gmail.com";
+const ELEVES = {
+  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "maths", "physique", "svt", "histoire"] },
+  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "maths", "anglais", "histoire"] },
+};
+const NOMS_MATIERES = { anglais: "anglais", francais: "français", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
+const SCIENCES = ["maths", "physique"];
+const MATIERES_DOCUMENTS = ["svt", "histoire"];
 
-function requireLucie(request) {
-  if (!request.auth || request.auth.uid !== LUCIE_UID) {
-    throw new HttpsError("permission-denied", "Accès réservé.");
-  }
+function contexteAppel(request, { matiereRequise = true } = {}) {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const estParent = uid === PARENT_UID;
+  const eleve = estParent ? String(request.data?.eleve || "") : uid;
+  const profil = ELEVES[eleve];
+  if (!profil) throw new HttpsError("permission-denied", "Accès réservé.");
+  const matiere = String(request.data?.matiere || "");
+  if (matiereRequise && !profil.matieres.includes(matiere)) throw new HttpsError("invalid-argument", "Matière inconnue.");
+  return { eleve, matiere, profil, estParent };
+}
+
+function verifierEleve(data, eleve) {
+  if (!data || data.eleve !== eleve) throw new HttpsError("permission-denied", "Accès réservé.");
 }
 
 function slugAnglais(s) {
@@ -306,31 +326,172 @@ function extractJsonAnglais(text) {
   }
 }
 
-const EXTRACTION_PROMPT_ANGLAIS = `Tu es un(e) prof d'anglais qui prépare le travail d'une collégienne française.
-Analyse la ou les photos de cours d'anglais fournies et extrais-en le contenu pédagogique.
+function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
 
-Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact suivant :
-{
-  "titre": "titre court du cours (ex: 'Present perfect - unit 4')",
-  "recap": "récapitulatif clair et pédagogique du cours, en français, qui réexplique la ou les règles comme à une collégienne (3-8 phrases)",
-  "vocabulaire": [
-    { "mot": "mot ou expression en anglais", "traduction": "traduction en français", "theme": "thème court en français (ex: La ville, Le caractère, La famille)", "exemple": "courte phrase d'exemple en anglais" }
-  ],
-  "grammaire": [
-    { "titre": "nom court de la notion de grammaire", "explication": "explication pédagogique en français de la règle", "exemples": ["phrase d'exemple en anglais"] }
-  ]
+function publicEleve(profil) {
+  return profil.niveau === "ce2" ? "une élève française de CE2 (8 ans)" : "une collégienne française";
 }
 
-VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page une par une et relève ABSOLUMENT TOUS les mots et expressions de vocabulaire présents (listes, tableaux, encadrés, lexiques, mots illustrés), sans en omettre, sans résumer, sans regrouper. Plusieurs pages de vocabulaire = plusieurs centaines d'entrées, c'est normal. Regroupe-les par "theme" cohérent (le titre de la rubrique du cours s'il existe). Exemples courts pour rester compact.
-Ne mets que ce qui est réellement présent/déductible dans le document. Si le cours ne contient pas de grammaire (ou pas de vocabulaire), le tableau correspondant peut être vide. Niveau collège/lycée français.`;
+function profDe(matiere) {
+  return { anglais: "prof d'anglais", francais: "maîtresse de CE2", maths: "prof de maths", physique: "prof de physique-chimie", svt: "prof de SVT", histoire: "prof d'histoire-géographie" }[matiere];
+}
 
-// Reçoit une ou plusieurs photos d'un cours, les fait analyser par l'IA (vocabulaire +
-// grammaire), stocke le cours puis crée une fiche de suivi (répétition espacée) pour
-// chaque notion nouvelle, due dès aujourd'hui.
+const NOTATION_SCIENCES = "Écris les maths en texte simple avec les symboles Unicode (×, ÷, ², ³, √, π, ≤, ≥, ½, °), jamais de LaTeX. Vérifie chaque calcul deux fois : une réponse fausse dans la correction est inacceptable.";
+
+// Ce que l'IA doit relever dans un cours, selon la matière.
+function consigneExtraction(matiere, profil) {
+  const schema = (vocab, gram) => `Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact suivant :
+{
+  "titre": "titre court du cours",
+  "recap": "récapitulatif clair et pédagogique du cours, en français, adapté à ${publicEleve(profil)} (3-8 phrases)",
+  "vocabulaire": [ ${vocab} ],
+  "grammaire": [ ${gram} ]
+}`;
+  const commun = `Ne mets que ce qui est réellement présent/déductible dans le document. Si une catégorie est absente, le tableau correspondant peut être vide.`;
+  if (matiere === "anglais") {
+    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours d'anglais fourni.
+${schema(`{ "mot": "mot ou expression en anglais", "traduction": "traduction en français", "theme": "thème court en français", "exemple": "courte phrase d'exemple en anglais" }`,
+  `{ "titre": "nom court de la notion de grammaire", "explication": "explication pédagogique en français", "exemples": ["phrase d'exemple en anglais"] }`)}
+VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page et relève ABSOLUMENT TOUS les mots et expressions (listes, tableaux, encadrés, lexiques, mots illustrés), sans omettre ni résumer. Plusieurs pages = plusieurs centaines d'entrées, c'est normal. Regroupe par "theme" (titre de rubrique du cours s'il existe). Exemples courts.
+${commun}`;
+  }
+  if (matiere === "francais") {
+    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de français fourni (leçon, mots à apprendre, dictée préparée…).
+${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire", "traduction": "sens très simple ou indice (ex: nom féminin, ce qu'on met sur la tête)", "theme": "thème court (ex: Mots de la semaine, Les sons [an])", "exemple": "courte phrase d'exemple simple" }`,
+  `{ "titre": "nom court de la règle (grammaire, conjugaison, orthographe)", "explication": "explication très simple pour une enfant de 8 ans", "exemples": ["phrase d'exemple"] }`)}
+Relève TOUS les mots à apprendre, sans en omettre. ${commun}`;
+  }
+  if (MATIERES_DOCUMENTS.includes(matiere)) {
+    const quoi = matiere === "svt"
+      ? { savoir: "définitions, mots-clés, organes et leurs rôles", comprendre: "processus, mécanismes, expériences et leurs conclusions" }
+      : { savoir: "dates et repères chronologiques, personnages, définitions, lieux et repères géographiques", comprendre: "événements et leurs causes/conséquences, méthodes (lire une carte, analyser un document)" };
+    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de ${NOMS_MATIERES[matiere]} fourni.
+${schema(`{ "mot": "terme, date ou repère à connaître", "traduction": "définition ou ce qu'il faut savoir en une phrase simple", "theme": "chapitre ou partie du cours", "exemple": "précision ou exemple court" }`,
+  `{ "titre": "nom court de la notion à comprendre", "explication": "explication simple et structurée", "exemples": ["exemple ou idée clé"] }`)}
+Dans "vocabulaire", mets les ${quoi.savoir}. Dans "grammaire", mets les ${quoi.comprendre}. Sois exhaustif.
+${commun}`;
+  }
+  const lois = matiere === "physique" ? "lois, définitions, grandeurs et unités, formules" : "définitions, formules, propriétés et faits à connaître par cœur (tables, unités…)";
+  return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de ${NOMS_MATIERES[matiere]} fourni.
+${schema(`{ "mot": "terme, formule ou fait à connaître", "traduction": "définition ou signification en une phrase simple", "theme": "chapitre ou partie du cours", "exemple": "exemple concret, éventuellement chiffré" }`,
+  `{ "titre": "nom court de la méthode ou du type d'exercice", "explication": "méthode expliquée pas à pas, simplement", "exemples": ["exemple résolu court"] }`)}
+Dans "vocabulaire", mets les ${lois}. Dans "grammaire", mets les méthodes et savoir-faire (comment résoudre tel type d'exercice). Sois exhaustif.
+${NOTATION_SCIENCES}
+${commun}`;
+}
+
+// Formats d'exercices et règles de langue, selon matière et niveau.
+function formatsExos(matiere, profil) {
+  const ce2 = profil.niveau === "ce2";
+  const base = `Trois types d'exercices possibles (champ "type") :
+- "qcm" : { "type": "qcm", "question": "...", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } — 3 ou 4 choix, "bonneReponse" = index 0-based, varie sa position.
+- "trou" : { "type": "trou", "question": "consigne", "phrase": "phrase ou calcul avec ___ à la place de la réponse", "reponses": ["réponse attendue", "variante acceptée"], "explication": "..." } — réponse courte (1 à 3 mots ou un nombre), mets toutes les variantes correctes.
+- "ordre" : { "type": "ordre", "question": "consigne", "mots": ["éléments", "mélangés"], "reponse": "la suite correcte, éléments séparés par un espace", "explication": "..." } — 3 à 9 éléments, vraiment mélangés.
+"explication" = une phrase courte en français qui explique la bonne réponse.`;
+  if (matiere === "anglais" && !ce2) {
+    return `${base}
+LANGUE : tout ce que l'élève lit pour répondre (question, phrase, choix, mots) est EN ANGLAIS simple, niveau collège. Exception : une question peut demander la traduction d'un mot français vers l'anglais. Seule "explication" est en français. Pour "trou", inclus les formes contractées en variantes. Pour "ordre", les éléments sont des mots sans ponctuation finale.`;
+  }
+  if (matiere === "anglais" && ce2) {
+    return `${base}
+LANGUE : consignes en FRANÇAIS très simple (8 ans). Contenu anglais très court : mots isolés ou phrases de 3 à 5 mots. Privilégie "qcm" (images mentales, couleurs, animaux, nombres…). Explications en français, une phrase.`;
+  }
+  if (matiere === "francais") {
+    return `${base}
+LANGUE : tout en français, phrases courtes et simples pour une enfant de 8 ans. Pour l'orthographe, utilise "trou" (écrire le mot) et "qcm" (choisir la bonne orthographe). Pour "ordre", les éléments sont les mots d'une phrase.`;
+  }
+  if (MATIERES_DOCUMENTS.includes(matiere)) {
+    return `${base}
+LANGUE : tout en français, ${ce2 ? "très simple, niveau CE2 (8 ans)" : "niveau collège"}. Pour "trou", la réponse est un mot-clé, une date ou un lieu (mets les variantes d'écriture). Pour "ordre", fais remettre dans l'ordre ${matiere === "histoire" ? "des événements chronologiques (éléments = événements courts ou dates)" : "les étapes d'un processus"} : dans ce cas, chaque élément peut faire plusieurs mots — sépare-les dans "reponse" par " | " et mets ces mêmes éléments dans "mots".`;
+  }
+  return `${base}
+LANGUE : tout en français, ${ce2 ? "très simple, niveau CE2 (8 ans), nombres adaptés à cet âge" : "niveau collège"}. Pour les calculs, utilise "trou" avec une réponse numérique : mets les variantes "12", "12,0", "12.0" (et avec l'unité si la consigne la demande). Pour "ordre", fais ranger des nombres ou remettre dans l'ordre les étapes d'une méthode.
+${NOTATION_SCIENCES}`;
+}
+
+function blocDecouverte(matiere, profil) {
+  const ce2 = profil.niveau === "ce2";
+  if (matiere === "anglais") {
+    return `"comprehensionEcrite": { "mode": "ecoute", "titre": "Écoute & compréhension", "texte": "${ce2 ? "3 ou 4 phrases anglaises très simples" : "court texte en anglais (5-8 phrases), amusant"}, qui réutilise le vocabulaire ci-dessus", "questions": [ 3 questions "qcm" ${ce2 ? "en français" : "in English"} ] }`;
+  }
+  if (matiere === "francais") {
+    return `"comprehensionEcrite": { "mode": "lecture", "titre": "Lecture", "texte": "petit texte de 4 à 6 phrases pour une enfant de 8 ans, qui utilise des mots du cours", "questions": [ 3 questions "qcm" de compréhension ] }`;
+  }
+  if (MATIERES_DOCUMENTS.includes(matiere)) {
+    return `"comprehensionEcrite": { "mode": "lecture", "titre": "${matiere === "svt" ? "Document scientifique" : "Document"}", "texte": "court document (4-6 phrases) ${matiere === "svt" ? "décrivant une observation ou une expérience" : "racontant un événement ou décrivant un lieu"}, ${ce2 ? "niveau CE2" : "niveau collège"}, en lien avec les notions ci-dessus", "questions": [ 3 questions "qcm" ou "trou" sur le document ] }`;
+  }
+  return `"comprehensionEcrite": { "mode": "probleme", "titre": "${matiere === "physique" ? "Situation" : "Problème"}", "texte": "${matiere === "physique" ? "petite situation concrète ou expérience" : "petit problème concret de la vie quotidienne"} en 3-5 phrases, ${ce2 ? "niveau CE2" : "niveau collège"}, qui mobilise les notions ci-dessus", "questions": [ 2 ou 3 questions "qcm" ou "trou" (réponse numérique) ] }`;
+}
+
+function ligneNotion(n, cours) {
+  if (n.type === "vocabulaire") {
+    const v = (cours?.vocabulaire || []).find(x => x.mot === n.label);
+    return `- [id:${n.id}] À SAVOIR "${n.label}"${v ? ` = ${v.traduction}${v.exemple ? ` (ex: ${v.exemple})` : ""}` : ""}`;
+  }
+  const g = (cours?.grammaire || []).find(x => x.titre === n.label);
+  const etiquette = ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
+  return `- [id:${n.id}] ${etiquette} "${n.label}"${g ? ` : ${g.explication}` : ""}`;
+}
+
+function reparateurIds(notions) {
+  const ids = new Set(notions.map(n => n.id));
+  return brut => {
+    const s = String(brut || "").replace(/^\[?\s*id\s*:\s*/i, "").replace(/\]$/, "").trim();
+    return ids.has(s) ? s : (notions.find(n => s && (s.includes(n.id) || n.id.includes(s)))?.id || null);
+  };
+}
+
+async function appelIA(prompt, maxTokens = 8000) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const response = await client.messages.create({
+    model: "claude-opus-5-5",
+    max_tokens: maxTokens,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const textBlock = response.content.find(b => b.type === "text");
+  if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+  return extractJsonAnglais(textBlock.text);
+}
+
+async function vocabAnglaisConnu(eleve) {
+  const snap = await db.collection("coursAnglais").where("eleve", "==", eleve).get();
+  return [...new Set(snap.docs.filter(d => d.data().matiere === "anglais").flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
+}
+
+// Profil de l'utilisateur connecté + migration unique des données d'avant le multi-élèves (tout = Lucie, anglais).
+exports.initialiserRevisions = onCall(
+  { region: "europe-west1", invoker: "public", timeoutSeconds: 300 },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Connexion requise.");
+    const estParent = uid === PARENT_UID;
+    if (!estParent && !ELEVES[uid]) throw new HttpsError("permission-denied", "Accès réservé.");
+
+    const migRef = db.collection("revisionsMeta").doc("migrationV2");
+    if (!(await migRef.get()).exists) {
+      for (const nom of ["coursAnglais", "progressionAnglais", "seancesAnglais", "reponsesAnglais", "chansonsAnglais"]) {
+        const snap = await db.collection(nom).get();
+        const aMigrer = snap.docs.filter(d => !d.data().eleve);
+        for (let i = 0; i < aMigrer.length; i += 400) {
+          const batch = db.batch();
+          aMigrer.slice(i, i + 400).forEach(d => batch.update(d.ref, { eleve: LUCIE_UID, matiere: d.data().matiere || "anglais" }));
+          await batch.commit();
+        }
+      }
+      await migRef.set({ faitLe: new Date().toISOString() });
+    }
+
+    const liste = (estParent ? Object.keys(ELEVES) : [uid]).map(id => ({ uid: id, ...ELEVES[id] }));
+    return { role: estParent ? "parent" : "eleve", eleves: liste };
+  }
+);
+
+// Reçoit photos/PDF d'un cours, les fait analyser selon la matière, stocke le cours et crée une
+// fiche de suivi (répétition espacée) par notion, due dès aujourd'hui.
 exports.extraireCoursAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 900, memory: "512MiB" },
   async (request) => {
-    requireLucie(request);
+    const { eleve, matiere, profil } = contexteAppel(request);
     const images = Array.isArray(request.data?.images) ? request.data.images : [];
     const content = images
       .filter(img => img?.data && img?.mimeType)
@@ -338,7 +499,7 @@ exports.extraireCoursAnglais = onCall(
         ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: img.data } }
         : { type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } });
     if (!content.length) throw new HttpsError("invalid-argument", "Au moins une photo valide est requise.");
-    content.push({ type: "text", text: EXTRACTION_PROMPT_ANGLAIS });
+    content.push({ type: "text", text: consigneExtraction(matiere, profil) });
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.stream({
@@ -354,7 +515,8 @@ exports.extraireCoursAnglais = onCall(
     const parsed = extractJsonAnglais(textBlock.text);
 
     const docRef = await db.collection("coursAnglais").add({
-      titre: parsed.titre || "Cours d'anglais",
+      eleve, matiere,
+      titre: parsed.titre || `Cours de ${NOMS_MATIERES[matiere]}`,
       recap: parsed.recap || "",
       vocabulaire: parsed.vocabulaire || [],
       grammaire: parsed.grammaire || [],
@@ -362,15 +524,10 @@ exports.extraireCoursAnglais = onCall(
     });
 
     const today = todayISOAnglais();
+    const base = { eleve, matiere, coursId: docRef.id, niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null };
     const ecritures = [
-      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, {
-        type: "vocabulaire", label: v.mot, theme: v.theme || "", coursId: docRef.id,
-        niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
-      }]),
-      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, {
-        type: "grammaire", label: g.titre, coursId: docRef.id,
-        niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
-      }]),
+      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, { ...base, type: "vocabulaire", label: v.mot, theme: v.theme || "" }]),
+      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, { ...base, type: "grammaire", label: g.titre }]),
     ];
     for (let i = 0; i < ecritures.length; i += 400) {
       const batch = db.batch();
@@ -384,98 +541,56 @@ exports.extraireCoursAnglais = onCall(
   }
 );
 
-function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
-
-const FORMATS_EXOS_ANGLAIS = `Trois types d'exercices possibles (champ "type") :
-- "qcm" : { "type": "qcm", "question": "consigne/question EN ANGLAIS", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } — 3 ou 4 choix en anglais, "bonneReponse" = index 0-based, varie sa position.
-- "trou" : { "type": "trou", "question": "consigne EN ANGLAIS (ex: Complete with the right verb.)", "phrase": "phrase en anglais avec ___ à la place du mot manquant", "reponses": ["réponse attendue", "variante acceptée"], "explication": "..." } — réponse courte (1 à 3 mots), mets toutes les variantes correctes (formes contractées incluses).
-- "ordre" : { "type": "ordre", "question": "Put the words in the right order.", "mots": ["words", "of", "the", "sentence", "shuffled"], "reponse": "The full correct sentence", "explication": "..." } — 4 à 9 mots, sans ponctuation finale dans "mots", vraiment mélangés.
-LANGUE : tout ce que l'élève lit pour répondre (question, phrase, choix, mots) est EN ANGLAIS simple, niveau collège. Exception : pour tester le sens d'un mot de vocabulaire, une question peut demander la traduction d'un mot français vers l'anglais (ex: How do you say "un château" in English?). Seule "explication" est EN FRANÇAIS : une phrase courte qui explique la bonne réponse.`;
-
-const GENERATION_PROMPT_HEADER_ANGLAIS = `Tu es un(e) prof d'anglais ludique qui prépare une séance quotidienne de 10-15 minutes pour une collégienne française. Voici les notions à travailler aujourd'hui (vocabulaire et grammaire déjà vus en cours, certaines jamais testées, d'autres déjà ratées une fois) :\n\n`;
-
-const GENERATION_PROMPT_FOOTER_ANGLAIS = `
-
-Génère une séance du jour. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact :
-{
-  "comprehensionEcrite": {
-    "texte": "court texte en anglais (5-8 phrases), niveau collège/lycée, amusant, qui réutilise si possible du vocabulaire ci-dessus",
-    "questions": [ { "type": "qcm", "question": "comprehension question in English", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "..." } ]
-  },
-  "vocabulaire": [ { "notionId": "<reprendre exactement l'id donné ci-dessus>", ...un exercice } ],
-  "grammaire": [ { "notionId": "<id>", ...un exercice } ]
-}
-
-${FORMATS_EXOS_ANGLAIS}
-
-Un exercice par notion vocabulaire/grammaire listée ci-dessus, pas plus, chacun avec son "notionId". Mélange les types : pour le vocabulaire surtout "qcm" et "trou" ; pour la grammaire surtout "trou" et "ordre". Les questions de compréhension sont des "qcm" (3 questions). Ton enjoué, jamais scolaire-ennuyeux.`;
-
 // Exercices à la demande sur une seule notion (depuis « Mes notions ») — non stockés.
 exports.exercicesNotionAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120 },
   async (request) => {
-    requireLucie(request);
+    const { eleve, profil } = contexteAppel(request, { matiereRequise: false });
     const notionId = String(request.data?.notionId || "");
-    if (!notionId) throw new HttpsError("invalid-argument", "notionId requis.");
     const notionSnap = await db.collection("progressionAnglais").doc(notionId).get();
     if (!notionSnap.exists) throw new HttpsError("not-found", "Notion introuvable.");
-    const notion = notionSnap.data();
+    const notion = { id: notionSnap.id, ...notionSnap.data() };
+    verifierEleve(notion, eleve);
     const coursSnap = await db.collection("coursAnglais").doc(notion.coursId).get();
     const cours = coursSnap.exists ? coursSnap.data() : {};
+    const matiere = notion.matiere || "anglais";
 
-    let contexte;
-    if (notion.type === "vocabulaire") {
-      const v = (cours.vocabulaire || []).find(x => x.mot === notion.label);
-      contexte = `VOCABULAIRE "${notion.label}"${v ? ` = ${v.traduction} (ex: ${v.exemple})` : ""}`;
-    } else {
-      const g = (cours.grammaire || []).find(x => x.titre === notion.label);
-      contexte = `GRAMMAIRE "${notion.label}"${g ? ` : ${g.explication} Exemples : ${(g.exemples || []).join(" / ")}` : ""}`;
-    }
+    const prompt = `Tu es un(e) ${profDe(matiere)} ludique. ${publicEleve(profil)} veut s'entraîner sur cette notion précise de ${NOMS_MATIERES[matiere]} :
+${ligneNotion(notion, cours)}${notion.type === "grammaire" ? `\nExemples du cours : ${((cours.grammaire || []).find(x => x.titre === notion.label)?.exemples || []).join(" / ")}` : ""}
 
-    const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut s'entraîner sur cette notion précise :
-${contexte}
+Génère 5 exercices progressifs (du plus simple au plus exigeant) uniquement sur cette notion, en mélangant les types.
+${matiere === "anglais" ? `Vocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) et des mots anglais très basiques. Aucun mot nouveau ou rare, y compris dans les mauvaises réponses.` : ""}
 
-Génère 5 exercices progressifs (du plus simple au plus exigeant) uniquement sur cette notion, en mélangant les types : au moins 1 "qcm", au moins 2 "trou" et au moins 1 "ordre".
-Vocabulaire autorisé : celui du cours de l'élève (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) et des mots anglais très basiques de niveau débutant. N'introduis aucun mot nouveau ou rare, y compris dans les mauvaises réponses.
-
-${FORMATS_EXOS_ANGLAIS}
+${formatsExos(matiere, profil)}
 
 Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) : { "exercices": [ ... ] }`;
-
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: "claude-opus-5-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const textBlock = response.content.find(b => b.type === "text");
-    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
-    const parsed = extractJsonAnglais(textBlock.text);
+    const parsed = await appelIA(prompt, 4096);
     return { exercices: parsed.exercices || [] };
   }
 );
 
-// Fiche pédagogique d'une chanson (sans reproduire les paroles : droits d'auteur).
+// Fiche pédagogique d'une chanson (anglais). Les paroles éventuelles sont collées par l'utilisateur ;
+// l'IA ne les reproduit ni ne les traduit intégralement.
 exports.ficheChansonAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180, invoker: "public" },
   async (request) => {
-    requireLucie(request);
+    const { eleve, profil } = contexteAppel(request, { matiereRequise: false });
     const id = String(request.data?.id || "").trim();
     const youtubeId = String(request.data?.youtubeId || "").trim();
     const paroles = typeof request.data?.paroles === "string" ? request.data.paroles.replace(/\r/g, "").trim().slice(0, 20000) : null;
     if (youtubeId && !/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) throw new HttpsError("invalid-argument", "Lien YouTube invalide.");
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Mise à jour d'une chanson existante : lien vidéo et/ou paroles collées par l'utilisateur.
     if (id) {
       const ref = db.collection("chansonsAnglais").doc(id);
       const snap = await ref.get();
       if (!snap.exists) throw new HttpsError("not-found", "Chanson introuvable.");
+      verifierEleve(snap.data(), eleve);
       const maj = {};
       if (request.data?.youtubeId !== undefined) maj.youtubeId = youtubeId;
       if (paroles !== null) {
         maj.paroles = paroles;
-        maj.annotations = paroles ? await annoterParolesAnglais(client, snap.data().titre, paroles) : [];
+        maj.annotations = paroles ? await annoterParolesAnglais(client, snap.data().titre, paroles, profil) : [];
       }
       await ref.update(maj);
       return { id };
@@ -485,7 +600,7 @@ exports.ficheChansonAnglais = onCall(
     const artiste = String(request.data?.artiste || "").trim().slice(0, 120);
     if (!titre) throw new HttpsError("invalid-argument", "Titre requis.");
 
-    const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut travailler son anglais avec la chanson « ${titre} »${artiste ? ` de ${artiste}` : ""}.
+    const prompt = `Tu es un(e) prof d'anglais ludique. ${publicEleve(profil)} veut travailler son anglais avec la chanson « ${titre} »${artiste ? ` de ${artiste}` : ""}.
 
 Prépare une fiche d'étude. CONTRAINTE ABSOLUE (droits d'auteur) : ne reproduis PAS les paroles. Pas de couplet, pas de refrain, pas de vers complet. Tu peux seulement citer des expressions isolées de 2 à 5 mots maximum.
 
@@ -495,10 +610,9 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
   "resume": "de quoi parle la chanson, en français, 3-4 phrases, ton sympa",
   "contexte": "1-2 phrases en français sur l'artiste/l'époque, si utile",
   "expressions": [ { "expression": "expression anglaise courte (2-5 mots) entendue dans la chanson", "sens": "traduction en français", "explication": "explication courte en français (grammaire ou usage)" } ],
-  "questions": [ { "type": "qcm", "question": "question EN ANGLAIS sur le sens ou les thèmes de la chanson", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "phrase courte en français" } ]
+  "questions": [ { "type": "qcm", "question": "${profil.niveau === "ce2" ? "question en français simple" : "question EN ANGLAIS"} sur le sens ou les thèmes de la chanson", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "phrase courte en français" } ]
 }
-6 à 8 expressions utiles pour une collégienne, 4 questions. Si tu ne connais pas cette chanson avec certitude, renvoie { "connue": false } et rien d'autre.`;
-
+6 à 8 expressions utiles, 4 questions. Si tu ne connais pas cette chanson avec certitude, renvoie { "connue": false } et rien d'autre.`;
     const response = await client.messages.create({
       model: "claude-opus-5-5",
       max_tokens: 4096,
@@ -510,22 +624,24 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
     if (fiche.connue === false && !paroles) throw new HttpsError("not-found", "La prof IA ne connaît pas assez cette chanson pour faire une fiche fiable.");
 
     const docRef = await db.collection("chansonsAnglais").add({
+      eleve, matiere: "anglais",
       titre, artiste, youtubeId,
       resume: fiche.resume || "", contexte: fiche.contexte || "",
       expressions: fiche.expressions || [], questions: fiche.questions || [],
       paroles: paroles || "",
-      annotations: paroles ? await annoterParolesAnglais(client, titre, paroles) : [],
+      annotations: paroles ? await annoterParolesAnglais(client, titre, paroles, profil) : [],
       dateAjout: new Date().toISOString(),
     });
     return { id: docRef.id };
   }
 );
 
-// Traduction d'un mot au clic (paroles, textes) — mise en cache par mot.
+// Traduction d'un mot anglais au clic — mise en cache par mot, partagée par la famille.
 exports.traduireMotAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 60, invoker: "public" },
   async (request) => {
-    requireLucie(request);
+    const uid = request.auth?.uid;
+    if (!uid || (uid !== PARENT_UID && !ELEVES[uid])) throw new HttpsError("permission-denied", "Accès réservé.");
     const mot = String(request.data?.mot || "").trim().toLowerCase().replace(/’/g, "'").slice(0, 40);
     const contexte = String(request.data?.contexte || "").trim().slice(0, 200);
     if (!/^[a-z][a-z'-]*$/.test(mot)) throw new HttpsError("invalid-argument", "Mot invalide.");
@@ -539,7 +655,7 @@ exports.traduireMotAnglais = onCall(
       max_tokens: 1024,
       output_config: { effort: "low" },
       messages: [{ role: "user", content: `Mot anglais : « ${mot} »${contexte ? `, rencontré dans : « ${contexte} »` : ""}.
-Pour une collégienne française, réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+Pour une élève française, réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
 { "traduction": "1 à 3 traductions françaises courtes, la plus courante d'abord", "nature": "nom, verbe, adjectif, adverbe, préposition, pronom…", "base": "si le mot est une forme conjuguée ou un pluriel, la forme de base (ex: went → go), sinon vide", "note": "une remarque utile très courte, ou vide" }` }],
     });
     const textBlock = response.content.find(b => b.type === "text");
@@ -553,10 +669,10 @@ Pour une collégienne française, réponds UNIQUEMENT avec un objet JSON (pas de
 
 // Annote des paroles FOURNIES PAR L'UTILISATEUR : expressions courtes repérées ligne par ligne,
 // sans traduction intégrale des vers (droits d'auteur).
-async function annoterParolesAnglais(client, titre, paroles) {
+async function annoterParolesAnglais(client, titre, paroles, profil) {
   const lignes = paroles.split("\n");
   const numerotees = lignes.map((l, i) => `${i}: ${l}`).join("\n");
-  const prompt = `Tu es un(e) prof d'anglais pour une collégienne française. Voici les paroles de « ${titre} » collées par l'élève, lignes numérotées :
+  const prompt = `Tu es un(e) prof d'anglais pour ${publicEleve(profil)}. Voici les paroles de « ${titre} » collées par l'élève, lignes numérotées :
 
 ${numerotees}
 
@@ -580,218 +696,176 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
     .map(a => ({ ligne: a.ligne, expression: String(a.expression), sens: String(a.sens || ""), explication: String(a.explication || "") }));
 }
 
-// Contrôle blanc sur un cours précis : 15 exercices couvrant ses notions, les plus faibles d'abord.
+// Contrôle blanc sur un cours précis : un exercice par notion, les plus faibles d'abord.
 exports.controleCoursAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 240, invoker: "public" },
   async (request) => {
-    requireLucie(request);
+    const { eleve, profil } = contexteAppel(request, { matiereRequise: false });
     const coursId = String(request.data?.coursId || "");
     const coursSnap = await db.collection("coursAnglais").doc(coursId).get();
     if (!coursSnap.exists) throw new HttpsError("not-found", "Cours introuvable.");
     const cours = coursSnap.data();
+    verifierEleve(cours, eleve);
+    const matiere = cours.matiere || "anglais";
+    const nbQuestions = profil.niveau === "ce2" ? 10 : 15;
     const progSnap = await db.collection("progressionAnglais").where("coursId", "==", coursId).get();
-    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const gram = toutes.filter(n => n.type === "grammaire");
-    const vocab = toutes.filter(n => n.type === "vocabulaire")
-      .sort((a, b) => (a.dernierResultat === false ? -1 : 0) - (b.dernierResultat === false ? -1 : 0) || (a.niveau || 0) - (b.niveau || 0) || Math.random() - .5)
-      .slice(0, Math.max(6, 15 - Math.min(gram.length, 7)));
-    const notions = [...gram.slice(0, 7), ...vocab].slice(0, 15);
+    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => n.eleve === eleve);
+    const faibles = (a, b) => (b.dernierResultat === false) - (a.dernierResultat === false) || (a.niveau || 0) - (b.niveau || 0) || Math.random() - .5;
+    const gram = toutes.filter(n => n.type === "grammaire").sort(faibles);
+    const vocab = toutes.filter(n => n.type === "vocabulaire").sort(faibles);
+    const nbGram = Math.min(gram.length, Math.ceil(nbQuestions / 2));
+    const notions = [...gram.slice(0, nbGram), ...vocab.slice(0, nbQuestions - nbGram)];
 
-    const lignes = notions.map(n => {
-      if (n.type === "vocabulaire") {
-        const v = (cours.vocabulaire || []).find(x => x.mot === n.label);
-        return `- [id:${n.id}] VOCABULAIRE "${n.label}"${v ? ` = ${v.traduction}` : ""}`;
-      }
-      const g = (cours.grammaire || []).find(x => x.titre === n.label);
-      return `- [id:${n.id}] GRAMMAIRE "${n.label}"${g ? ` : ${g.explication}` : ""}`;
-    }).join("\n");
+    const prompt = `Tu es un(e) ${profDe(matiere)} qui prépare un CONTRÔLE BLANC pour ${publicEleve(profil)}, sur le cours de ${NOMS_MATIERES[matiere]} « ${cours.titre} ». Notions à évaluer :
+${notions.map(n => ligneNotion(n, cours)).join("\n")}
+${matiere === "anglais" ? `\nVocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) + mots anglais très basiques.` : ""}
+Génère exactement un exercice par notion ci-dessus, du plus simple au plus difficile, au niveau d'une vraie interro.
 
-    const prompt = `Tu es un(e) prof d'anglais qui prépare un CONTRÔLE BLANC pour une collégienne française, sur le cours « ${cours.titre} ». Notions à évaluer :
-${lignes}
-
-Vocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) + mots anglais très basiques.
-Génère exactement un exercice par notion ci-dessus, du plus simple au plus difficile, niveau d'une vraie interro de collège. Pour la grammaire, privilégie "trou" et "ordre" ; pour le vocabulaire, "trou" (traduction FR → EN dans la consigne autorisée) et "qcm".
-
-${FORMATS_EXOS_ANGLAIS}
+${formatsExos(matiere, profil)}
 
 Chaque exercice a en plus "notionId" = l'id exact donné ci-dessus. Réponds UNIQUEMENT avec un objet JSON : { "exercices": [ ... ] }`;
-
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: "claude-opus-5-5",
-      max_tokens: 8000,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const textBlock = response.content.find(b => b.type === "text");
-    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
-    const { exercices = [] } = extractJsonAnglais(textBlock.text);
-    const ids = new Set(notions.map(n => n.id));
-    const reparer = brut => {
-      const s = String(brut || "").replace(/^\[?\s*id\s*:\s*/i, "").replace(/\]$/, "").trim();
-      return ids.has(s) ? s : (notions.find(n => s && (s.includes(n.id) || n.id.includes(s)))?.id || null);
-    };
+    const { exercices = [] } = await appelIA(prompt, 8000);
+    const reparer = reparateurIds(notions);
     return { titre: cours.titre, exercices: exercices.map(e => ({ ...e, notionId: reparer(e.notionId) })) };
   }
 );
 
-// Récap hebdomadaire envoyé au parent.
-const RECAP_ANGLAIS_DESTINATAIRE = "gbornand@gmail.com";
-
-async function construireRecapAnglais() {
+// Récap hebdomadaire envoyé au parent : une partie par enfant, une ligne par matière.
+async function construireRecapEleve(eleve) {
   const depuis = new Date(Date.now() - 7 * 86400000).toISOString();
   const [repSnap, seanceSnap, progSnap] = await Promise.all([
-    db.collection("reponsesAnglais").where("at", ">=", depuis).get(),
-    db.collection("seancesAnglais").where("finieLe", ">=", depuis).get(),
-    db.collection("progressionAnglais").get(),
+    db.collection("reponsesAnglais").where("eleve", "==", eleve).get(),
+    db.collection("seancesAnglais").where("eleve", "==", eleve).get(),
+    db.collection("progressionAnglais").where("eleve", "==", eleve).get(),
   ]);
-  const reponses = repSnap.docs.map(d => d.data());
-  const seances = seanceSnap.docs.map(d => d.data());
+  const reponses = repSnap.docs.map(d => d.data()).filter(r => r.at >= depuis);
+  const seances = seanceSnap.docs.map(d => d.data()).filter(s => (s.finieLe || "") >= depuis);
   const progression = progSnap.docs.map(d => d.data());
   const jours = [...new Set(reponses.map(r => r.date))].sort();
   let minutes = 0;
   for (const j of jours) {
     const heures = reponses.filter(r => r.date === j).map(r => Date.parse(r.at)).sort((a, b) => a - b);
-    minutes += Math.min(60, Math.max(2, Math.round((heures[heures.length - 1] - heures[0]) / 60000)));
+    minutes += Math.min(90, Math.max(2, Math.round((heures[heures.length - 1] - heures[0]) / 60000)));
   }
   const bonnes = reponses.filter(r => r.correct).length;
-  const coincent = progression.filter(n => n.dernierResultat === false).map(n => n.label).slice(0, 10);
-  const maitrisees = progression.filter(n => (n.niveau || 0) >= 4).length;
-  const seancesJour = seances.filter(s => !s.type || s.type === "jour");
+  const parMatiere = ELEVES[eleve].matieres.map(m => {
+    const rep = reponses.filter(r => (r.matiere || "anglais") === m);
+    const prog = progression.filter(n => (n.matiere || "anglais") === m);
+    return {
+      matiere: m, reponses: rep.length,
+      reussite: rep.length ? Math.round(rep.filter(r => r.correct).length / rep.length * 100) : null,
+      maitrisees: prog.filter(n => (n.niveau || 0) >= 4).length, total: prog.length,
+      coincent: prog.filter(n => n.dernierResultat === false).map(n => n.label).slice(0, 6),
+    };
+  });
   return {
-    joursActifs: jours.length, minutes, reponses: reponses.length,
+    prenom: ELEVES[eleve].prenom, joursActifs: jours.length, minutes, reponses: reponses.length,
     reussite: reponses.length ? Math.round(bonnes / reponses.length * 100) : 0,
-    seances: seancesJour.length, parties: seances.filter(s => s.type === "vitesse").length,
-    moyenneSeance: seancesJour.length ? `${Math.round(seancesJour.reduce((s, x) => s + x.score / Math.max(1, x.total), 0) / seancesJour.length * 100)} %` : "—",
-    maitrisees, totalNotions: progression.length, coincent,
+    seances: seances.filter(s => !s.type || s.type === "jour").length, parMatiere,
   };
 }
 
-function htmlRecapAnglais(r) {
-  const ligne = (label, val) => `<tr><td style="padding:8px 0;color:#6a6690;border-bottom:1px solid #eee;">${label}</td><td style="padding:8px 0;text-align:right;font-weight:800;color:#2d2a4a;border-bottom:1px solid #eee;">${val}</td></tr>`;
-  return `<div style="font-family:Segoe UI,Arial,sans-serif;background:#f4f0ff;padding:24px;">
-  <div style="max-width:520px;margin:auto;background:#fff;border-radius:20px;overflow:hidden;">
-    <div style="background:linear-gradient(135deg,#5b6ee8,#a152d6);color:#fff;padding:22px 24px;">
-      <div style="font-size:13px;opacity:.85;">🦉 English Time · récap de la semaine</div>
-      <div style="font-size:22px;font-weight:900;margin-top:4px;">${r.joursActifs} jour${r.joursActifs > 1 ? "s" : ""} d'anglais sur 7</div>
-    </div>
-    <div style="padding:20px 24px;">
-      <table style="width:100%;border-collapse:collapse;font-size:15px;">
-        ${ligne("Temps estimé", `≈ ${r.minutes} min`)}
-        ${ligne("Séances du jour terminées", r.seances)}
-        ${ligne("Score moyen des séances", r.moyenneSeance)}
-        ${ligne("Parties de jeu de vitesse", r.parties)}
-        ${ligne("Réponses données", `${r.reponses} (${r.reussite} % justes)`)}
-        ${ligne("Notions maîtrisées", `${r.maitrisees} / ${r.totalNotions}`)}
+function htmlRecapRevisions(recaps) {
+  const sections = recaps.map(r => `
+    <div style="padding:20px 24px;border-top:1px solid #eee;">
+      <div style="font-size:19px;font-weight:900;color:#2d2a4a;">${escapeHtml(r.prenom)} · ${r.joursActifs} jour${r.joursActifs > 1 ? "s" : ""} sur 7</div>
+      <div style="color:#6a6690;font-size:14px;margin-top:4px;">≈ ${r.minutes} min · ${r.seances} séance${r.seances > 1 ? "s" : ""} terminée${r.seances > 1 ? "s" : ""} · ${r.reponses} réponses (${r.reussite} % justes)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:12px;">
+        ${r.parMatiere.map(m => `<tr>
+          <td style="padding:7px 0;border-bottom:1px solid #f1eefc;font-weight:800;color:#5b6ee8;text-transform:capitalize;">${NOMS_MATIERES[m.matiere]}</td>
+          <td style="padding:7px 0;border-bottom:1px solid #f1eefc;color:#2d2a4a;">${m.reponses ? `${m.reponses} rép. · ${m.reussite} %` : "pas travaillé"}</td>
+          <td style="padding:7px 0;border-bottom:1px solid #f1eefc;text-align:right;color:#6a6690;">${m.maitrisees}/${m.total} maîtrisées</td>
+        </tr>${m.coincent.length ? `<tr><td colspan="3" style="padding:2px 0 8px;font-size:12px;color:#c0392b;">À reprendre : ${m.coincent.map(escapeHtml).join(" · ")}</td></tr>` : ""}`).join("")}
       </table>
-      ${r.coincent.length ? `<div style="margin-top:18px;font-weight:800;color:#c0392b;">À reprendre</div>
-      <div style="margin-top:6px;color:#2d2a4a;font-size:14px;line-height:1.6;">${r.coincent.map(escapeHtml).join(" · ")}</div>` : ""}
-      <a href="https://anglais-leoluce.web.app" style="display:inline-block;margin-top:20px;background:#5b6ee8;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px;">Ouvrir English Time</a>
+    </div>`).join("");
+  return `<div style="font-family:Segoe UI,Arial,sans-serif;background:#f4f0ff;padding:24px;">
+  <div style="max-width:560px;margin:auto;background:#fff;border-radius:20px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#5b6ee8,#a152d6);color:#fff;padding:22px 24px;">
+      <div style="font-size:13px;opacity:.85;">🦉 Mes révisions · récap de la semaine</div>
+      <div style="font-size:22px;font-weight:900;margin-top:4px;">${recaps.map(r => escapeHtml(r.prenom)).join(" & ")}</div>
     </div>
+    ${sections}
+    <div style="padding:18px 24px 24px;"><a href="https://anglais-leoluce.web.app" style="display:inline-block;background:#5b6ee8;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px;">Ouvrir Mes révisions</a></div>
   </div></div>`;
 }
 
-async function envoyerRecapAnglais(sujetPrefixe = "") {
-  const r = await construireRecapAnglais();
+async function envoyerRecapRevisions(sujetPrefixe = "") {
+  const recaps = await Promise.all(Object.keys(ELEVES).map(construireRecapEleve));
   await transporter().sendMail({
-    from: `"English Time" <${SMTP_USER}>`,
-    to: RECAP_ANGLAIS_DESTINATAIRE,
-    subject: `${sujetPrefixe}🦉 Anglais de Lucie : ${r.joursActifs} jour${r.joursActifs > 1 ? "s" : ""} sur 7, ${r.reussite} % de réussite`,
-    html: htmlRecapAnglais(r),
+    from: `"Mes révisions" <${SMTP_USER}>`,
+    to: RECAP_DESTINATAIRE,
+    subject: `${sujetPrefixe}🦉 Révisions de la semaine : ${recaps.map(r => `${r.prenom} ${r.joursActifs}/7 j`).join(", ")}`,
+    html: htmlRecapRevisions(recaps),
   });
-  return r;
+  return recaps;
 }
 
 exports.recapAnglaisHebdo = onSchedule(
   { schedule: "0 18 * * 0", timeZone: "Europe/Paris", region: "europe-west1", secrets: [SMTP_PASS] },
-  async () => { await envoyerRecapAnglais(); }
+  async () => { await envoyerRecapRevisions(); }
 );
 
 exports.recapAnglaisTest = onCall(
   { region: "europe-west1", secrets: [SMTP_PASS], invoker: "public" },
   async (request) => {
-    requireLucie(request);
-    const r = await envoyerRecapAnglais("[APERÇU] ");
-    return { ok: true, destinataire: RECAP_ANGLAIS_DESTINATAIRE, ...r };
+    if (request.auth?.uid !== PARENT_UID) throw new HttpsError("permission-denied", "Réservé au parent.");
+    await envoyerRecapRevisions("[APERÇU] ");
+    return { ok: true, destinataire: RECAP_DESTINATAIRE };
   }
 );
 
-// Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
-// dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
+// Génère (ou renvoie si déjà faite aujourd'hui) la séance du jour d'un élève dans une matière.
 exports.genererExercicesDuJour = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180 },
   async (request) => {
-    requireLucie(request);
+    const { eleve, matiere, profil } = contexteAppel(request);
     const today = todayISOAnglais();
-    const existingRef = db.collection("exercicesAnglais").doc(today);
+    const existingRef = db.collection("exercicesAnglais").doc(`${eleve}_${matiere}_${today}`);
     const existing = await existingRef.get();
-    if (existing.exists && existing.data().version === 3 && !request.data?.regenerer) {
-      return existing.data();
-    }
+    if (existing.exists && !request.data?.regenerer) return existing.data();
 
-    let dueSnap = await db.collection("progressionAnglais")
-      .where("prochaineDate", "<=", today)
-      .orderBy("prochaineDate")
-      .limit(500).get();
-    if (dueSnap.empty) {
-      dueSnap = await db.collection("progressionAnglais").orderBy("niveau").limit(30).get();
-    }
-    if (dueSnap.empty) {
-      throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
-    }
+    const progSnap = await db.collection("progressionAnglais").where("eleve", "==", eleve).get();
+    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => (n.matiere || "anglais") === matiere);
+    if (!toutes.length) throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
+    let candidates = toutes.filter(n => (n.prochaineDate || "") <= today);
+    if (!candidates.length) candidates = [...toutes].sort((a, b) => (a.niveau || 0) - (b.niveau || 0)).slice(0, 30);
 
-    // Priorité : notions ratées à la dernière réponse, puis jamais vues, puis les plus faibles.
+    // Priorité : ratées à la dernière réponse, puis jamais vues, puis les plus faibles ; séance équilibrée.
     const rang = n => (n.dernierResultat === false ? 0 : n.dernierVu ? 2 : 1);
-    const candidates = dueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     for (let i = candidates.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
     candidates.sort((a, b) => rang(a) - rang(b) || (a.niveau || 0) - (b.niveau || 0));
-    // Séance équilibrée : 5 mots de vocabulaire + 3 règles de grammaire, complétée par l'autre type si l'un manque.
-    const vocabDue = candidates.filter(n => n.type === "vocabulaire");
-    const gramDue = candidates.filter(n => n.type === "grammaire");
-    let notions = [...vocabDue.slice(0, 5), ...gramDue.slice(0, 3)];
-    if (notions.length < 8) {
-      const restants = candidates.filter(n => !notions.includes(n));
-      notions = [...notions, ...restants.slice(0, 8 - notions.length)];
+    const [nbSavoir, nbRegles] = profil.niveau === "ce2" ? [4, 2] : [5, 3];
+    let notions = [...candidates.filter(n => n.type === "vocabulaire").slice(0, nbSavoir), ...candidates.filter(n => n.type === "grammaire").slice(0, nbRegles)];
+    if (notions.length < nbSavoir + nbRegles) {
+      notions = [...notions, ...candidates.filter(n => !notions.includes(n)).slice(0, nbSavoir + nbRegles - notions.length)];
     }
     const coursIds = [...new Set(notions.map(n => n.coursId))];
     const coursDocs = await Promise.all(coursIds.map(id => db.collection("coursAnglais").doc(id).get()));
     const coursById = Object.fromEntries(coursDocs.filter(d => d.exists).map(d => [d.id, d.data()]));
 
-    const lignes = notions.map(n => {
-      const cours = coursById[n.coursId];
-      if (n.type === "vocabulaire") {
-        const v = (cours?.vocabulaire || []).find(x => x.mot === n.label);
-        return `- [id:${n.id}] VOCABULAIRE "${n.label}"${v ? ` = ${v.traduction} (ex: ${v.exemple})` : ""}`;
-      }
-      const g = (cours?.grammaire || []).find(x => x.titre === n.label);
-      return `- [id:${n.id}] GRAMMAIRE "${n.label}"${g ? ` : ${g.explication}` : ""}`;
-    }).join("\n");
+    let cadre = "";
+    if (matiere === "anglais") {
+      cadre = `\n\nVOCABULAIRE DÉJÀ APPRIS EN CLASSE (le seul autorisé en plus des mots anglais très basiques) :\n${(await vocabAnglaisConnu(eleve)).join(", ")}\nRÈGLE STRICTE : aucun mot nouveau ou rare, y compris dans le texte et dans les mauvaises réponses.`;
+    }
 
-    const tousCours = await db.collection("coursAnglais").get();
-    const vocabConnu = [...new Set(tousCours.docs.flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
-    const cadreVocab = `\n\nVOCABULAIRE DÉJÀ APPRIS EN CLASSE (le seul autorisé en plus des mots anglais très basiques de niveau débutant — articles, pronoms, verbes et noms du quotidien) :\n${vocabConnu.join(", ")}\n\nRÈGLE STRICTE : n'introduis AUCUN mot de vocabulaire nouveau ou rare qui ne soit ni dans cette liste ni basique, y compris dans le texte de compréhension et dans les mauvaises réponses des QCM.`;
+    const prompt = `Tu es un(e) ${profDe(matiere)} ludique qui prépare une séance quotidienne de ${profil.niveau === "ce2" ? "8 à 10" : "10 à 15"} minutes en ${NOMS_MATIERES[matiere]} pour ${publicEleve(profil)}. Notions à travailler aujourd'hui (certaines jamais testées, d'autres déjà ratées une fois) :
+${notions.map(n => ligneNotion(n, coursById[n.coursId])).join("\n")}${cadre}
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: "claude-opus-5-5",
-      max_tokens: 8000,
-      messages: [{ role: "user", content: GENERATION_PROMPT_HEADER_ANGLAIS + lignes + cadreVocab + GENERATION_PROMPT_FOOTER_ANGLAIS }],
-    });
-    const textBlock = response.content.find(b => b.type === "text");
-    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
-    const parsed = extractJsonAnglais(textBlock.text);
+Génère la séance. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format :
+{
+  ${blocDecouverte(matiere, profil)},
+  "vocabulaire": [ { "notionId": "<id exact donné ci-dessus>", ...un exercice } ],
+  "grammaire": [ { "notionId": "<id>", ...un exercice } ]
+}
+"vocabulaire" = un exercice par notion « À SAVOIR » ; "grammaire" = un exercice par notion « RÈGLE », « MÉTHODE » ou « À COMPRENDRE ». Pas plus d'un exercice par notion. Ton enjoué, jamais scolaire-ennuyeux.
 
-    // L'IA recopie parfois l'id avec « id: » ou des crochets : on le ramène à un id réel, sinon le suivi est perdu.
-    const idsValides = new Set(notions.map(n => n.id));
-    const reparerId = (brut) => {
-      const s = String(brut || "").replace(/^\[?\s*id\s*:\s*/i, "").replace(/\]$/, "").trim();
-      if (idsValides.has(s)) return s;
-      return notions.find(n => s && (s.includes(n.id) || n.id.includes(s)))?.id || null;
-    };
-    const avecIds = (items) => (items || []).map(it => ({ ...it, notionId: reparerId(it.notionId) }));
+${formatsExos(matiere, profil)}`;
+    const parsed = await appelIA(prompt, 8000);
+    const reparer = reparateurIds(notions);
+    const avecIds = items => (items || []).map(it => ({ ...it, notionId: reparer(it.notionId) }));
 
     const sessionDoc = {
-      version: 3,
-      date: today,
+      version: 4, eleve, matiere, date: today,
       comprehensionEcrite: parsed.comprehensionEcrite || null,
       vocabulaire: avecIds(parsed.vocabulaire),
       grammaire: avecIds(parsed.grammaire),

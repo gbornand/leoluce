@@ -410,6 +410,17 @@ body {
 .activite-day { font-size: 10px; color: #a39ecf; text-align: center; margin-top: 3px; line-height: 1.2; min-height: 24px; }
 .activite-col.auj .activite-day { color: #5b6ee8; font-weight: 900; }
 
+/* ÉLÈVE & MATIÈRE */
+.contexte-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e6e1fb; position: sticky; top: 61px; z-index: 4; }
+.contexte-bar:empty { display: none; }
+.ctx-enfants { display: flex; gap: 4px; background: #f0ecff; border-radius: 999px; padding: 3px; }
+.ctx-enfant { border: none; background: none; border-radius: 999px; padding: 6px 14px; font-weight: 800; color: #6a6690; cursor: pointer; font-size: 13px; }
+.ctx-enfant.active { background: #2d2a4a; color: #fff; }
+.ctx-matieres { display: flex; gap: 6px; overflow-x: auto; flex: 1; }
+.ctx-matiere { border: 2px solid #ece8fc; background: #fff; border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 13px; color: #4a4670; cursor: pointer; white-space: nowrap; }
+.ctx-matiere.active { border-color: #8f6fe8; background: #f4f0ff; color: #5b6ee8; }
+.tab-btn[hidden], .train-card[hidden] { display: none; }
+
 /* SÉRIE & BADGES */
 .streak { font-weight: 900; color: #f04e7a; background: #fff0f4; border-radius: 999px; padding: 6px 12px; font-size: 14px; white-space: nowrap; }
 .streak-attente { opacity: .55; }

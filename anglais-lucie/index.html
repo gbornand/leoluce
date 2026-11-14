@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>English Time</title>
+<title>Mes révisions</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#5b6ee8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="English">
+<meta name="apple-mobile-web-app-title" content="Révisions">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,11 +22,7 @@
   <span class="halo halo-2"></span>
   <div class="login-card">
     <div class="login-emoji-badge"><span class="login-emoji">🦉</span></div>
-    <h1>English Time</h1>
-    <div class="flags" aria-hidden="true">
-      <svg class="flag" viewBox="0 0 60 30"><clipPath id="uk-c"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#uk-c)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#uk-t)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
-      <svg class="flag" viewBox="0 0 7410 3900"><rect width="7410" height="3900" fill="#b22234"/><path d="M0,450H7410m0,600H0m0,600H7410m0,600H0m0,600H7410m0,600H0" stroke="#fff" stroke-width="300"/><rect width="2964" height="2100" fill="#3c3b6e"/><g fill="#fff"><g id="us-s18"><g id="us-s9"><g id="us-s5"><g id="us-s4"><path id="us-s" d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z"/><use href="#us-s" y="420"/><use href="#us-s" y="840"/><use href="#us-s" y="1260"/></g><use href="#us-s" y="1680"/></g><use href="#us-s4" x="247" y="210"/></g><use href="#us-s9" x="494"/></g><use href="#us-s18" x="988"/><use href="#us-s9" x="1976"/><use href="#us-s5" x="2470"/></g></svg>
-    </div>
+    <h1>Mes révisions</h1>
     <p class="login-sub">10 minutes par jour, c'est tout.</p>
     <form id="login-form">
       <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
@@ -47,7 +43,7 @@
 <!-- APP -->
 <section id="screen-app" class="screen" hidden>
   <header class="topbar">
-    <div class="topbar-title">🦉 English Time</div>
+    <div class="topbar-title">🦉 Mes révisions</div>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
       <button class="tab-btn" data-tab="add">+ Un cours</button>
@@ -59,6 +55,7 @@
     <button id="btn-logout" class="btn-ghost">↪</button>
   </header>
 
+  <div id="contexte-bar" class="contexte-bar"></div>
   <main class="content">
 
     <!-- ONGLET AUJOURD'HUI -->
@@ -74,8 +71,8 @@
         </div>
 
         <section class="exo-block" id="block-comprehension">
-          <h2>🎧 Écoute &amp; compréhension</h2>
-          <p class="muted">Écoute d'abord, réponds aux questions. Lis le texte seulement si tu bloques.</p>
+          <h2 id="ce-titre">🎧 Écoute &amp; compréhension</h2>
+          <p class="muted" id="ce-consigne">Écoute d'abord, réponds aux questions. Lis le texte seulement si tu bloques.</p>
           <div class="audio-player">
             <button id="btn-play" class="audio-play" aria-label="Écouter">▶</button>
             <div class="audio-info">
@@ -92,12 +89,12 @@
         </section>
 
         <section class="exo-block" id="block-vocabulaire">
-          <h2>🔤 Vocabulaire</h2>
+          <h2 id="titre-bloc-savoir">🔤 Vocabulaire</h2>
           <div id="vocab-questions"></div>
         </section>
 
         <section class="exo-block" id="block-grammaire">
-          <h2>📐 Grammaire</h2>
+          <h2 id="titre-bloc-regle">📐 Grammaire</h2>
           <div id="gram-questions"></div>
         </section>
 
@@ -128,7 +125,7 @@
         <button class="train-card tc-dictee" id="btn-dictee"><span class="tc-emoji">✍️</span><span class="tc-title">Dictée</span><span class="tc-sub">Écoute une phrase et écris-la</span></button>
         <button class="train-card tc-controle" id="btn-controle"><span class="tc-emoji">📝</span><span class="tc-title">Contrôle blanc</span><span class="tc-sub">Révise un cours précis avant l'interro</span></button>
       </div>
-      <div class="recap-parent">
+      <div class="recap-parent" id="recap-parent" hidden>
         <span>📧 Récap hebdo envoyé chaque dimanche à 18 h</span>
         <button class="btn-ghost-small" id="btn-recap-test">Envoyer un aperçu maintenant</button>
         <span class="muted" id="recap-status"></span>

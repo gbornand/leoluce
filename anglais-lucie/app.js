@@ -83,13 +83,78 @@ document.getElementById("btn-forgot-password").addEventListener("click", async (
 
 document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
 
-onAuthStateChanged(auth, (user) => {
+// ------------------------------------------------------------
+// ÉLÈVES & MATIÈRES
+// ------------------------------------------------------------
+const MATIERES_UI = {
+  anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
+  francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
+  maths: { nom: "Maths", emoji: "🧮", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
+  physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
+  svt: { nom: "SVT", emoji: "🌿", savoir: "🌿 Notions & définitions", regle: "🔬 À comprendre", savoirCourt: "notions", regleCourt: "à comprendre" },
+  histoire: { nom: "Histoire-géo", emoji: "🌍", savoir: "📅 Repères & définitions", regle: "🏛️ À comprendre", savoirCourt: "repères", regleCourt: "à comprendre" },
+};
+
+let profil = null;
+let eleveCourant = null;
+let matiereCourante = null;
+
+function eleveInfo() { return profil?.eleves.find(e => e.uid === eleveCourant); }
+function ui() { return MATIERES_UI[matiereCourante] || MATIERES_UI.anglais; }
+function lireLocal(cle) { try { return localStorage.getItem(cle); } catch { return null; } }
+function ecrireLocal(cle, val) { try { localStorage.setItem(cle, val); } catch {} }
+
+function choisirContexte(eleve, matiere) {
+  eleveCourant = eleve;
+  const info = eleveInfo();
+  matiereCourante = info.matieres.includes(matiere) ? matiere : (lireLocal(`matiere-${eleve}`) && info.matieres.includes(lireLocal(`matiere-${eleve}`)) ? lireLocal(`matiere-${eleve}`) : info.matieres[0]);
+  ecrireLocal("eleve-courant", eleve);
+  ecrireLocal(`matiere-${eleve}`, matiereCourante);
+  notionsById = {};
+  coursById = {};
+  renderContexte();
+  appliquerMatiere();
+  loadToday();
+  loadNotions();
+  if (!document.getElementById("tab-chansons").hidden) loadChansons();
+}
+
+function renderContexte() {
+  const bar = document.getElementById("contexte-bar");
+  const enfants = profil.role === "parent"
+    ? `<div class="ctx-enfants">${profil.eleves.map(e => `<button class="ctx-enfant${e.uid === eleveCourant ? " active" : ""}" data-eleve="${esc(e.uid)}">${esc(e.prenom)}</button>`).join("")}</div>`
+    : "";
+  bar.innerHTML = `${enfants}<div class="ctx-matieres">${eleveInfo().matieres.map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
+  bar.querySelectorAll("[data-eleve]").forEach(b => b.addEventListener("click", () => choisirContexte(b.dataset.eleve, null)));
+  bar.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => choisirContexte(eleveCourant, b.dataset.matiere)));
+}
+
+function appliquerMatiere() {
+  const anglais = matiereCourante === "anglais";
+  const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
+  tabChansons.hidden = !anglais;
+  if (!anglais && !document.getElementById("tab-chansons").hidden) document.querySelector('.tab-btn[data-tab="today"]').click();
+  document.getElementById("btn-pron").hidden = !anglais;
+  document.getElementById("btn-dictee").hidden = !["anglais", "francais"].includes(matiereCourante);
+  document.getElementById("recap-parent").hidden = profil.role !== "parent";
+  document.getElementById("titre-bloc-savoir").textContent = ui().savoir;
+  document.getElementById("titre-bloc-regle").textContent = ui().regle;
+}
+
+onAuthStateChanged(auth, async (user) => {
   document.getElementById("screen-login").hidden = !!user;
   document.getElementById("screen-app").hidden = !user;
-  if (user) {
-    loadToday();
-    loadNotions();
+  if (!user) { profil = null; return; }
+  try {
+    const initialiserRevisions = httpsCallable(functions, "initialiserRevisions", { timeout: 300000 });
+    profil = await initialiserRevisions({}).then(r => r.data);
+  } catch (err) {
+    console.error(err);
+    document.getElementById("today-loading").textContent = "Ce compte n'a pas accès aux révisions.";
+    return;
   }
+  const memo = lireLocal("eleve-courant");
+  choisirContexte(profil.eleves.some(e => e.uid === memo) ? memo : profil.eleves[0].uid, null);
 });
 
 // ------------------------------------------------------------
@@ -112,29 +177,39 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // AUJOURD'HUI — exercices du jour
 // ------------------------------------------------------------
 let notionsById = {};
+let coursById = {};
 let score = { bonnes: 0, total: 0 };
+
+function idSeanceDuJour() { return `${eleveCourant}_${matiereCourante}_${todayISO()}`; }
+
+async function genererSeance(regenerer) {
+  const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
+  return genererExercicesDuJour({ eleve: eleveCourant, matiere: matiereCourante, regenerer }).then(r => r.data);
+}
 
 async function loadToday() {
   document.getElementById("today-loading").hidden = false;
+  document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
   document.getElementById("today-empty").hidden = true;
   document.getElementById("today-content").hidden = true;
+  const contexte = idSeanceDuJour();
 
   try {
-    const snap = await getDoc(doc(db, "exercicesAnglais", todayISO()));
     let data;
-    if (snap.exists() && snap.data().version === 3) {
-      data = snap.data();
-    } else {
-      const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
-      data = await genererExercicesDuJour({}).then(r => r.data);
-    }
+    try {
+      const snap = await getDoc(doc(db, "exercicesAnglais", contexte));
+      if (snap.exists()) data = snap.data();
+    } catch {}
+    if (!data) data = await genererSeance(false);
+    if (contexte !== idSeanceDuJour()) return;
     renderToday(data);
   } catch (err) {
+    if (contexte !== idSeanceDuJour()) return;
     document.getElementById("today-loading").hidden = true;
     document.getElementById("today-empty").hidden = false;
     document.getElementById("today-empty").textContent =
       err?.message?.includes("Aucune notion")
-        ? "Pas encore de notion à réviser aujourd'hui — va dans + Un cours pour ajouter ton premier cours 📸"
+        ? `Pas encore de cours de ${ui().nom.toLowerCase()} — va dans + Un cours pour ajouter le premier 📸`
         : "Oups, impossible de charger la séance du jour. Réessaie un peu plus tard.";
   }
 }
@@ -155,13 +230,23 @@ function renderToday(data) {
   }
 
   const ceBlock = document.getElementById("block-comprehension");
-  if (data.comprehensionEcrite?.texte) {
+  const ce = data.comprehensionEcrite;
+  if (ce?.texte) {
     ceBlock.hidden = false;
-    texteEcoute = data.comprehensionEcrite.texte;
-    document.getElementById("ce-texte").innerHTML = motsCliquables(texteEcoute);
-    document.getElementById("ce-texte").hidden = true;
-    document.getElementById("btn-show-text").hidden = false;
-    renderTodayList("ce-questions", data.comprehensionEcrite.questions || [], false);
+    const mode = ce.mode || "ecoute";
+    const ecoute = mode === "ecoute";
+    texteEcoute = ce.texte;
+    langueEcoute = matiereCourante === "anglais" ? "en" : "fr";
+    const icone = { ecoute: "🎧", lecture: "📖", probleme: "🧩" }[mode] || "📖";
+    document.getElementById("ce-titre").textContent = `${icone} ${ce.titre || (ecoute ? "Écoute & compréhension" : "Lecture")}`;
+    document.getElementById("ce-consigne").textContent = ecoute
+      ? "Écoute d'abord, réponds aux questions. Lis le texte seulement si tu bloques."
+      : mode === "probleme" ? "Lis bien l'énoncé, puis réponds." : "Lis le texte, puis réponds aux questions.";
+    document.getElementById("ce-texte").innerHTML = matiereCourante === "anglais" ? motsCliquables(texteEcoute) : esc(texteEcoute);
+    document.getElementById("ce-texte").hidden = ecoute;
+    document.getElementById("btn-show-text").hidden = !ecoute;
+    document.querySelector(".audio-player").hidden = !(ecoute || matiereCourante === "francais");
+    renderTodayList("ce-questions", ce.questions || [], false);
   } else {
     ceBlock.hidden = true;
   }
@@ -171,14 +256,18 @@ function renderToday(data) {
 
 // ÉCOUTE : synthèse vocale du navigateur, voix anglaise (gratuit, hors ligne selon l'appareil).
 let texteEcoute = "";
+let langueEcoute = "en";
 let vitesseEcoute = 0.95;
 
-function voixAnglaise() {
+function voixPour(langue) {
   const voix = speechSynthesis.getVoices();
-  return voix.find(v => /en-GB/i.test(v.lang) && /google|natural|online/i.test(v.name))
-    || voix.find(v => /en-GB/i.test(v.lang))
-    || voix.find(v => /^en/i.test(v.lang));
+  const code = langue === "fr" ? "fr-FR" : "en-GB";
+  return voix.find(v => v.lang === code && /google|natural|online/i.test(v.name))
+    || voix.find(v => v.lang === code)
+    || voix.find(v => v.lang.toLowerCase().startsWith(langue));
 }
+
+function voixAnglaise() { return voixPour("en"); }
 
 function majBoutonEcoute(enCours) {
   document.getElementById("btn-play").textContent = enCours ? "❚❚" : "▶";
@@ -196,9 +285,9 @@ document.getElementById("btn-play").addEventListener("click", () => {
     return;
   }
   const u = new SpeechSynthesisUtterance(texteEcoute);
-  const v = voixAnglaise();
+  const v = voixPour(langueEcoute);
   if (v) u.voice = v;
-  u.lang = v?.lang || "en-GB";
+  u.lang = v?.lang || (langueEcoute === "fr" ? "fr-FR" : "en-GB");
   u.rate = vitesseEcoute;
   u.onend = () => majBoutonEcoute(false);
   u.onerror = () => majBoutonEcoute(false);
@@ -244,8 +333,8 @@ async function finSeance() {
   const resultat = { score: score.bonnes, total: score.total, erreurs: score.erreurs, finieLe: new Date().toISOString() };
   afficherBilan(resultat);
   try {
-    await addDoc(collection(db, "seancesAnglais"), { type: "jour", date: todayISO(), ...resultat });
-    await updateDoc(doc(db, "exercicesAnglais", todayISO()), { terminee: true, resultat });
+    await addDoc(collection(db, "seancesAnglais"), { type: "jour", eleve: eleveCourant, matiere: matiereCourante, date: todayISO(), ...resultat });
+    await updateDoc(doc(db, "exercicesAnglais", idSeanceDuJour()), { terminee: true, resultat });
   } catch (err) {
     console.error("Enregistrement séance", err);
   }
@@ -281,9 +370,7 @@ document.getElementById("btn-autre-seance").addEventListener("click", async (e) 
   btn.disabled = true;
   btn.textContent = "Préparation… ✍️";
   try {
-    const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
-    const data = await genererExercicesDuJour({ regenerer: true }).then(r => r.data);
-    renderToday(data);
+    renderToday(await genererSeance(true));
   } catch (err) {
     console.error(err);
   } finally {
@@ -297,9 +384,7 @@ async function nouvelleSeance() {
   btn.disabled = true;
   btn.textContent = "La prof IA prépare une nouvelle séance… ✍️";
   try {
-    const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
-    const data = await genererExercicesDuJour({ regenerer: true }).then(r => r.data);
-    renderToday(data);
+    renderToday(await genererSeance(true));
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
     console.error(err);
@@ -309,7 +394,11 @@ async function nouvelleSeance() {
 }
 
 function normaliser(s) {
-  return String(s || "").toLowerCase().replace(/[’`]/g, "'").replace(/[.,!?;:"]/g, "").replace(/\s+/g, " ").trim();
+  return String(s || "").toLowerCase().replace(/[’`]/g, "'")
+    .replace(/(\d)[.,](\d)/g, "$1§$2")
+    .replace(/[.,!?;:"]/g, "")
+    .replace(/§/g, ".")
+    .replace(/\s+/g, " ").trim();
 }
 
 // Rend un exercice (qcm | trou | ordre) et appelle onAnswered(correct) une seule fois.
@@ -377,13 +466,14 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     row.append(input, ok);
     card.appendChild(row);
   } else if (type === "ordre") {
+    const parEtapes = String(ex.reponse || "").includes("|");
     const cible = document.createElement("div");
     cible.className = "ordre-cible";
     const reserve = document.createElement("div");
     reserve.className = "ordre-reserve";
     const choisis = [];
     const majCible = () => {
-      cible.textContent = choisis.length ? choisis.map(c => c.mot).join(" ") : "Clique sur les mots dans le bon ordre…";
+      cible.textContent = choisis.length ? choisis.map(c => c.mot).join(parEtapes ? " → " : " ") : "Clique sur les éléments dans le bon ordre…";
       cible.classList.toggle("vide", !choisis.length);
     };
     (ex.mots || []).forEach((mot) => {
@@ -413,10 +503,12 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     ok.textContent = "Valider";
     ok.addEventListener("click", () => {
       if (!choisis.length) return;
-      const correct = normaliser(choisis.map(c => c.mot).join(" ")) === normaliser(ex.reponse);
+      const correct = parEtapes
+        ? JSON.stringify(choisis.map(c => normaliser(c.mot))) === JSON.stringify(String(ex.reponse).split("|").map(normaliser))
+        : normaliser(choisis.map(c => c.mot).join(" ")) === normaliser(ex.reponse);
       ok.disabled = true; effacer.disabled = true;
       cible.classList.add(correct ? "correct" : "incorrect");
-      finish(correct, ex.reponse, choisis.map(c => c.mot).join(" "));
+      finish(correct, parEtapes ? String(ex.reponse).split("|").map(s => s.trim()).join(" → ") : ex.reponse, choisis.map(c => c.mot).join(parEtapes ? " → " : " "));
     });
     majCible();
     actions.append(effacer, ok);
@@ -447,7 +539,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
 // Journal de toutes les réponses (historique) — écriture seule, jamais modifiée.
 function journaliser({ notionId = null, correct, source, question = "", reponse = "" }) {
   addDoc(collection(db, "reponsesAnglais"), {
-    at: new Date().toISOString(), date: todayISO(), notionId, correct: !!correct, source,
+    at: new Date().toISOString(), date: todayISO(), eleve: eleveCourant, matiere: matiereCourante, notionId, correct: !!correct, source,
     question: String(question).slice(0, 300), reponse: String(reponse ?? "").slice(0, 200),
   }).catch(err => console.error("Journal réponse", err));
 }
@@ -540,8 +632,8 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
   statusEl.textContent = "La prof IA regarde ton cours… 🧐";
   try {
     const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
-    const result = await extraireCoursAnglais({ images: photosEnAttente }).then(r => r.data);
-    statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} mots, ${(result.grammaire || []).length} règle(s) de grammaire).`;
+    const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
+    statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}).`;
     photosEnAttente = [];
     document.getElementById("photo-preview").innerHTML = "";
     document.getElementById("photo-input").value = "";
@@ -558,8 +650,6 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
 // ------------------------------------------------------------
 // MES NOTIONS
 // ------------------------------------------------------------
-let coursById = {};
-
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -611,21 +701,25 @@ function barreNiveau(niveau) {
 async function loadNotions() {
   const el = document.getElementById("notions-list");
   const [progSnap, coursSnap, seancesSnap, reponsesSnap] = await Promise.all([
-    getDocs(collection(db, "progressionAnglais")),
-    getDocs(collection(db, "coursAnglais")),
-    getDocs(collection(db, "seancesAnglais")),
-    getDocs(collection(db, "reponsesAnglais")),
+    getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleveCourant))),
+    getDocs(query(collection(db, "coursAnglais"), where("eleve", "==", eleveCourant))),
+    getDocs(query(collection(db, "seancesAnglais"), where("eleve", "==", eleveCourant))),
+    getDocs(query(collection(db, "reponsesAnglais"), where("eleve", "==", eleveCourant))),
   ]);
-  const reponses = reponsesSnap.docs.map(d => d.data());
-  const seances = seancesSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
+  const dansMatiere = x => (x.matiere || "anglais") === matiereCourante;
+  const toutesReponses = reponsesSnap.docs.map(d => d.data());
+  const toutesSeances = seancesSnap.docs.map(d => d.data());
+  const reponses = toutesReponses.filter(dansMatiere);
+  const seances = toutesSeances.filter(dansMatiere).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   coursById = {};
-  coursSnap.forEach(d => { coursById[d.id] = d.data(); });
+  coursSnap.forEach(d => { if (dansMatiere(d.data())) coursById[d.id] = d.data(); });
   notionsById = {};
-  progSnap.forEach(d => { notionsById[d.id] = { id: d.id, ...d.data() }; });
+  progSnap.forEach(d => { if (dansMatiere(d.data())) notionsById[d.id] = { id: d.id, ...d.data() }; });
   const rows = Object.values(notionsById).sort((a, b) => (a.niveau || 0) - (b.niveau || 0) || a.label.localeCompare(b.label));
+  const motivation = calculerMotivation({ reponses: toutesReponses, seances: toutesSeances, rows: Object.values(notionsById) });
 
   if (!rows.length) {
-    el.innerHTML = `<div class="panel-info">Pas encore de notion — ajoute un cours pour commencer 📸</div>`;
+    el.innerHTML = `<div class="panel-info">Pas encore de cours de ${esc(ui().nom.toLowerCase())} — ajoute-en un pour commencer 📸</div>${htmlBadges(motivation)}`;
     return;
   }
 
@@ -657,8 +751,8 @@ async function loadNotions() {
       <div class="stat stat-alert"><div class="stat-val">${ratees}</div><div class="stat-lbl">à reprendre (✗)</div></div>
     </div>
     ${graphiqueActivite(reponses)}
-    ${htmlBadges(calculerMotivation({ reponses, seances, rows }))}
-    <h3 class="section-title">📐 Grammaire <span>${grammaire.length}</span></h3>
+    ${htmlBadges(motivation)}
+    <h3 class="section-title">${esc(ui().regle)} <span>${grammaire.length}</span></h3>
     <div class="gram-grid">${grammaire.map(n => {
       const st = statutNiveau(n.niveau || 0);
       return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
@@ -668,7 +762,7 @@ async function loadNotions() {
         ${barreNiveau(n.niveau || 0)}
       </button>`;
     }).join("")}</div>
-    <h3 class="section-title">🔤 Vocabulaire <span>${vocab.length}</span></h3>
+    <h3 class="section-title">${esc(ui().savoir)} <span>${vocab.length}</span></h3>
     <div class="accordion">${themesVocab(vocab).map(([theme, mots], i) => {
       const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
       return `<div class="acc-item">
@@ -779,11 +873,11 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
     <div class="game-body"><div class="sp-question" id="sp-q"></div><div class="sp-choix" id="sp-choix"></div></div>`);
   const fin = () => {
     clearInterval(jeuTimer);
-    const cle = `record-vitesse-${theme}`;
+    const cle = `record-vitesse-${eleveCourant}-${matiereCourante}-${theme}`;
     let record = 0;
     try { record = Number(localStorage.getItem(cle) || 0); if (score > record) localStorage.setItem(cle, String(score)); } catch {}
     addDoc(collection(db, "seancesAnglais"), {
-      type: "vitesse", theme, date: todayISO(), score, total: score + erreurs, erreursNb: erreurs, finieLe: new Date().toISOString(),
+      type: "vitesse", eleve: eleveCourant, matiere: matiereCourante, theme, date: todayISO(), score, total: score + erreurs, erreursNb: erreurs, finieLe: new Date().toISOString(),
     }).catch(err => console.error("Enregistrement jeu", err));
     corps.querySelector(".game-body").innerHTML = `<div class="today-score">⏱️ Temps écoulé ! ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}, ${erreurs} erreur${erreurs > 1 ? "s" : ""}</div>
       <p class="sp-record">${score > record ? "🏆 Nouveau record !" : `Record : ${record}`}</p>
@@ -832,7 +926,7 @@ function youtubeIdDe(url) {
 
 async function loadChansons() {
   const el = document.getElementById("songs-list");
-  const snap = await getDocs(collection(db, "chansonsAnglais"));
+  const snap = await getDocs(query(collection(db, "chansonsAnglais"), where("eleve", "==", eleveCourant)));
   const chansons = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.dateAjout || "").localeCompare(a.dateAjout || ""));
   if (!chansons.length) {
     el.innerHTML = `<div class="panel-info">Pas encore de chanson — ajoute ta préférée ci-dessus 🎶</div>`;
@@ -939,7 +1033,7 @@ function ouvrirChanson(c) {
     status.textContent = parolesChangees ? "La prof IA annote les paroles… 🎧" : "Enregistrement…";
     try {
       const ficheChansonAnglais = httpsCallable(functions, "ficheChansonAnglais", { timeout: 180000 });
-      await ficheChansonAnglais({ id: c.id, youtubeId, ...(parolesChangees ? { paroles } : {}) });
+      await ficheChansonAnglais({ id: c.id, eleve: eleveCourant, youtubeId, ...(parolesChangees ? { paroles } : {}) });
       const snap = await getDoc(doc(db, "chansonsAnglais", c.id));
       ouvrirChanson({ id: c.id, ...snap.data() });
       loadChansons();
@@ -965,7 +1059,7 @@ document.getElementById("btn-add-song").addEventListener("click", async () => {
   status.textContent = "La prof IA prépare la fiche de la chanson… 🎧";
   try {
     const ficheChansonAnglais = httpsCallable(functions, "ficheChansonAnglais", { timeout: 180000 });
-    await ficheChansonAnglais({ titre, artiste, youtubeId, paroles: document.getElementById("song-paroles").value });
+    await ficheChansonAnglais({ eleve: eleveCourant, titre, artiste, youtubeId, paroles: document.getElementById("song-paroles").value });
     status.textContent = "✅ Chanson ajoutée !";
     ["song-titre", "song-artiste", "song-url", "song-paroles"].forEach(id => { document.getElementById(id).value = ""; });
     loadChansons();
@@ -1032,7 +1126,7 @@ const SOURCES_LIBELLES = { seance: "Séance", entrainement: "Entraînement", fla
 async function afficherHistoriqueNotion(notionId) {
   const zone = document.getElementById("notion-historique");
   try {
-    const snap = await getDocs(query(collection(db, "reponsesAnglais"), where("notionId", "==", notionId)));
+    const snap = await getDocs(query(collection(db, "reponsesAnglais"), where("eleve", "==", eleveCourant), where("notionId", "==", notionId)));
     if (notionId !== modalNotionId || !zone.isConnected) return;
     const lignes = snap.docs.map(d => d.data()).sort((a, b) => b.at.localeCompare(a.at));
     if (!lignes.length) {
@@ -1061,7 +1155,7 @@ document.getElementById("btn-entrainer").addEventListener("click", async () => {
   zone.innerHTML = `<div class="loading-exos">✍️ La prof IA prépare tes exercices…</div>`;
   try {
     const exercicesNotionAnglais = httpsCallable(functions, "exercicesNotionAnglais", { timeout: 120000 });
-    const { exercices } = await exercicesNotionAnglais({ notionId }).then(r => r.data);
+    const { exercices } = await exercicesNotionAnglais({ notionId, eleve: eleveCourant }).then(r => r.data);
     if (notionId !== modalNotionId) return;
     btn.hidden = true;
     zone.innerHTML = `<div class="exemples-title">Entraînement</div>`;
@@ -1149,8 +1243,8 @@ function majSerie(serie, faitAujourdhui) {
 
 function annoncerNouveauxBadges(obtenus, badges) {
   let vus = null;
-  try { vus = JSON.parse(localStorage.getItem("badges-vus") || "null"); } catch {}
-  try { localStorage.setItem("badges-vus", JSON.stringify(obtenus)); } catch {}
+  try { vus = JSON.parse(localStorage.getItem(`badges-vus-${eleveCourant}`) || "null"); } catch {}
+  try { localStorage.setItem(`badges-vus-${eleveCourant}`, JSON.stringify(obtenus)); } catch {}
   if (!vus) return;
   obtenus.filter(id => !vus.includes(id)).forEach((id, i) => {
     const b = badges.find(x => x.id === id);
@@ -1205,13 +1299,13 @@ function comparerMots(attendu, donne) {
   return { resultat, taux: resultat.length ? resultat.filter(x => x.ok).length / resultat.length : 0 };
 }
 
-function dire(texte, rate = 0.95) {
+function dire(texte, rate = 0.95, langue = matiereCourante === "anglais" ? "en" : "fr") {
   if (!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(texte);
-  const v = voixAnglaise();
+  const v = voixPour(langue);
   if (v) u.voice = v;
-  u.lang = v?.lang || "en-GB";
+  u.lang = v?.lang || (langue === "fr" ? "fr-FR" : "en-GB");
   u.rate = rate;
   speechSynthesis.speak(u);
 }
@@ -1335,7 +1429,7 @@ document.getElementById("btn-controle").addEventListener("click", async () => {
   if (!Object.keys(coursById).length) await loadNotions();
   const cours = Object.entries(coursById).sort((a, b) => (b[1].dateAjout || "").localeCompare(a[1].dateAjout || ""));
   const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">📝 Contrôle blanc</div><h3>Quel cours réviser ?</h3></div>
-    <div class="game-body">${cours.length ? cours.map(([id, c]) => `<button class="cours-choix" data-cours="${esc(id)}"><span>${esc(c.titre)}</span><span class="muted">${(c.vocabulaire || []).length} mots · ${(c.grammaire || []).length} règles</span></button>`).join("") : `<div class="panel-info">Ajoute d'abord un cours 📸</div>`}</div>`);
+    <div class="game-body">${cours.length ? cours.map(([id, c]) => `<button class="cours-choix" data-cours="${esc(id)}"><span>${esc(c.titre)}</span><span class="muted">${(c.vocabulaire || []).length} ${ui().savoirCourt} · ${(c.grammaire || []).length} ${ui().regleCourt}</span></button>`).join("") : `<div class="panel-info">Ajoute d'abord un cours 📸</div>`}</div>`);
   corps.querySelectorAll("[data-cours]").forEach(b => b.addEventListener("click", () => lancerControle(b.dataset.cours)));
 });
 
@@ -1344,7 +1438,7 @@ async function lancerControle(coursId) {
     <div class="game-body"><div class="loading-exos">✍️ La prof IA prépare ton contrôle… (environ une minute)</div></div>`);
   try {
     const controleCoursAnglais = httpsCallable(functions, "controleCoursAnglais", { timeout: 240000 });
-    const { exercices } = await controleCoursAnglais({ coursId }).then(r => r.data);
+    const { exercices } = await controleCoursAnglais({ coursId, eleve: eleveCourant }).then(r => r.data);
     const body = corps.querySelector(".game-body");
     body.innerHTML = `<p class="muted">${exercices.length} questions, comme en classe. Les explications s'affichent après chaque réponse.</p>`;
     let repondues = 0, bonnes = 0;

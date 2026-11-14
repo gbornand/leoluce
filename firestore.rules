@@ -80,46 +80,59 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
-    // ANGLAIS LUCIE (feature isolée, ajoutée le 2026-11-13) — outil mono-utilisateur,
-    // accès restreint à l'uid de Lucie (même constante que DIRECT_FAMILY_UIDS côté functions).
+    // MES RÉVISIONS (ex-English Time, 2026-11-13/14) — élèves Lucie et Léonie + accès parent.
+    // Chaque doc porte `eleve` (uid) : un élève ne voit que ses docs, le parent voit tout.
+    // Mêmes uid que ELEVES / PARENT_UID côté functions.
     // ═══════════════════════════════════════
-    function isLucieAnglais() {
-      return request.auth != null && request.auth.uid == "BmPJ62Hhb0V572vQgzwzybbnU8s2";
+    function estParentRev() {
+      return request.auth != null && request.auth.uid == "GoxalGBKNWcyC6OkdENgz8j1u883";
+    }
+    function estEleveRev() {
+      return request.auth != null && request.auth.uid in ["BmPJ62Hhb0V572vQgzwzybbnU8s2", "PKRatKwnzDZt0BzZjMfO3PFnGxU2"];
+    }
+    function accesRev(data) {
+      return estParentRev() || (estEleveRev() && data.eleve == request.auth.uid);
     }
 
     match /coursAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if isLucieAnglais();
+      allow read, delete: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
     }
 
     match /exercicesAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if isLucieAnglais();
+      allow read, delete: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
     }
 
     match /progressionAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if isLucieAnglais();
-    }
-
-    match /motsAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if false;
-    }
-
-    match /reponsesAnglais/{id} {
-      allow read, create: if isLucieAnglais();
-      allow update, delete: if false;
+      allow read, delete: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
     }
 
     match /seancesAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if isLucieAnglais();
+      allow read: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /reponsesAnglais/{id} {
+      allow read: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update, delete: if false;
     }
 
     match /chansonsAnglais/{id} {
-      allow read: if isLucieAnglais();
-      allow write: if isLucieAnglais();
+      allow read, delete: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
+    }
+
+    match /motsAnglais/{id} {
+      allow read: if estParentRev() || estEleveRev();
+      allow write: if false;
     }
 
   }
