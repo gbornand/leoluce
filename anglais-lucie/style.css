@@ -16,6 +16,13 @@ body {
   padding: 20px;
 }
 #screen-login[hidden] { display: none; }
+.world-map {
+  position: absolute; inset: 0; pointer-events: none;
+  background: url("world.svg") center / min(1400px, 140%) no-repeat;
+  opacity: .22;
+}
+.flags { display: flex; justify-content: center; gap: 8px; margin: 6px 0 4px; }
+.flag { width: 30px; height: 18px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
 .halo { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
 .halo-1 { width: 420px; height: 420px; top: -120px; left: -100px; background: rgba(255,255,255,.28); }
 .halo-2 { width: 380px; height: 380px; bottom: -120px; right: -80px; background: rgba(255,190,240,.35); }
