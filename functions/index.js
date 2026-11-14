@@ -314,20 +314,21 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
   "titre": "titre court du cours (ex: 'Present perfect - unit 4')",
   "recap": "récapitulatif clair et pédagogique du cours, en français, qui réexplique la ou les règles comme à une collégienne (3-8 phrases)",
   "vocabulaire": [
-    { "mot": "mot ou expression en anglais", "traduction": "traduction en français", "exemple": "phrase d'exemple en anglais" }
+    { "mot": "mot ou expression en anglais", "traduction": "traduction en français", "theme": "thème court en français (ex: La ville, Le caractère, La famille)", "exemple": "courte phrase d'exemple en anglais" }
   ],
   "grammaire": [
     { "titre": "nom court de la notion de grammaire", "explication": "explication pédagogique en français de la règle", "exemples": ["phrase d'exemple en anglais"] }
   ]
 }
 
-Ne mets que ce qui est réellement présent/déductible sur la photo. Si le cours ne contient pas de grammaire (ou pas de vocabulaire), le tableau correspondant peut être vide. Niveau collège/lycée français.`;
+VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page une par une et relève ABSOLUMENT TOUS les mots et expressions de vocabulaire présents (listes, tableaux, encadrés, lexiques, mots illustrés), sans en omettre, sans résumer, sans regrouper. Plusieurs pages de vocabulaire = plusieurs centaines d'entrées, c'est normal. Regroupe-les par "theme" cohérent (le titre de la rubrique du cours s'il existe). Exemples courts pour rester compact.
+Ne mets que ce qui est réellement présent/déductible dans le document. Si le cours ne contient pas de grammaire (ou pas de vocabulaire), le tableau correspondant peut être vide. Niveau collège/lycée français.`;
 
 // Reçoit une ou plusieurs photos d'un cours, les fait analyser par l'IA (vocabulaire +
 // grammaire), stocke le cours puis crée une fiche de suivi (répétition espacée) pour
 // chaque notion nouvelle, due dès aujourd'hui.
 exports.extraireCoursAnglais = onCall(
-  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 300, memory: "512MiB" },
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 900, memory: "512MiB" },
   async (request) => {
     requireLucie(request);
     const images = Array.isArray(request.data?.images) ? request.data.images : [];
@@ -340,11 +341,14 @@ exports.extraireCoursAnglais = onCall(
     content.push({ type: "text", text: EXTRACTION_PROMPT_ANGLAIS });
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
+    const response = await client.messages.stream({
       model: "claude-opus-5-5",
-      max_tokens: 16000,
+      max_tokens: 64000,
       messages: [{ role: "user", content }],
-    });
+    }).finalMessage();
+    if (response.stop_reason === "max_tokens") {
+      throw new HttpsError("resource-exhausted", "Cours trop long pour un seul envoi : découpe-le en plusieurs parties.");
+    }
     const textBlock = response.content.find(b => b.type === "text");
     if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
     const parsed = extractJsonAnglais(textBlock.text);
@@ -358,22 +362,23 @@ exports.extraireCoursAnglais = onCall(
     });
 
     const today = todayISOAnglais();
-    const batch = db.batch();
-    for (const v of parsed.vocabulaire || []) {
-      const id = `vocab_${docRef.id}_${slugAnglais(v.mot)}`;
-      batch.set(db.collection("progressionAnglais").doc(id), {
-        type: "vocabulaire", label: v.mot, coursId: docRef.id,
+    const ecritures = [
+      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, {
+        type: "vocabulaire", label: v.mot, theme: v.theme || "", coursId: docRef.id,
         niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
-      }, { merge: true });
-    }
-    for (const g of parsed.grammaire || []) {
-      const id = `gram_${docRef.id}_${slugAnglais(g.titre)}`;
-      batch.set(db.collection("progressionAnglais").doc(id), {
+      }]),
+      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, {
         type: "grammaire", label: g.titre, coursId: docRef.id,
         niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null,
-      }, { merge: true });
+      }]),
+    ];
+    for (let i = 0; i < ecritures.length; i += 400) {
+      const batch = db.batch();
+      for (const [id, data] of ecritures.slice(i, i + 400)) {
+        batch.set(db.collection("progressionAnglais").doc(id), data, { merge: true });
+      }
+      await batch.commit();
     }
-    await batch.commit();
 
     return { coursId: docRef.id, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [] };
   }

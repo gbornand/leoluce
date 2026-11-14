@@ -398,7 +398,7 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
   statusEl.hidden = false;
   statusEl.textContent = "La prof IA regarde ton cours… 🧐";
   try {
-    const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 300000 });
+    const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente }).then(r => r.data);
     statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} mots, ${(result.grammaire || []).length} règle(s) de grammaire).`;
     photosEnAttente = [];
