@@ -480,31 +480,35 @@ async function loadNotions() {
       </button>`;
     }).join("")}</div>
     <h3 class="section-title">🔤 Vocabulaire <span>${vocab.length}</span></h3>
-    <div class="theme-grid">${themesVocab(vocab).map(([theme, mots], i) => {
+    <div class="accordion">${themesVocab(vocab).map(([theme, mots], i) => {
       const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
-      return `<div class="theme-card">
-        <div class="theme-head">
-          <div><div class="theme-name">${esc(theme)}</div><div class="theme-count">${mots.length} mot${mots.length > 1 ? "s" : ""} · ${pctTheme}% maîtrisé</div></div>
+      return `<div class="acc-item">
+        <button class="acc-head" data-acc="${i}" aria-expanded="false">
+          <span class="acc-name">${esc(theme)}</span>
+          <span class="acc-count">${mots.length} mot${mots.length > 1 ? "s" : ""}</span>
+          <span class="acc-bar"><span style="width:${pctTheme}%"></span></span>
+          <span class="acc-pct">${pctTheme}%</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body" id="acc-body-${i}" hidden>
+          <div class="theme-actions">
+            <button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button>
+            <button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>
+          </div>
+          <div class="vocab-grid">${mots.map(n => {
+            const st = statutNiveau(n.niveau || 0);
+            return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
+          }).join("")}</div>
         </div>
-        <div class="theme-progress"><span style="width:${pctTheme}%"></span></div>
-        <div class="theme-actions">
-          <button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button>
-          <button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>
-          <button class="btn-ghost-small" data-voir="${i}">Voir les mots</button>
-        </div>
-        <div class="vocab-grid" id="theme-mots-${i}" hidden>${mots.map(n => {
-          const st = statutNiveau(n.niveau || 0);
-          return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
-        }).join("")}</div>
       </div>`;
     }).join("")}</div>`;
 
   const themes = themesVocab(vocab);
   el.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.id)));
-  el.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
-    const box = document.getElementById(`theme-mots-${b.dataset.voir}`);
-    box.hidden = !box.hidden;
-    b.textContent = box.hidden ? "Voir les mots" : "Masquer";
+  el.querySelectorAll("[data-acc]").forEach(b => b.addEventListener("click", () => {
+    const body = document.getElementById(`acc-body-${b.dataset.acc}`);
+    body.hidden = !body.hidden;
+    b.setAttribute("aria-expanded", String(!body.hidden));
   }));
   el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));

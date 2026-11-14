@@ -256,6 +256,26 @@ body {
 .theme-card .vocab-grid { margin-top: 12px; }
 .btn-speed { background: linear-gradient(135deg, #ff8a3d, #f04e7a); color: #fff; border: none; font-weight: 800; cursor: pointer; }
 
+/* ACCORDÉON VOCABULAIRE */
+.accordion { background: #fff; border-radius: 18px; box-shadow: 0 2px 10px rgba(91,110,232,.08); overflow: hidden; }
+.acc-item + .acc-item { border-top: 1px solid #efecff; }
+.acc-head {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+  background: none; border: none; cursor: pointer; font: inherit; color: inherit; text-align: left;
+}
+.acc-head:hover { background: #faf9ff; }
+.acc-name { font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-count { font-size: 12px; color: #8a84b5; white-space: nowrap; }
+.acc-bar { width: 70px; height: 6px; border-radius: 3px; background: #ece8fc; overflow: hidden; flex-shrink: 0; }
+.acc-bar span { display: block; height: 100%; background: linear-gradient(90deg, #f0a020, #2fa36b); }
+.acc-pct { font-size: 12px; font-weight: 800; color: #5b6ee8; width: 34px; text-align: right; }
+.acc-chevron { color: #8f6fe8; transition: transform .2s; }
+.acc-head[aria-expanded="true"] .acc-chevron { transform: rotate(180deg); }
+.acc-head[aria-expanded="true"] { background: #faf9ff; }
+.acc-body { padding: 4px 16px 16px; background: #faf9ff; }
+.acc-body .vocab-grid { margin-top: 12px; }
+@media (max-width: 480px) { .acc-bar { display: none; } }
+
 /* MODALE JEUX / CHANSON */
 .game-head { padding: 22px 22px 18px; color: #fff; }
 .game-head h3 { margin: 4px 0 0; font-size: 21px; }
