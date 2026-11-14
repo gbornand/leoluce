@@ -371,9 +371,80 @@ async function openNotionModal(notionId) {
       ? `<p>${g.explication}</p>${(g.exemples || []).map(ex => `<p class="exemple">${ex}</p>`).join("")}`
       : `<p>${notion.label}</p>`;
   }
+  modalNotionId = notionId;
+  document.getElementById("modal-exos").innerHTML = "";
+  document.getElementById("btn-entrainer").hidden = false;
+  document.getElementById("btn-entrainer").disabled = false;
   document.getElementById("modal-notion").hidden = false;
 }
 
+let modalNotionId = null;
+
+document.getElementById("btn-entrainer").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-entrainer");
+  const zone = document.getElementById("modal-exos");
+  const notionId = modalNotionId;
+  btn.disabled = true;
+  zone.innerHTML = `<p class="muted">La prof IA prépare tes exercices… ✍️</p>`;
+  try {
+    const exercicesNotionAnglais = httpsCallable(functions, "exercicesNotionAnglais", { timeout: 120000 });
+    const { exercices } = await exercicesNotionAnglais({ notionId }).then(r => r.data);
+    if (notionId !== modalNotionId) return;
+    btn.hidden = true;
+    zone.innerHTML = "";
+    let bonnes = 0, repondues = 0;
+    exercices.forEach((ex) => {
+      const card = document.createElement("div");
+      card.className = "question-card";
+      const label = document.createElement("div");
+      label.className = "question-label";
+      label.textContent = ex.question;
+      card.appendChild(label);
+      const list = document.createElement("div");
+      list.className = "choix-list";
+      (ex.choix || []).forEach((choix, idx) => {
+        const b = document.createElement("button");
+        b.className = "choix-btn";
+        b.textContent = choix;
+        b.addEventListener("click", () => {
+          const correct = idx === ex.bonneReponse;
+          list.querySelectorAll(".choix-btn").forEach((x, xi) => {
+            x.disabled = true;
+            if (xi === ex.bonneReponse) x.classList.add("correct");
+            else if (xi === idx) x.classList.add("incorrect");
+          });
+          if (ex.explication) {
+            const expl = document.createElement("div");
+            expl.className = "exo-explication";
+            expl.textContent = `${correct ? "✅" : "💡"} ${ex.explication}`;
+            card.appendChild(expl);
+          }
+          repondues += 1;
+          if (correct) bonnes += 1;
+          if (repondues === exercices.length) {
+            const reussi = bonnes >= Math.ceil(exercices.length * 0.75);
+            enregistrerReponse(notionId, reussi).then(loadNotions);
+            const fin = document.createElement("div");
+            fin.className = "today-score";
+            fin.textContent = reussi
+              ? `🎉 ${bonnes}/${exercices.length} — bien joué, notion en progrès !`
+              : `${bonnes}/${exercices.length} — on la reverra bientôt, courage 💪`;
+            zone.appendChild(fin);
+          }
+        });
+        list.appendChild(b);
+      });
+      card.appendChild(list);
+      zone.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    zone.innerHTML = `<p class="muted">Oups, impossible de générer les exercices. Réessaie dans un instant.</p>`;
+    btn.disabled = false;
+  }
+});
+
 document.getElementById("modal-close").addEventListener("click", () => {
   document.getElementById("modal-notion").hidden = true;
+  modalNotionId = null;
 });

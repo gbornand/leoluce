@@ -396,6 +396,48 @@ Génère une séance du jour. Réponds UNIQUEMENT avec un objet JSON (pas de tex
 }
 Chaque "choix" contient 3 ou 4 propositions, "bonneReponse" est l'index (0-based) de la bonne. Un exercice par notion vocabulaire/grammaire listée ci-dessus, pas plus. Ton enjoué, jamais scolaire-ennuyeux.`;
 
+// Exercices à la demande sur une seule notion (depuis « Mes notions ») — non stockés.
+exports.exercicesNotionAnglais = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120 },
+  async (request) => {
+    requireLucie(request);
+    const notionId = String(request.data?.notionId || "");
+    if (!notionId) throw new HttpsError("invalid-argument", "notionId requis.");
+    const notionSnap = await db.collection("progressionAnglais").doc(notionId).get();
+    if (!notionSnap.exists) throw new HttpsError("not-found", "Notion introuvable.");
+    const notion = notionSnap.data();
+    const coursSnap = await db.collection("coursAnglais").doc(notion.coursId).get();
+    const cours = coursSnap.exists ? coursSnap.data() : {};
+
+    let contexte;
+    if (notion.type === "vocabulaire") {
+      const v = (cours.vocabulaire || []).find(x => x.mot === notion.label);
+      contexte = `VOCABULAIRE "${notion.label}"${v ? ` = ${v.traduction} (ex: ${v.exemple})` : ""}`;
+    } else {
+      const g = (cours.grammaire || []).find(x => x.titre === notion.label);
+      contexte = `GRAMMAIRE "${notion.label}"${g ? ` : ${g.explication} Exemples : ${(g.exemples || []).join(" / ")}` : ""}`;
+    }
+
+    const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut s'entraîner sur cette notion précise :
+${contexte}
+
+Génère 4 exercices variés et progressifs (du plus simple au plus exigeant) uniquement sur cette notion. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{ "exercices": [ { "question": "consigne en français, phrase à compléter ou à traduire si besoin", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "une phrase courte en français qui explique pourquoi c'est la bonne réponse" } ] }
+3 ou 4 choix par question, "bonneReponse" = index 0-based. Varie la position de la bonne réponse.`;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const parsed = extractJsonAnglais(textBlock.text);
+    return { exercices: parsed.exercices || [] };
+  }
+);
+
 // Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
 // dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
 exports.genererExercicesDuJour = onCall(
