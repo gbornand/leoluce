@@ -15,6 +15,7 @@ body {
   background: linear-gradient(160deg, #6f7ff2 0%, #8f6fe8 55%, #c86fd8 100%);
   padding: 20px;
 }
+#screen-login[hidden] { display: none; }
 .floatie {
   position: absolute; font-size: 34px; opacity: .55; filter: drop-shadow(0 4px 10px rgba(0,0,0,.15));
   animation: bob 6s ease-in-out infinite; pointer-events: none;
