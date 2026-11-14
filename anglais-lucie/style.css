@@ -133,6 +133,7 @@ body {
 #tab-add input[type=file] { margin: 14px 0; display: block; }
 .photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .photo-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; }
+.pdf-tag { background: #fff; border-radius: 10px; padding: 10px 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(91,110,232,.08); }
 
 /* NOTIONS */
 .notion-row {

@@ -122,7 +122,7 @@ async function loadToday() {
     if (snap.exists()) {
       data = snap.data();
     } else {
-      const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour");
+      const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
       data = await genererExercicesDuJour({}).then(r => r.data);
     }
     renderToday(data);
@@ -243,6 +243,14 @@ document.getElementById("photo-input").addEventListener("change", async (e) => {
   photosEnAttente = [];
   document.getElementById("photo-preview").innerHTML = "";
   for (const file of e.target.files) {
+    if (file.type === "application/pdf") {
+      photosEnAttente.push({ mimeType: "application/pdf", data: await fileToBase64(file) });
+      const tag = document.createElement("div");
+      tag.className = "pdf-tag";
+      tag.textContent = `📄 ${file.name}`;
+      document.getElementById("photo-preview").appendChild(tag);
+      continue;
+    }
     const resized = await resizeImage(file, 1600, 0.85);
     photosEnAttente.push(resized);
     const img = document.createElement("img");
@@ -251,6 +259,15 @@ document.getElementById("photo-input").addEventListener("change", async (e) => {
   }
   document.getElementById("btn-envoyer-cours").disabled = photosEnAttente.length === 0;
 });
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 function resizeImage(file, maxDim, quality) {
   return new Promise((resolve, reject) => {
@@ -283,7 +300,7 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
   statusEl.hidden = false;
   statusEl.textContent = "La prof IA regarde ton cours… 🧐";
   try {
-    const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais");
+    const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 300000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente }).then(r => r.data);
     statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} mots, ${(result.grammaire || []).length} règle(s) de grammaire).`;
     photosEnAttente = [];

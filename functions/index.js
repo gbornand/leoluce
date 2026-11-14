@@ -327,20 +327,22 @@ Ne mets que ce qui est réellement présent/déductible sur la photo. Si le cour
 // grammaire), stocke le cours puis crée une fiche de suivi (répétition espacée) pour
 // chaque notion nouvelle, due dès aujourd'hui.
 exports.extraireCoursAnglais = onCall(
-  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY] },
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 300, memory: "512MiB" },
   async (request) => {
     requireLucie(request);
     const images = Array.isArray(request.data?.images) ? request.data.images : [];
     const content = images
       .filter(img => img?.data && img?.mimeType)
-      .map(img => ({ type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } }));
+      .map(img => img.mimeType === "application/pdf"
+        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: img.data } }
+        : { type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } });
     if (!content.length) throw new HttpsError("invalid-argument", "Au moins une photo valide est requise.");
     content.push({ type: "text", text: EXTRACTION_PROMPT_ANGLAIS });
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
       model: "claude-opus-5-5",
-      max_tokens: 4096,
+      max_tokens: 16000,
       messages: [{ role: "user", content }],
     });
     const textBlock = response.content.find(b => b.type === "text");
@@ -397,7 +399,7 @@ Chaque "choix" contient 3 ou 4 propositions, "bonneReponse" est l'index (0-based
 // Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
 // dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
 exports.genererExercicesDuJour = onCall(
-  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY] },
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180 },
   async (request) => {
     requireLucie(request);
     const today = todayISOAnglais();
