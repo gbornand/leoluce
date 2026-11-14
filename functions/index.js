@@ -332,6 +332,17 @@ function publicEleve(profil) {
   return profil.niveau === "ce2" ? "une élève française de CE2 (8 ans)" : "une collégienne française";
 }
 
+const MATIERES_FIGURES = ["svt", "histoire", "physique"];
+
+function consigneFigures(matiere) {
+  if (!MATIERES_FIGURES.includes(matiere)) return "";
+  return `
+
+FIGURES : ajoute aussi au JSON une clé "figures" listant les ${matiere === "histoire" ? "cartes et schémas légendés" : "schémas légendés"} présents dans le document (ceux qui ont des étiquettes/légendes à apprendre) :
+"figures": [ { "titre": "titre court de la figure", "type": "${matiere === "histoire" ? "carte\" ou \"schema" : "schema"}", "page": numéro de la page du PDF ou de la photo (1 = la première), "legendes": ["texte exact de chaque étiquette ou légende, dans l'ordre de lecture"] } ]
+Tableau vide s'il n'y en a aucune. Recopie les légendes telles qu'écrites sur la figure.`;
+}
+
 function profDe(matiere) {
   return { anglais: "prof d'anglais", francais: "maîtresse de CE2", maths: "prof de maths", physique: "prof de physique-chimie", svt: "prof de SVT", histoire: "prof d'histoire-géographie" }[matiere];
 }
@@ -499,7 +510,7 @@ exports.extraireCoursAnglais = onCall(
         ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: img.data } }
         : { type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } });
     if (!content.length) throw new HttpsError("invalid-argument", "Au moins une photo valide est requise.");
-    content.push({ type: "text", text: consigneExtraction(matiere, profil) });
+    content.push({ type: "text", text: consigneExtraction(matiere, profil) + consigneFigures(matiere) });
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.stream({
@@ -520,6 +531,7 @@ exports.extraireCoursAnglais = onCall(
       recap: parsed.recap || "",
       vocabulaire: parsed.vocabulaire || [],
       grammaire: parsed.grammaire || [],
+      figuresProposees: Array.isArray(parsed.figures) ? parsed.figures.slice(0, 20) : [],
       dateAjout: new Date().toISOString(),
     });
 
@@ -537,7 +549,7 @@ exports.extraireCoursAnglais = onCall(
       await batch.commit();
     }
 
-    return { coursId: docRef.id, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [] };
+    return { coursId: docRef.id, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [], figures: Array.isArray(parsed.figures) ? parsed.figures.slice(0, 20) : [] };
   }
 );
 
@@ -825,7 +837,7 @@ exports.genererExercicesDuJour = onCall(
     if (existing.exists && !request.data?.regenerer) return existing.data();
 
     const progSnap = await db.collection("progressionAnglais").where("eleve", "==", eleve).get();
-    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => (n.matiere || "anglais") === matiere);
+    const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => (n.matiere || "anglais") === matiere && n.type !== "figure");
     if (!toutes.length) throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
     let candidates = toutes.filter(n => (n.prochaineDate || "") <= today);
     if (!candidates.length) candidates = [...toutes].sort((a, b) => (a.niveau || 0) - (b.niveau || 0)).slice(0, 30);

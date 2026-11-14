@@ -421,6 +421,41 @@ body {
 .ctx-matiere.active { border-color: #8f6fe8; background: #f4f0ff; color: #5b6ee8; }
 .tab-btn[hidden], .train-card[hidden] { display: none; }
 
+/* SCHÉMAS & CARTES */
+.hdr-figure { background: linear-gradient(135deg, #2fa36b, #1fa2a0); }
+.fig-stage { position: relative; display: block; width: 100%; touch-action: none; user-select: none; border-radius: 12px; overflow: hidden; background: #f6f4ff; }
+.fig-img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+.fig-sel { position: absolute; border: 2px dashed #f04e7a; background: rgba(240,78,122,.12); pointer-events: none; }
+.fig-box { position: absolute; border: 2px solid #5b6ee8; background: rgba(91,110,232,.25); color: #fff; font-weight: 900; font-size: 12px; display: flex; align-items: flex-start; justify-content: flex-start; padding: 1px 4px; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.fig-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.fig-page { border: 2px solid #ece8fc; border-radius: 12px; padding: 4px; background: #fff; cursor: pointer; font: inherit; font-size: 12px; }
+.fig-page img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; display: block; }
+.fig-page.suggeree { border-color: #2fa36b; }
+.fig-page:hover { border-color: #8f6fe8; }
+.fig-upload { display: inline-block; cursor: pointer; }
+.fig-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 12px; }
+.fig-nav .btn-ghost-small { margin-top: 0; }
+.fig-label { display: block; font-weight: 700; font-size: 13px; color: #4a4670; margin-bottom: 10px; }
+.fig-label input, .fig-label textarea { display: block; width: 100%; margin-top: 5px; padding: 10px 14px; border-radius: 12px; border: 2px solid #e6e1fb; font: inherit; font-size: 14px; }
+.fig-consigne { font-size: 15px; margin: 0 0 10px; }
+.fig-choix { display: flex; gap: 10px; align-items: flex-start; background: #faf9ff; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.fig-choix input { margin-top: 4px; }
+.fig-masque { position: absolute; border: 2px solid #8f6fe8; background: #fff; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 3px; overflow: hidden; font: inherit; }
+.fig-masque.rempli { background: #f4f0ff; border-color: #5b6ee8; }
+.fig-masque.ok { background: #e5f6ed; border-color: #2fa36b; }
+.fig-masque.ko { background: #fdecec; border-color: #e5484d; }
+.fig-num { font-weight: 900; color: #8f6fe8; font-size: 13px; }
+.fig-txt { font-size: 11px; font-weight: 800; line-height: 1.1; color: #2d2a4a; text-align: center; }
+.fig-etiquettes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.mot-chip.choisi { background: #5b6ee8; color: #fff; }
+.fig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.fig-carte { background: #fff; border: none; border-left: 5px solid var(--lvl); border-radius: 16px; overflow: hidden; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; box-shadow: 0 2px 10px rgba(91,110,232,.08); }
+.fig-carte img { width: 100%; height: 120px; object-fit: cover; display: block; background: #f6f4ff; }
+.fig-carte-info { padding: 10px 12px 12px; }
+.fig-ajout { border: 2px dashed #d6cff7; border-radius: 16px; background: #faf9ff; color: #5b6ee8; font: inherit; font-weight: 800; cursor: pointer; min-height: 120px; }
+.fig-ajout:hover { border-color: #8f6fe8; }
+.fig-titre-jour { margin-bottom: 6px; }
+
 /* TABLEAU DE BORD PARENT */
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .dash-carte { background: #fff; border-radius: 20px; padding: 18px; box-shadow: 0 4px 18px rgba(91,110,232,.10); }

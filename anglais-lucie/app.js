@@ -6,7 +6,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -262,6 +262,7 @@ function renderToday(data) {
   }
   renderTodayList("vocab-questions", data.vocabulaire || [], true);
   renderTodayList("gram-questions", data.grammaire || [], true);
+  afficherFigureDuJour();
 }
 
 // ÉCOUTE : synthèse vocale du navigateur, voix anglaise (gratuit, hors ligne selon l'appareil).
@@ -646,12 +647,15 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
   try {
     const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
-    statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}).`;
+    const nbFigures = (result.figures || []).length;
+    statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
+    derniersSources = photosEnAttente;
     photosEnAttente = [];
     document.getElementById("photo-preview").innerHTML = "";
     document.getElementById("photo-input").value = "";
     loadNotions();
     loadToday();
+    if (nbFigures && MATIERES_FIGURES.includes(matiereCourante)) proposerFigures(result.coursId, result.figures);
   } catch (err) {
     statusEl.textContent = "❌ Oups, la prof IA n'a pas réussi à lire ce cours. Réessaie avec une photo plus nette.";
     console.error(err);
@@ -733,6 +737,7 @@ async function loadNotions() {
 
   if (!rows.length) {
     el.innerHTML = `<div class="panel-info">Pas encore de cours de ${esc(ui().nom.toLowerCase())} — ajoute-en un pour commencer 📸</div>${htmlBadges(motivation)}`;
+    await ajouterSectionFigures(el);
     return;
   }
 
@@ -808,6 +813,7 @@ async function loadNotions() {
   }));
   el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
+  await ajouterSectionFigures(el);
 }
 
 function tradDe(n) {
@@ -1609,3 +1615,409 @@ document.getElementById("btn-recap-test-dash").addEventListener("click", async (
     btn.disabled = false;
   }
 });
+
+// ------------------------------------------------------------
+// SCHÉMAS & CARTES À COMPLÉTER
+// ------------------------------------------------------------
+const MATIERES_FIGURES = ["svt", "histoire", "physique"];
+let derniersSources = [];
+let figuresById = {};
+let pdfjsPret = null;
+
+function chargerPdfJs() {
+  if (!pdfjsPret) {
+    pdfjsPret = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  return pdfjsPret;
+}
+
+async function pagesDepuisSources(sources) {
+  const pages = [];
+  for (const s of sources) {
+    if (s.mimeType === "application/pdf") {
+      const lib = await chargerPdfJs();
+      const octets = Uint8Array.from(atob(s.data), c => c.charCodeAt(0));
+      const pdf = await lib.getDocument({ data: octets }).promise;
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const vp = page.getViewport({ scale: 1.6 });
+        const c = document.createElement("canvas");
+        c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        pages.push(c.toDataURL("image/jpeg", 0.85));
+      }
+    } else {
+      pages.push(`data:${s.mimeType};base64,${s.data}`);
+    }
+  }
+  return pages;
+}
+
+function recadrer(dataUrl, rect, maxDim = 1100) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const sx = rect.x * img.naturalWidth, sy = rect.y * img.naturalHeight;
+      const sw = rect.w * img.naturalWidth, sh = rect.h * img.naturalHeight;
+      const ratio = Math.min(1, maxDim / Math.max(sw, sh));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(sw * ratio)); c.height = Math.max(1, Math.round(sh * ratio));
+      c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+// Tracé d'un rectangle (souris ou doigt) sur une image ; coordonnées normalisées 0-1.
+function zoneDeSelection(stage, onRect) {
+  const sel = document.createElement("div");
+  sel.className = "fig-sel";
+  sel.hidden = true;
+  stage.appendChild(sel);
+  let depart = null;
+  const pos = e => {
+    const r = stage.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+  };
+  const norm = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
+  const majSel = (a, b) => {
+    const r = norm(a, b);
+    Object.assign(sel.style, { left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` });
+  };
+  stage.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return;
+    e.preventDefault();
+    stage.setPointerCapture(e.pointerId);
+    depart = pos(e);
+    majSel(depart, depart);
+    sel.hidden = false;
+  });
+  stage.addEventListener("pointermove", e => { if (depart) majSel(depart, pos(e)); });
+  stage.addEventListener("pointerup", e => {
+    if (!depart) return;
+    const rect = norm(depart, pos(e));
+    depart = null;
+    sel.hidden = true;
+    if (rect.w > 0.01 && rect.h > 0.01) onRect(rect);
+  });
+}
+
+async function enregistrerFigure({ coursId, titre, type, image, legendes }) {
+  const ref = await addDoc(collection(db, "figuresRevisions"), {
+    eleve: eleveCourant, matiere: matiereCourante, coursId: coursId || null,
+    titre, type, image, legendes, dateAjout: new Date().toISOString(),
+  });
+  await setDoc(doc(db, "progressionAnglais", `fig_${ref.id}`), {
+    eleve: eleveCourant, matiere: matiereCourante, coursId: coursId || null,
+    type: "figure", label: titre, figureId: ref.id,
+    niveau: 0, dernierResultat: null, prochaineDate: todayISO(), dernierVu: null,
+  });
+}
+
+// Assistant de configuration : image → recadrage → légendes → placement. Résout "ok" | "passe".
+function assistantFigure({ coursId, figure = {}, pages = [], rang = "" }) {
+  return new Promise(resolve => {
+    const corps = document.getElementById("modal-libre-corps");
+    document.getElementById("modal-libre").hidden = false;
+    const entete = etape => `<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ ${rang ? `Figure ${esc(rang)} · ` : ""}${esc(etape)}</div><h3>${esc(figure.titre || "Nouveau schéma ou carte")}</h3></div>`;
+    let image = null, recadree = null;
+
+    const etapeSource = () => {
+      corps.innerHTML = `${entete("1. Choisis l'image")}<div class="game-body">
+        ${pages.length ? `<p class="muted">Sur quelle page se trouve la figure ?</p><div class="fig-pages">${pages.map((p, i) => `<button class="fig-page${figure.page === i + 1 ? " suggeree" : ""}" data-page="${i}"><img src="${p}" alt=""><span>Page ${i + 1}${figure.page === i + 1 ? " · proposée" : ""}</span></button>`).join("")}</div>` : ""}
+        <label class="btn-ghost-small fig-upload">📷 ${pages.length ? "Utiliser une autre photo" : "Choisir une photo de la figure"}<input type="file" accept="image/*" hidden></label>
+        <div class="fig-nav"><button class="btn-ghost-small" id="fig-passer">Passer cette figure</button></div></div>`;
+      corps.querySelectorAll("[data-page]").forEach(b => b.addEventListener("click", () => { image = pages[Number(b.dataset.page)]; etapeCadrage(); }));
+      corps.querySelector(".fig-upload input").addEventListener("change", async e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const r = await resizeImage(f, 2000, 0.9);
+        image = `data:${r.mimeType};base64,${r.data}`;
+        etapeCadrage();
+      });
+      corps.querySelector("#fig-passer").addEventListener("click", () => resolve("passe"));
+    };
+
+    const etapeCadrage = () => {
+      corps.innerHTML = `${entete("2. Recadre la figure")}<div class="game-body">
+        <p class="muted">Trace un rectangle autour de la figure (clic-glisser, ou au doigt).</p>
+        <div class="fig-stage"><img src="${image}" class="fig-img" alt="" draggable="false"></div>
+        <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Retour</button><button class="btn-ghost-small" id="fig-tout">Garder toute l'image</button></div></div>`;
+      corps.querySelector("#fig-retour").addEventListener("click", etapeSource);
+      const suite = async rect => { recadree = await recadrer(image, rect); etapeLegendes(); };
+      corps.querySelector("#fig-tout").addEventListener("click", () => suite({ x: 0, y: 0, w: 1, h: 1 }));
+      zoneDeSelection(corps.querySelector(".fig-stage"), suite);
+    };
+
+    const etapeLegendes = () => {
+      corps.innerHTML = `${entete("3. Les légendes")}<div class="game-body">
+        <label class="fig-label">Titre<input type="text" id="fig-titre" value="${esc(figure.titre || "")}" placeholder="ex : Le cœur humain"></label>
+        <label class="fig-label">Légendes à apprendre (une par ligne)<textarea id="fig-legendes" rows="6">${esc((figure.legendes || []).join("\n"))}</textarea></label>
+        <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Retour</button><button class="btn-primary btn-small" id="fig-placer">Placer les légendes →</button></div></div>`;
+      corps.querySelector("#fig-retour").addEventListener("click", etapeCadrage);
+      corps.querySelector("#fig-placer").addEventListener("click", () => {
+        figure.titre = corps.querySelector("#fig-titre").value.trim() || "Figure";
+        const textes = corps.querySelector("#fig-legendes").value.split("\n").map(s => s.trim()).filter(Boolean);
+        if (textes.length >= 2) etapePlacement(textes);
+      });
+    };
+
+    const etapePlacement = textes => {
+      const placees = [];
+      const historique = [];
+      let i = 0;
+      corps.innerHTML = `${entete("4. Encadre chaque légende")}<div class="game-body">
+        <p class="fig-consigne" id="fig-consigne"></p>
+        <div class="fig-stage"><img src="${recadree}" class="fig-img" alt="" draggable="false"></div>
+        <div class="fig-nav"><button class="btn-ghost-small" id="fig-annuler">↺ Annuler</button><button class="btn-ghost-small" id="fig-sauter">Pas visible, passer</button></div>
+        <button class="btn-primary btn-block" id="fig-enregistrer" hidden>✅ Enregistrer la figure</button></div>`;
+      const stage = corps.querySelector(".fig-stage");
+      const maj = () => {
+        stage.querySelectorAll(".fig-box").forEach(b => b.remove());
+        placees.forEach((p, n) => {
+          const b = document.createElement("div");
+          b.className = "fig-box";
+          Object.assign(b.style, { left: `${p.x * 100}%`, top: `${p.y * 100}%`, width: `${p.w * 100}%`, height: `${p.h * 100}%` });
+          b.textContent = n + 1;
+          stage.appendChild(b);
+        });
+        const fini = i >= textes.length;
+        corps.querySelector("#fig-consigne").innerHTML = fini
+          ? `C'est fait : ${placees.length} légende${placees.length > 1 ? "s" : ""} placée${placees.length > 1 ? "s" : ""}.`
+          : `Encadre « <b>${esc(textes[i])}</b> » sur la figure <span class="muted">(${i + 1}/${textes.length})</span>`;
+        corps.querySelector("#fig-enregistrer").hidden = !(fini && placees.length >= 2);
+        corps.querySelector("#fig-sauter").hidden = fini;
+      };
+      zoneDeSelection(stage, rect => {
+        if (i >= textes.length) return;
+        placees.push({ texte: textes[i], ...rect });
+        historique.push("place");
+        i += 1;
+        maj();
+      });
+      corps.querySelector("#fig-sauter").addEventListener("click", () => { historique.push("saute"); i += 1; maj(); });
+      corps.querySelector("#fig-annuler").addEventListener("click", () => {
+        const dernier = historique.pop();
+        if (!dernier) return;
+        if (dernier === "place") placees.pop();
+        i -= 1;
+        maj();
+      });
+      corps.querySelector("#fig-enregistrer").addEventListener("click", async e => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.textContent = "Enregistrement…";
+        try {
+          await enregistrerFigure({ coursId, titre: figure.titre, type: figure.type || "schema", image: recadree, legendes: placees });
+          resolve("ok");
+        } catch (err) {
+          console.error(err);
+          btn.textContent = "❌ Échec, réessayer";
+          btn.disabled = false;
+        }
+      });
+      maj();
+    };
+
+    etapeSource();
+  });
+}
+
+async function proposerFigures(coursId, figures) {
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>${figures.length} figure${figures.length > 1 ? "s" : ""} trouvée${figures.length > 1 ? "s" : ""} dans ce cours</h3></div>
+    <div class="game-body"><p class="muted">Lesquelles faut-il apprendre ?</p>
+    ${figures.map((f, i) => `<label class="fig-choix"><input type="checkbox" value="${i}" checked><span><b>${esc(f.titre)}</b><br><span class="muted">${f.type === "carte" ? "Carte" : "Schéma"} · ${(f.legendes || []).length} légendes${f.page ? ` · page ${esc(f.page)}` : ""}</span></span></label>`).join("")}
+    <button class="btn-primary btn-block" id="fig-go">Configurer les figures cochées</button>
+    <div class="fig-nav"><button class="btn-ghost-small" id="fig-plus-tard">Plus tard</button></div></div>`);
+  corps.querySelector("#fig-plus-tard").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+  corps.querySelector("#fig-go").addEventListener("click", async () => {
+    const choisies = [...corps.querySelectorAll("input:checked")].map(c => ({ ...figures[Number(c.value)] }));
+    if (!choisies.length) return;
+    corps.querySelector(".game-body").innerHTML = `<div class="loading-exos">Préparation des pages…</div>`;
+    let pages = [];
+    try { pages = await pagesDepuisSources(derniersSources); } catch (err) { console.error(err); }
+    for (let i = 0; i < choisies.length; i++) {
+      await assistantFigure({ coursId, figure: choisies[i], pages, rang: `${i + 1}/${choisies.length}` });
+    }
+    document.getElementById("modal-libre-close").click();
+  });
+}
+
+async function ajouterFigurePlusTard() {
+  const cours = Object.entries(coursById);
+  const dejaFaites = new Set(Object.values(figuresById).map(f => normaliser(f.titre)));
+  const propositions = cours.flatMap(([id, c]) => (c.figuresProposees || [])
+    .filter(f => !dejaFaites.has(normaliser(f.titre)))
+    .map(f => ({ coursId: id, coursTitre: c.titre, figure: f })));
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Ajouter une figure</h3></div>
+    <div class="game-body">
+      ${propositions.length ? `<p class="muted">Repérées dans tes cours (il faudra une photo de la page) :</p>${propositions.map((p, i) => `<button class="cours-choix" data-prop="${i}"><span>${esc(p.figure.titre)}</span><span class="muted">${esc(p.coursTitre)} · ${(p.figure.legendes || []).length} légendes</span></button>`).join("")}` : ""}
+      <button class="cours-choix" id="fig-libre"><span>📷 Une autre figure (photo)</span><span class="muted">tu tapes les légendes toi-même</span></button>
+    </div>`);
+  const lancer = async (coursId, figure) => {
+    await assistantFigure({ coursId, figure: { ...figure }, pages: [] });
+    document.getElementById("modal-libre-close").click();
+  };
+  corps.querySelectorAll("[data-prop]").forEach(b => b.addEventListener("click", () => {
+    const p = propositions[Number(b.dataset.prop)];
+    lancer(p.coursId, p.figure);
+  }));
+  corps.querySelector("#fig-libre").addEventListener("click", () => lancer(null, {}));
+}
+
+// Exercice : replacer chaque étiquette sur sa case numérotée.
+function renderFigureExercice(fig, { onAnswered } = {}) {
+  const wrap = document.createElement("div");
+  wrap.className = "fig-exo";
+  const legendes = fig.legendes || [];
+  const ordre = melanger(legendes.map((l, i) => i));
+  wrap.innerHTML = `<p class="muted">Clique sur une étiquette, puis sur la case où elle va. Clique sur une case remplie pour la vider.</p>
+    <div class="fig-stage fig-jeu"><img src="${fig.image}" class="fig-img" alt="" draggable="false"></div>
+    <div class="fig-etiquettes"></div>
+    <button class="btn-primary btn-block fig-valider" disabled>Valider</button>
+    <div class="fig-resultat"></div>`;
+  const stage = wrap.querySelector(".fig-stage");
+  const etiq = wrap.querySelector(".fig-etiquettes");
+  const valider = wrap.querySelector(".fig-valider");
+  const placement = new Array(legendes.length).fill(null);
+  let selection = null;
+  let fini = false;
+  const masques = legendes.map((l, i) => {
+    const m = document.createElement("button");
+    m.className = "fig-masque";
+    Object.assign(m.style, { left: `${l.x * 100}%`, top: `${l.y * 100}%`, width: `${l.w * 100}%`, height: `${l.h * 100}%` });
+    m.addEventListener("click", () => {
+      if (fini) return;
+      if (selection !== null) {
+        const ancien = placement.indexOf(selection);
+        if (ancien >= 0) placement[ancien] = null;
+        placement[i] = selection;
+        selection = null;
+      } else {
+        placement[i] = null;
+      }
+      maj();
+    });
+    stage.appendChild(m);
+    return m;
+  });
+  const maj = () => {
+    masques.forEach((m, i) => {
+      const p = placement[i];
+      m.classList.toggle("rempli", p !== null);
+      m.innerHTML = p !== null ? `<span class="fig-txt">${esc(legendes[p].texte)}</span>` : `<span class="fig-num">${i + 1}</span>`;
+    });
+    etiq.innerHTML = "";
+    ordre.forEach(idx => {
+      const c = document.createElement("button");
+      c.className = `mot-chip${selection === idx ? " choisi" : ""}`;
+      c.textContent = legendes[idx].texte;
+      c.disabled = fini || placement.includes(idx);
+      c.addEventListener("click", () => { selection = selection === idx ? null : idx; maj(); });
+      etiq.appendChild(c);
+    });
+    valider.disabled = fini || placement.some(p => p === null);
+  };
+  valider.addEventListener("click", () => {
+    fini = true;
+    maj();
+    let bonnes = 0;
+    masques.forEach((m, i) => {
+      const ok = normaliser(legendes[placement[i]].texte) === normaliser(legendes[i].texte);
+      if (ok) bonnes += 1;
+      m.classList.add(ok ? "ok" : "ko");
+      m.innerHTML = `<span class="fig-txt">${esc(legendes[i].texte)}</span>`;
+    });
+    const total = legendes.length;
+    const reussi = bonnes / total >= 0.8;
+    wrap.querySelector(".fig-resultat").innerHTML = `<div class="today-score${reussi ? "" : " score-low"}">${bonnes === total ? "🏆" : reussi ? "🎉" : "💪"} ${bonnes}/${total} légendes bien placées</div>`;
+    onAnswered?.(reussi, bonnes, total);
+  });
+  maj();
+  return wrap;
+}
+
+function ouvrirFigure(fig) {
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ ${fig.type === "carte" ? "Carte" : "Schéma"} à compléter</div><h3>${esc(fig.titre)}</h3></div><div class="game-body"></div>`);
+  const body = corps.querySelector(".game-body");
+  const lancer = () => {
+    body.innerHTML = "";
+    body.appendChild(renderFigureExercice(fig, {
+      onAnswered: (ok, bonnes, total) => {
+        enregistrerReponse(`fig_${fig.id}`, ok, { source: "schema", question: fig.titre, reponse: `${bonnes}/${total}` });
+        const actions = document.createElement("div");
+        actions.className = "fig-nav";
+        actions.innerHTML = `<button class="btn-primary btn-small">🔁 Recommencer</button><button class="btn-ghost-small fig-suppr">🗑️ Supprimer cette figure</button>`;
+        actions.querySelector(".btn-primary").addEventListener("click", lancer);
+        const suppr = actions.querySelector(".fig-suppr");
+        suppr.addEventListener("click", async () => {
+          if (!suppr.dataset.confirme) { suppr.dataset.confirme = "1"; suppr.textContent = "Confirmer la suppression ?"; return; }
+          try {
+            await deleteDoc(doc(db, "figuresRevisions", fig.id));
+            await deleteDoc(doc(db, "progressionAnglais", `fig_${fig.id}`));
+            document.getElementById("modal-libre-close").click();
+          } catch (err) {
+            console.error(err);
+            suppr.textContent = "❌ Suppression impossible";
+          }
+        });
+        body.appendChild(actions);
+      },
+    }));
+  };
+  lancer();
+}
+
+async function ajouterSectionFigures(el) {
+  if (!MATIERES_FIGURES.includes(matiereCourante)) return;
+  const snap = await getDocs(query(collection(db, "figuresRevisions"), where("eleve", "==", eleveCourant)));
+  const figs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => f.matiere === matiereCourante);
+  figuresById = Object.fromEntries(figs.map(f => [f.id, f]));
+  el.insertAdjacentHTML("beforeend", `<h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>
+    <div class="fig-grid">${figs.map(f => {
+      const n = notionsById[`fig_${f.id}`];
+      const st = statutNiveau(n?.niveau || 0);
+      return `<button class="fig-carte ${st.cls}" data-fig="${esc(f.id)}"><img src="${f.image}" alt="">
+        <div class="fig-carte-info"><span class="pill ${st.cls}">${st.label}</span>${n ? marqueDerniere(n) : ""}
+        <div class="gram-card-title">${esc(f.titre)}</div><div class="gram-card-cours">${(f.legendes || []).length} légendes</div>${barreNiveau(n?.niveau || 0)}</div></button>`;
+    }).join("")}
+    <button class="fig-ajout" id="fig-ajout">➕ Ajouter un schéma${matiereCourante === "histoire" ? " ou une carte" : ""}</button></div>`);
+  el.querySelectorAll("[data-fig]").forEach(b => b.addEventListener("click", () => ouvrirFigure(figuresById[b.dataset.fig])));
+  el.querySelector("#fig-ajout").addEventListener("click", ajouterFigurePlusTard);
+}
+
+async function afficherFigureDuJour() {
+  const bloc = document.getElementById("block-figure");
+  bloc.hidden = true;
+  if (!MATIERES_FIGURES.includes(matiereCourante)) return;
+  const contexte = idSeanceDuJour();
+  try {
+    const snap = await getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleveCourant)));
+    const dues = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(n => n.type === "figure" && n.matiere === matiereCourante && (n.prochaineDate || "") <= todayISO())
+      .sort((a, b) => (b.dernierResultat === false) - (a.dernierResultat === false) || (a.niveau || 0) - (b.niveau || 0));
+    if (!dues.length || contexte !== idSeanceDuJour()) return;
+    const figSnap = await getDoc(doc(db, "figuresRevisions", dues[0].figureId));
+    if (!figSnap.exists() || contexte !== idSeanceDuJour()) return;
+    const fig = { id: figSnap.id, ...figSnap.data() };
+    bloc.hidden = false;
+    const zone = document.getElementById("figure-du-jour");
+    zone.innerHTML = `<div class="gram-card-title fig-titre-jour">${esc(fig.titre)}</div>`;
+    zone.appendChild(renderFigureExercice(fig, {
+      onAnswered: (ok, b, t) => enregistrerReponse(`fig_${fig.id}`, ok, { source: "schema", question: fig.titre, reponse: `${b}/${t}` }),
+    }));
+  } catch (err) {
+    console.error("Figure du jour", err);
+  }
+}
