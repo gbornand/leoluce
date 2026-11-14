@@ -566,12 +566,21 @@ exports.genererExercicesDuJour = onCall(
     if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
     const parsed = extractJsonAnglais(textBlock.text);
 
+    // L'IA recopie parfois l'id avec « id: » ou des crochets : on le ramène à un id réel, sinon le suivi est perdu.
+    const idsValides = new Set(notions.map(n => n.id));
+    const reparerId = (brut) => {
+      const s = String(brut || "").replace(/^\[?\s*id\s*:\s*/i, "").replace(/\]$/, "").trim();
+      if (idsValides.has(s)) return s;
+      return notions.find(n => s && (s.includes(n.id) || n.id.includes(s)))?.id || null;
+    };
+    const avecIds = (items) => (items || []).map(it => ({ ...it, notionId: reparerId(it.notionId) }));
+
     const sessionDoc = {
       version: 3,
       date: today,
       comprehensionEcrite: parsed.comprehensionEcrite || null,
-      vocabulaire: parsed.vocabulaire || [],
-      grammaire: parsed.grammaire || [],
+      vocabulaire: avecIds(parsed.vocabulaire),
+      grammaire: avecIds(parsed.grammaire),
       genereLe: new Date().toISOString(),
     };
     await existingRef.set(sessionDoc);

@@ -180,6 +180,16 @@ body {
 .ring span { width: 56px; height: 56px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #5b6ee8; }
 .summary-title { font-weight: 900; font-size: 18px; margin-bottom: 6px; }
 .summary-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: -8px 0 8px; }
+@media (max-width: 560px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: #fff; border-radius: 16px; padding: 12px 14px; box-shadow: 0 2px 10px rgba(91,110,232,.08); }
+.stat-val { font-size: 24px; font-weight: 900; color: #5b6ee8; }
+.stat-val span { font-size: 14px; color: #a39ecf; }
+.stat-lbl { font-size: 12px; color: #8a84b5; font-weight: 600; }
+.stat-alert .stat-val { color: #e5484d; }
+.last-mark { display: inline-block; font-size: 11px; font-weight: 900; border-radius: 50%; width: 17px; height: 17px; line-height: 17px; text-align: center; margin-left: 4px; vertical-align: 1px; }
+.last-mark.ok { background: #e5f6ed; color: #1f7a4f; }
+.last-mark.ko { background: #fdecec; color: #c0392b; }
 .section-title { font-size: 16px; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
 .section-title span { font-size: 12px; background: #ece8fc; color: #5b6ee8; border-radius: 999px; padding: 2px 9px; }
 .gram-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }

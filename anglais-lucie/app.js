@@ -552,6 +552,12 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function marqueDerniere(n) {
+  if (n.dernierResultat === true) return `<span class="last-mark ok" title="Réussie la dernière fois">✓</span>`;
+  if (n.dernierResultat === false) return `<span class="last-mark ko" title="Ratée la dernière fois">✗</span>`;
+  return "";
+}
+
 function statutNiveau(niveau) {
   if (niveau >= 4) return { cls: "lvl-ok", label: "Maîtrisée" };
   if (niveau >= 2) return { cls: "lvl-mid", label: "En progrès" };
@@ -564,10 +570,12 @@ function barreNiveau(niveau) {
 
 async function loadNotions() {
   const el = document.getElementById("notions-list");
-  const [progSnap, coursSnap] = await Promise.all([
+  const [progSnap, coursSnap, seancesSnap] = await Promise.all([
     getDocs(collection(db, "progressionAnglais")),
     getDocs(collection(db, "coursAnglais")),
+    getDocs(collection(db, "seancesAnglais")),
   ]);
+  const seances = seancesSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   coursById = {};
   coursSnap.forEach(d => { coursById[d.id] = d.data(); });
   notionsById = {};
@@ -584,6 +592,9 @@ async function loadNotions() {
   const maitrisees = rows.filter(n => (n.niveau || 0) >= 4).length;
   const progres = rows.filter(n => (n.niveau || 0) >= 2 && (n.niveau || 0) < 4).length;
   const pct = Math.round(rows.reduce((s, n) => s + (n.niveau || 0), 0) / (rows.length * 5) * 100);
+  const travaillees = rows.filter(n => n.dernierVu).length;
+  const ratees = rows.filter(n => n.dernierResultat === false).length;
+  const derniere = seances[0];
 
   el.innerHTML = `
     <div class="notions-summary">
@@ -597,11 +608,17 @@ async function loadNotions() {
         </div>
       </div>
     </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val">${seances.length}</div><div class="stat-lbl">séance${seances.length > 1 ? "s" : ""} faite${seances.length > 1 ? "s" : ""}</div></div>
+      <div class="stat"><div class="stat-val">${travaillees}<span>/${rows.length}</span></div><div class="stat-lbl">notions déjà travaillées</div></div>
+      <div class="stat"><div class="stat-val">${derniere ? `${derniere.score}<span>/${derniere.total}</span>` : "—"}</div><div class="stat-lbl">dernière séance</div></div>
+      <div class="stat stat-alert"><div class="stat-val">${ratees}</div><div class="stat-lbl">à reprendre (✗)</div></div>
+    </div>
     <h3 class="section-title">📐 Grammaire <span>${grammaire.length}</span></h3>
     <div class="gram-grid">${grammaire.map(n => {
       const st = statutNiveau(n.niveau || 0);
       return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
-        <span class="pill ${st.cls}">${st.label}</span>
+        <span class="pill ${st.cls}">${st.label}</span>${marqueDerniere(n)}
         <div class="gram-card-title">${esc(n.label)}</div>
         <div class="gram-card-cours">${esc(coursById[n.coursId]?.titre || "")}</div>
         ${barreNiveau(n.niveau || 0)}
@@ -625,7 +642,7 @@ async function loadNotions() {
           </div>
           <div class="vocab-grid">${mots.map(n => {
             const st = statutNiveau(n.niveau || 0);
-            return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
+            return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)} ${marqueDerniere(n)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
           }).join("")}</div>
         </div>
       </div>`;
