@@ -226,10 +226,12 @@ function renderTodayList(containerId, items, suiviNotion) {
     score.total += 1;
     el.appendChild(renderExercise(item, {
       onRevoir: suiviNotion && item.notionId ? () => openNotionModal(item.notionId) : null,
-      onAnswered: (correct) => {
+      onAnswered: (correct, donnee) => {
         score.repondues += 1;
         if (correct) score.bonnes += 1;
-        if (suiviNotion && item.notionId) enregistrerReponse(item.notionId, correct);
+        const trace = { question: item.phrase || item.question || "", reponse: donnee };
+        if (suiviNotion && item.notionId) enregistrerReponse(item.notionId, correct, { source: "seance", ...trace });
+        else journaliser({ correct, source: suiviNotion ? "seance" : "comprehension", ...trace });
         if (!correct) score.erreurs.push({ question: item.question || "", phrase: item.phrase || "", notionId: suiviNotion ? item.notionId || null : null });
         if (score.repondues === score.total) finSeance();
       },
@@ -241,7 +243,7 @@ async function finSeance() {
   const resultat = { score: score.bonnes, total: score.total, erreurs: score.erreurs, finieLe: new Date().toISOString() };
   afficherBilan(resultat);
   try {
-    await addDoc(collection(db, "seancesAnglais"), { date: todayISO(), ...resultat });
+    await addDoc(collection(db, "seancesAnglais"), { type: "jour", date: todayISO(), ...resultat });
     await updateDoc(doc(db, "exercicesAnglais", todayISO()), { terminee: true, resultat });
   } catch (err) {
     console.error("Enregistrement séance", err);
@@ -330,7 +332,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
   card.appendChild(label);
 
   let done = false;
-  const finish = (correct, bonneReponseTexte) => {
+  const finish = (correct, bonneReponseTexte, donnee) => {
     if (done) return;
     done = true;
     card.classList.add(correct ? "is-correct" : "is-incorrect");
@@ -339,7 +341,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     const solution = !correct && bonneReponseTexte ? `Réponse : « ${bonneReponseTexte} ». ` : "";
     expl.textContent = `${correct ? "✅ Bravo ! " : "💡 "}${solution}${ex.explication || ""}`;
     card.appendChild(expl);
-    onAnswered?.(correct);
+    onAnswered?.(correct, donnee);
   };
 
   if (type === "trou") {
@@ -367,7 +369,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
       const correct = attendues.includes(normaliser(input.value));
       input.disabled = true; ok.disabled = true;
       input.classList.add(correct ? "correct" : "incorrect");
-      finish(correct, (ex.reponses || [])[0]);
+      finish(correct, (ex.reponses || [])[0], input.value.trim());
     };
     ok.addEventListener("click", valider);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") valider(); });
@@ -413,7 +415,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
       const correct = normaliser(choisis.map(c => c.mot).join(" ")) === normaliser(ex.reponse);
       ok.disabled = true; effacer.disabled = true;
       cible.classList.add(correct ? "correct" : "incorrect");
-      finish(correct, ex.reponse);
+      finish(correct, ex.reponse, choisis.map(c => c.mot).join(" "));
     });
     majCible();
     actions.append(effacer, ok);
@@ -432,7 +434,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
           if (xi === ex.bonneReponse) x.classList.add("correct");
           else if (xi === idx) x.classList.add("incorrect");
         });
-        finish(correct, null);
+        finish(correct, null, choix);
       });
       list.appendChild(b);
     });
@@ -441,11 +443,20 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
   return card;
 }
 
-async function enregistrerReponse(notionId, correct, pas = 1) {
+// Journal de toutes les réponses (historique) — écriture seule, jamais modifiée.
+function journaliser({ notionId = null, correct, source, question = "", reponse = "" }) {
+  addDoc(collection(db, "reponsesAnglais"), {
+    at: new Date().toISOString(), date: todayISO(), notionId, correct: !!correct, source,
+    question: String(question).slice(0, 300), reponse: String(reponse ?? "").slice(0, 200),
+  }).catch(err => console.error("Journal réponse", err));
+}
+
+async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance", question = "", reponse = "", journal = true } = {}) {
+  if (journal) journaliser({ notionId, correct, source, question, reponse });
   try {
     const ref = doc(db, "progressionAnglais", notionId);
     const snap = await getDoc(ref);
-    if (!snap.exists()) return;
+    if (!snap.exists()) { console.warn("Notion introuvable pour la réponse", notionId); return; }
     const data = snap.data();
     let niveau = data.niveau || 0;
     niveau = correct ? Math.min(niveau + pas, 5) : Math.max(niveau - 1, 0);
@@ -552,6 +563,31 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// Réponses par jour sur 14 jours : une barre par jour (hauteur = nb de réponses), détail au survol.
+function graphiqueActivite(reponses) {
+  if (!reponses.length) return "";
+  const jours = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    jours.push(d.toISOString().slice(0, 10));
+  }
+  const parJour = Object.fromEntries(jours.map(j => [j, { total: 0, bonnes: 0 }]));
+  reponses.forEach(r => { if (parJour[r.date]) { parJour[r.date].total += 1; if (r.correct) parJour[r.date].bonnes += 1; } });
+  const max = Math.max(1, ...jours.map(j => parJour[j].total));
+  const total14 = jours.reduce((s, j) => s + parJour[j].total, 0);
+  const bonnes14 = jours.reduce((s, j) => s + parJour[j].bonnes, 0);
+  return `<div class="activite">
+    <div class="activite-head"><span class="activite-title">Activité (14 jours)</span>
+      <span class="activite-sub">${total14} réponses · ${total14 ? Math.round(bonnes14 / total14 * 100) : 0}% de réussite</span></div>
+    <div class="activite-bars" role="img" aria-label="Nombre de réponses par jour sur 14 jours">${jours.map(j => {
+      const { total, bonnes } = parJour[j];
+      const label = new Date(j + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+      const tip = total ? `${label} : ${total} réponse${total > 1 ? "s" : ""}, ${Math.round(bonnes / total * 100)}% de réussite` : `${label} : aucune réponse`;
+      return `<div class="activite-col" title="${esc(tip)}"><div class="activite-bar${total ? "" : " vide"}" style="height:${total ? Math.max(6, total / max * 100) : 2}%"></div><div class="activite-day">${new Date(j + "T12:00:00").getDate()}</div></div>`;
+    }).join("")}</div>
+  </div>`;
+}
+
 function marqueDerniere(n) {
   if (n.dernierResultat === true) return `<span class="last-mark ok" title="Réussie la dernière fois">✓</span>`;
   if (n.dernierResultat === false) return `<span class="last-mark ko" title="Ratée la dernière fois">✗</span>`;
@@ -570,11 +606,13 @@ function barreNiveau(niveau) {
 
 async function loadNotions() {
   const el = document.getElementById("notions-list");
-  const [progSnap, coursSnap, seancesSnap] = await Promise.all([
+  const [progSnap, coursSnap, seancesSnap, reponsesSnap] = await Promise.all([
     getDocs(collection(db, "progressionAnglais")),
     getDocs(collection(db, "coursAnglais")),
     getDocs(collection(db, "seancesAnglais")),
+    getDocs(collection(db, "reponsesAnglais")),
   ]);
+  const reponses = reponsesSnap.docs.map(d => d.data());
   const seances = seancesSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   coursById = {};
   coursSnap.forEach(d => { coursById[d.id] = d.data(); });
@@ -594,7 +632,7 @@ async function loadNotions() {
   const pct = Math.round(rows.reduce((s, n) => s + (n.niveau || 0), 0) / (rows.length * 5) * 100);
   const travaillees = rows.filter(n => n.dernierVu).length;
   const ratees = rows.filter(n => n.dernierResultat === false).length;
-  const derniere = seances[0];
+  const derniere = seances.find(s => !s.type || s.type === "jour");
 
   el.innerHTML = `
     <div class="notions-summary">
@@ -614,6 +652,7 @@ async function loadNotions() {
       <div class="stat"><div class="stat-val">${derniere ? `${derniere.score}<span>/${derniere.total}</span>` : "—"}</div><div class="stat-lbl">dernière séance</div></div>
       <div class="stat stat-alert"><div class="stat-val">${ratees}</div><div class="stat-lbl">à reprendre (✗)</div></div>
     </div>
+    ${graphiqueActivite(reponses)}
     <h3 class="section-title">📐 Grammaire <span>${grammaire.length}</span></h3>
     <div class="gram-grid">${grammaire.map(n => {
       const st = statutNiveau(n.niveau || 0);
@@ -720,8 +759,8 @@ function lancerFlashcards([theme, mots]) {
       </div>`;
     const card = corps.querySelector("#fc-card");
     card.addEventListener("click", () => { card.classList.add("flipped"); corps.querySelector("#fc-actions").hidden = false; });
-    corps.querySelector(".fc-oui").addEventListener("click", () => { sus += 1; enregistrerReponse(n.id, true); i += 1; afficher(); });
-    corps.querySelector(".fc-non").addEventListener("click", () => { enregistrerReponse(n.id, false); i += 1; afficher(); });
+    corps.querySelector(".fc-oui").addEventListener("click", () => { sus += 1; enregistrerReponse(n.id, true, { source: "flashcards", question: n.label }); i += 1; afficher(); });
+    corps.querySelector(".fc-non").addEventListener("click", () => { enregistrerReponse(n.id, false, { source: "flashcards", question: n.label }); i += 1; afficher(); });
   };
   afficher();
 }
@@ -738,6 +777,9 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
     const cle = `record-vitesse-${theme}`;
     let record = 0;
     try { record = Number(localStorage.getItem(cle) || 0); if (score > record) localStorage.setItem(cle, String(score)); } catch {}
+    addDoc(collection(db, "seancesAnglais"), {
+      type: "vitesse", theme, date: todayISO(), score, total: score + erreurs, erreursNb: erreurs, finieLe: new Date().toISOString(),
+    }).catch(err => console.error("Enregistrement jeu", err));
     corps.querySelector(".game-body").innerHTML = `<div class="today-score">⏱️ Temps écoulé ! ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}, ${erreurs} erreur${erreurs > 1 ? "s" : ""}</div>
       <p class="sp-record">${score > record ? "🏆 Nouveau record !" : `Record : ${record}`}</p>
       <button class="btn-primary btn-block" id="sp-rejouer">🔁 Rejouer</button>`;
@@ -756,7 +798,9 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
       b.addEventListener("click", () => {
         if (restant <= 0) return;
         const ok = n.label === courant.label;
-        if (ok) score += 1; else { erreurs += 1; enregistrerReponse(courant.id, false); }
+        const trace = { source: "vitesse", question: tradDe(courant), reponse: n.label };
+        if (ok) { score += 1; journaliser({ notionId: courant.id, correct: true, ...trace }); }
+        else { erreurs += 1; enregistrerReponse(courant.id, false, trace); }
         b.classList.add(ok ? "correct" : "incorrect");
         corps.querySelector("#sp-score").textContent = score;
         setTimeout(suivante, ok ? 250 : 700);
@@ -796,18 +840,75 @@ async function loadChansons() {
   el.querySelectorAll("[data-song]").forEach(b => b.addEventListener("click", () => ouvrirChanson(chansons[b.dataset.song])));
 }
 
+function surligner(ligne, expressions) {
+  let html = esc(ligne);
+  expressions.forEach(e => {
+    const cible = esc(e);
+    const i = html.toLowerCase().indexOf(cible.toLowerCase());
+    if (i >= 0) html = `${html.slice(0, i)}<mark>${html.slice(i, i + cible.length)}</mark>${html.slice(i + cible.length)}`;
+  });
+  return html;
+}
+
+function htmlParoles(c) {
+  if (!c.paroles) return "";
+  const parLigne = {};
+  (c.annotations || []).forEach(a => { (parLigne[a.ligne] ||= []).push(a); });
+  return `<div class="exemples-title">Paroles &amp; explications</div>
+    <div class="paroles">${c.paroles.split("\n").map((ligne, i) => {
+      const notes = parLigne[i] || [];
+      return `<div class="paroles-row${ligne.trim() ? "" : " blank"}">
+        <div class="paroles-ligne">${surligner(ligne, notes.map(n => n.expression)) || "&nbsp;"}</div>
+        <div class="paroles-notes">${notes.map(n => `<div class="note"><span class="note-expr">${esc(n.expression)}</span> = ${esc(n.sens)}${n.explication ? `<div class="note-expl">${esc(n.explication)}</div>` : ""}</div>`).join("")}</div>
+      </div>`;
+    }).join("")}</div>`;
+}
+
 function ouvrirChanson(c) {
   const corps = ouvrirLibre(`<div class="game-head hdr-song"><div class="modal-kicker">🎵 ${esc(c.artiste)}</div><h3>${esc(c.titre)}</h3></div>
     <div class="game-body">
-      ${c.youtubeId ? `<div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${esc(c.youtubeId)}" title="${esc(c.titre)}" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
-      <div class="regle-box"><div class="regle-title">De quoi ça parle ?</div>${esc(c.resume)}${c.contexte ? `<p class="song-contexte">${esc(c.contexte)}</p>` : ""}</div>
-      <div class="exemples-title">Expressions à retenir</div>
-      ${(c.expressions || []).map(x => `<div class="expr-card"><div class="expr-en">${esc(x.expression)}</div><div class="expr-fr">${esc(x.sens)}</div>${x.explication ? `<div class="expr-expl">${esc(x.explication)}</div>` : ""}</div>`).join("")}
-      <div class="exemples-title">As-tu bien compris ?</div>
-      <div id="song-questions"></div>
+      ${c.youtubeId ? `<div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${esc(c.youtubeId)}" title="${esc(c.titre)}" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : `<div class="panel-info">Pas encore de vidéo : ajoute un lien YouTube ci-dessous ✏️</div>`}
+      ${c.resume ? `<div class="regle-box"><div class="regle-title">De quoi ça parle ?</div>${esc(c.resume)}${c.contexte ? `<p class="song-contexte">${esc(c.contexte)}</p>` : ""}</div>` : ""}
+      ${htmlParoles(c)}
+      ${!c.paroles && (c.expressions || []).length ? `<div class="exemples-title">Expressions à retenir</div>
+        ${c.expressions.map(x => `<div class="expr-card"><div class="expr-en">${esc(x.expression)}</div><div class="expr-fr">${esc(x.sens)}</div>${x.explication ? `<div class="expr-expl">${esc(x.explication)}</div>` : ""}</div>`).join("")}` : ""}
+      ${(c.questions || []).length ? `<div class="exemples-title">As-tu bien compris ?</div><div id="song-questions"></div>` : ""}
+      <details class="song-edit">
+        <summary>✏️ ${c.paroles ? "Modifier" : "Ajouter"} la vidéo ou les paroles</summary>
+        <input type="url" id="edit-song-url" placeholder="Lien YouTube" value="${c.youtubeId ? `https://youtu.be/${esc(c.youtubeId)}` : ""}">
+        <textarea id="edit-song-paroles" rows="8" placeholder="Colle ici les paroles depuis un site de paroles, une ligne par vers">${esc(c.paroles || "")}</textarea>
+        <button class="btn-primary btn-small" id="btn-save-song">Enregistrer</button>
+        <p class="muted" id="edit-song-status" hidden></p>
+      </details>
     </div>`);
   const zone = corps.querySelector("#song-questions");
-  (c.questions || []).forEach(q => zone.appendChild(renderExercise(q)));
+  (c.questions || []).forEach(q => zone?.appendChild(renderExercise(q, {
+    onAnswered: (correct, donnee) => journaliser({ correct, source: "chanson", question: q.question, reponse: donnee }),
+  })));
+
+  corps.querySelector("#btn-save-song").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const status = corps.querySelector("#edit-song-status");
+    const url = corps.querySelector("#edit-song-url").value.trim();
+    const youtubeId = youtubeIdDe(url);
+    status.hidden = false;
+    if (url && !youtubeId) { status.textContent = "Ce lien YouTube n'est pas reconnu."; return; }
+    const paroles = corps.querySelector("#edit-song-paroles").value;
+    const parolesChangees = paroles.trim() !== (c.paroles || "").trim();
+    btn.disabled = true;
+    status.textContent = parolesChangees ? "La prof IA annote les paroles… 🎧" : "Enregistrement…";
+    try {
+      const ficheChansonAnglais = httpsCallable(functions, "ficheChansonAnglais", { timeout: 180000 });
+      await ficheChansonAnglais({ id: c.id, youtubeId, ...(parolesChangees ? { paroles } : {}) });
+      const snap = await getDoc(doc(db, "chansonsAnglais", c.id));
+      ouvrirChanson({ id: c.id, ...snap.data() });
+      loadChansons();
+    } catch (err) {
+      console.error(err);
+      status.textContent = "❌ Échec de l'enregistrement. Réessaie.";
+      btn.disabled = false;
+    }
+  });
 }
 
 document.getElementById("btn-add-song").addEventListener("click", async () => {
@@ -824,9 +925,9 @@ document.getElementById("btn-add-song").addEventListener("click", async () => {
   status.textContent = "La prof IA prépare la fiche de la chanson… 🎧";
   try {
     const ficheChansonAnglais = httpsCallable(functions, "ficheChansonAnglais", { timeout: 180000 });
-    await ficheChansonAnglais({ titre, artiste, youtubeId });
+    await ficheChansonAnglais({ titre, artiste, youtubeId, paroles: document.getElementById("song-paroles").value });
     status.textContent = "✅ Chanson ajoutée !";
-    ["song-titre", "song-artiste", "song-url"].forEach(id => { document.getElementById(id).value = ""; });
+    ["song-titre", "song-artiste", "song-url", "song-paroles"].forEach(id => { document.getElementById(id).value = ""; });
     loadChansons();
   } catch (err) {
     console.error(err);
@@ -877,11 +978,39 @@ async function openNotionModal(notionId) {
       : `<div class="regle-box">${esc(notion.label)}</div>`;
   }
   modalNotionId = notionId;
+  corps.insertAdjacentHTML("beforeend", `<div id="notion-historique"></div>`);
+  afficherHistoriqueNotion(notionId);
   document.getElementById("modal-exos").innerHTML = "";
   const btn = document.getElementById("btn-entrainer");
   btn.hidden = false;
   btn.disabled = false;
   document.getElementById("modal-notion").hidden = false;
+}
+
+const SOURCES_LIBELLES = { seance: "Séance", entrainement: "Entraînement", flashcards: "Flashcards", vitesse: "Jeu de vitesse", comprehension: "Écoute" };
+
+async function afficherHistoriqueNotion(notionId) {
+  const zone = document.getElementById("notion-historique");
+  try {
+    const snap = await getDocs(query(collection(db, "reponsesAnglais"), where("notionId", "==", notionId)));
+    if (notionId !== modalNotionId || !zone.isConnected) return;
+    const lignes = snap.docs.map(d => d.data()).sort((a, b) => b.at.localeCompare(a.at));
+    if (!lignes.length) {
+      zone.innerHTML = `<div class="exemples-title">Historique</div><p class="muted histo-vide">Pas encore travaillée.</p>`;
+      return;
+    }
+    const ok = lignes.filter(l => l.correct).length;
+    zone.innerHTML = `<div class="exemples-title">Historique · ${ok}/${lignes.length} réussies</div>
+      <div class="histo-points">${[...lignes].reverse().slice(-20).map(l => `<span class="histo-point ${l.correct ? "ok" : "ko"}" title="${esc(new Date(l.at).toLocaleDateString("fr-FR"))} · ${esc(SOURCES_LIBELLES[l.source] || l.source)}"></span>`).join("")}</div>
+      <div class="histo-liste">${lignes.slice(0, 6).map(l => `<div class="histo-ligne">
+        <span class="last-mark ${l.correct ? "ok" : "ko"}">${l.correct ? "✓" : "✗"}</span>
+        <span class="histo-date">${esc(new Date(l.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }))}</span>
+        <span class="histo-src">${esc(SOURCES_LIBELLES[l.source] || l.source)}</span>
+        ${l.reponse ? `<span class="histo-rep">« ${esc(l.reponse)} »</span>` : ""}
+      </div>`).join("")}</div>`;
+  } catch (err) {
+    console.error("Historique notion", err);
+  }
 }
 
 document.getElementById("btn-entrainer").addEventListener("click", async () => {
@@ -899,13 +1028,14 @@ document.getElementById("btn-entrainer").addEventListener("click", async () => {
     let bonnes = 0, repondues = 0;
     exercices.forEach((ex) => {
       zone.appendChild(renderExercise(ex, {
-        onAnswered: (correct) => {
+        onAnswered: (correct, donnee) => {
           repondues += 1;
           if (correct) bonnes += 1;
+          journaliser({ notionId, correct, source: "entrainement", question: ex.phrase || ex.question || "", reponse: donnee });
           if (repondues < exercices.length) return;
           const parfait = bonnes === exercices.length;
           const reussi = bonnes >= Math.ceil(exercices.length * 0.75);
-          enregistrerReponse(notionId, reussi, parfait ? 2 : 1).then(loadNotions);
+          enregistrerReponse(notionId, reussi, { pas: parfait ? 2 : 1, source: "entrainement", journal: false }).then(loadNotions);
           const fin = document.createElement("div");
           fin.className = `today-score ${reussi ? "" : "score-low"}`;
           fin.textContent = parfait

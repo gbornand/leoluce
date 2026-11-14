@@ -460,11 +460,30 @@ exports.ficheChansonAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180, invoker: "public" },
   async (request) => {
     requireLucie(request);
+    const id = String(request.data?.id || "").trim();
+    const youtubeId = String(request.data?.youtubeId || "").trim();
+    const paroles = typeof request.data?.paroles === "string" ? request.data.paroles.replace(/\r/g, "").trim().slice(0, 20000) : null;
+    if (youtubeId && !/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) throw new HttpsError("invalid-argument", "Lien YouTube invalide.");
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    // Mise à jour d'une chanson existante : lien vidéo et/ou paroles collées par l'utilisateur.
+    if (id) {
+      const ref = db.collection("chansonsAnglais").doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) throw new HttpsError("not-found", "Chanson introuvable.");
+      const maj = {};
+      if (request.data?.youtubeId !== undefined) maj.youtubeId = youtubeId;
+      if (paroles !== null) {
+        maj.paroles = paroles;
+        maj.annotations = paroles ? await annoterParolesAnglais(client, snap.data().titre, paroles) : [];
+      }
+      await ref.update(maj);
+      return { id };
+    }
+
     const titre = String(request.data?.titre || "").trim().slice(0, 120);
     const artiste = String(request.data?.artiste || "").trim().slice(0, 120);
-    const youtubeId = String(request.data?.youtubeId || "").trim();
     if (!titre) throw new HttpsError("invalid-argument", "Titre requis.");
-    if (youtubeId && !/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) throw new HttpsError("invalid-argument", "Lien YouTube invalide.");
 
     const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut travailler son anglais avec la chanson « ${titre} »${artiste ? ` de ${artiste}` : ""}.
 
@@ -480,7 +499,6 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
 }
 6 à 8 expressions utiles pour une collégienne, 4 questions. Si tu ne connais pas cette chanson avec certitude, renvoie { "connue": false } et rien d'autre.`;
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
       model: "claude-opus-5-5",
       max_tokens: 4096,
@@ -489,17 +507,48 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
     const textBlock = response.content.find(b => b.type === "text");
     if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
     const fiche = extractJsonAnglais(textBlock.text);
-    if (fiche.connue === false) throw new HttpsError("not-found", "La prof IA ne connaît pas assez cette chanson pour faire une fiche fiable.");
+    if (fiche.connue === false && !paroles) throw new HttpsError("not-found", "La prof IA ne connaît pas assez cette chanson pour faire une fiche fiable.");
 
     const docRef = await db.collection("chansonsAnglais").add({
       titre, artiste, youtubeId,
       resume: fiche.resume || "", contexte: fiche.contexte || "",
       expressions: fiche.expressions || [], questions: fiche.questions || [],
+      paroles: paroles || "",
+      annotations: paroles ? await annoterParolesAnglais(client, titre, paroles) : [],
       dateAjout: new Date().toISOString(),
     });
     return { id: docRef.id };
   }
 );
+
+// Annote des paroles FOURNIES PAR L'UTILISATEUR : expressions courtes repérées ligne par ligne,
+// sans traduction intégrale des vers (droits d'auteur).
+async function annoterParolesAnglais(client, titre, paroles) {
+  const lignes = paroles.split("\n");
+  const numerotees = lignes.map((l, i) => `${i}: ${l}`).join("\n");
+  const prompt = `Tu es un(e) prof d'anglais pour une collégienne française. Voici les paroles de « ${titre} » collées par l'élève, lignes numérotées :
+
+${numerotees}
+
+Repère 8 à 15 passages utiles à apprendre (expressions idiomatiques, phrasal verbs, temps de grammaire, mots clés). Pour chacun, donne le numéro de ligne et l'expression EXACTE copiée telle quelle depuis cette ligne (2 à 5 mots maximum).
+N'écris PAS de traduction des lignes entières : seulement le sens de l'expression courte et une explication.
+
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{ "annotations": [ { "ligne": 0, "expression": "...", "sens": "sens en français de l'expression", "explication": "phrase courte en français : grammaire, usage ou truc à retenir" } ] }`;
+  const response = await client.messages.create({
+    model: "claude-opus-5-5",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const textBlock = response.content.find(b => b.type === "text");
+  if (!textBlock) return [];
+  const { annotations = [] } = extractJsonAnglais(textBlock.text);
+  return annotations
+    .filter(a => Number.isInteger(a.ligne) && lignes[a.ligne] && a.expression
+      && lignes[a.ligne].toLowerCase().includes(String(a.expression).toLowerCase())
+      && String(a.expression).split(/\s+/).length <= 6)
+    .map(a => ({ ligne: a.ligne, expression: String(a.expression), sens: String(a.sens || ""), explication: String(a.explication || "") }));
+}
 
 // Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
 // dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
