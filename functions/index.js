@@ -521,6 +521,36 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
   }
 );
 
+// Traduction d'un mot au clic (paroles, textes) — mise en cache par mot.
+exports.traduireMotAnglais = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 60, invoker: "public" },
+  async (request) => {
+    requireLucie(request);
+    const mot = String(request.data?.mot || "").trim().toLowerCase().replace(/’/g, "'").slice(0, 40);
+    const contexte = String(request.data?.contexte || "").trim().slice(0, 200);
+    if (!/^[a-z][a-z'-]*$/.test(mot)) throw new HttpsError("invalid-argument", "Mot invalide.");
+    const cacheRef = db.collection("motsAnglais").doc(slugAnglais(mot) || "x");
+    const cache = await cacheRef.get();
+    if (cache.exists) return cache.data();
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 1024,
+      output_config: { effort: "low" },
+      messages: [{ role: "user", content: `Mot anglais : « ${mot} »${contexte ? `, rencontré dans : « ${contexte} »` : ""}.
+Pour une collégienne française, réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{ "traduction": "1 à 3 traductions françaises courtes, la plus courante d'abord", "nature": "nom, verbe, adjectif, adverbe, préposition, pronom…", "base": "si le mot est une forme conjuguée ou un pluriel, la forme de base (ex: went → go), sinon vide", "note": "une remarque utile très courte, ou vide" }` }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const r = extractJsonAnglais(textBlock.text);
+    const resultat = { mot, traduction: String(r.traduction || ""), nature: String(r.nature || ""), base: String(r.base || ""), note: String(r.note || "") };
+    await cacheRef.set(resultat);
+    return resultat;
+  }
+);
+
 // Annote des paroles FOURNIES PAR L'UTILISATEUR : expressions courtes repérées ligne par ligne,
 // sans traduction intégrale des vers (droits d'auteur).
 async function annoterParolesAnglais(client, titre, paroles) {

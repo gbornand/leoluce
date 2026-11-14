@@ -102,6 +102,11 @@ service cloud.firestore {
       allow write: if isLucieAnglais();
     }
 
+    match /motsAnglais/{id} {
+      allow read: if isLucieAnglais();
+      allow write: if false;
+    }
+
     match /reponsesAnglais/{id} {
       allow read, create: if isLucieAnglais();
       allow update, delete: if false;

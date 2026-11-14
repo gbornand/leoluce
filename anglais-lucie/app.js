@@ -157,7 +157,7 @@ function renderToday(data) {
   if (data.comprehensionEcrite?.texte) {
     ceBlock.hidden = false;
     texteEcoute = data.comprehensionEcrite.texte;
-    document.getElementById("ce-texte").textContent = texteEcoute;
+    document.getElementById("ce-texte").innerHTML = motsCliquables(texteEcoute);
     document.getElementById("ce-texte").hidden = true;
     document.getElementById("btn-show-text").hidden = false;
     renderTodayList("ce-questions", data.comprehensionEcrite.questions || [], false);
@@ -583,7 +583,10 @@ function graphiqueActivite(reponses) {
       const { total, bonnes } = parJour[j];
       const label = new Date(j + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
       const tip = total ? `${label} : ${total} réponse${total > 1 ? "s" : ""}, ${Math.round(bonnes / total * 100)}% de réussite` : `${label} : aucune réponse`;
-      return `<div class="activite-col" title="${esc(tip)}"><div class="activite-bar${total ? "" : " vide"}" style="height:${total ? Math.max(6, total / max * 100) : 2}%"></div><div class="activite-day">${new Date(j + "T12:00:00").getDate()}</div></div>`;
+      const dj = new Date(j + "T12:00:00");
+      const estAuj = j === todayISO();
+      const lettre = ["D", "L", "M", "M", "J", "V", "S"][dj.getDay()];
+      return `<div class="activite-col${estAuj ? " auj" : ""}" title="${esc(tip)}"><div class="activite-bar${total ? "" : " vide"}" style="height:${total ? Math.max(6, total / max * 100) : 2}%"></div><div class="activite-day">${estAuj ? "auj." : `${lettre}<br>${dj.getDate()}`}</div></div>`;
     }).join("")}</div>
   </div>`;
 }
@@ -840,25 +843,60 @@ async function loadChansons() {
   el.querySelectorAll("[data-song]").forEach(b => b.addEventListener("click", () => ouvrirChanson(chansons[b.dataset.song])));
 }
 
-function surligner(ligne, expressions) {
-  let html = esc(ligne);
-  expressions.forEach(e => {
-    const cible = esc(e);
-    const i = html.toLowerCase().indexOf(cible.toLowerCase());
-    if (i >= 0) html = `${html.slice(0, i)}<mark>${html.slice(i, i + cible.length)}</mark>${html.slice(i + cible.length)}`;
-  });
-  return html;
+// Rend un texte avec chaque mot cliquable (traduction au clic) et les expressions annotées surlignées.
+function motsCliquables(texte, expressions = []) {
+  const bas = texte.toLowerCase();
+  const zones = expressions.map(e => { const i = bas.indexOf(String(e).toLowerCase()); return i >= 0 ? [i, i + String(e).length] : null; }).filter(Boolean);
+  const dansZone = (a, b) => zones.some(([z0, z1]) => a >= z0 && b <= z1);
+  let html = "";
+  let pos = 0;
+  for (const m of texte.matchAll(/[A-Za-z][A-Za-z'’-]*/g)) {
+    html += esc(texte.slice(pos, m.index));
+    const fin = m.index + m[0].length;
+    html += `<span class="mot${dansZone(m.index, fin) ? " mot-expr" : ""}" data-mot="${esc(m[0])}">${esc(m[0])}</span>`;
+    pos = fin;
+  }
+  return html + esc(texte.slice(pos));
 }
+
+const popMot = document.createElement("div");
+popMot.className = "pop-mot";
+popMot.hidden = true;
+document.body.appendChild(popMot);
+
+document.addEventListener("click", async (e) => {
+  const cible = e.target.closest(".mot");
+  if (!cible) { if (!e.target.closest(".pop-mot")) popMot.hidden = true; return; }
+  const mot = cible.dataset.mot;
+  const contexte = (cible.closest(".paroles-ligne, .ce-texte")?.textContent || "").slice(0, 200);
+  const r = cible.getBoundingClientRect();
+  popMot.style.left = `${Math.min(window.innerWidth - 250, Math.max(8, r.left + window.scrollX))}px`;
+  popMot.style.top = `${r.bottom + window.scrollY + 6}px`;
+  popMot.innerHTML = `<div class="pop-titre">${esc(mot)}</div><div class="pop-load">…</div>`;
+  popMot.hidden = false;
+  try {
+    const traduireMotAnglais = httpsCallable(functions, "traduireMotAnglais", { timeout: 60000 });
+    const t = await traduireMotAnglais({ mot, contexte }).then(res => res.data);
+    if (popMot.querySelector(".pop-titre")?.textContent !== mot) return;
+    popMot.innerHTML = `<div class="pop-titre">${esc(mot)} <span class="pop-nature">${esc(t.nature)}</span></div>
+      <div class="pop-trad">${esc(t.traduction)}</div>
+      ${t.base && t.base.toLowerCase() !== mot.toLowerCase() ? `<div class="pop-base">forme de base : <strong>${esc(t.base)}</strong></div>` : ""}
+      ${t.note ? `<div class="pop-note">${esc(t.note)}</div>` : ""}`;
+  } catch (err) {
+    console.error(err);
+    popMot.innerHTML = `<div class="pop-titre">${esc(mot)}</div><div class="pop-note">Traduction indisponible pour l'instant.</div>`;
+  }
+});
 
 function htmlParoles(c) {
   if (!c.paroles) return "";
   const parLigne = {};
   (c.annotations || []).forEach(a => { (parLigne[a.ligne] ||= []).push(a); });
-  return `<div class="exemples-title">Paroles &amp; explications</div>
+  return `<div class="exemples-title">Paroles &amp; explications <span class="astuce">· clique sur un mot pour sa traduction</span></div>
     <div class="paroles">${c.paroles.split("\n").map((ligne, i) => {
       const notes = parLigne[i] || [];
       return `<div class="paroles-row${ligne.trim() ? "" : " blank"}">
-        <div class="paroles-ligne">${surligner(ligne, notes.map(n => n.expression)) || "&nbsp;"}</div>
+        <div class="paroles-ligne">${motsCliquables(ligne, notes.map(n => n.expression)) || "&nbsp;"}</div>
         <div class="paroles-notes">${notes.map(n => `<div class="note"><span class="note-expr">${esc(n.expression)}</span> = ${esc(n.sens)}${n.explication ? `<div class="note-expl">${esc(n.explication)}</div>` : ""}</div>`).join("")}</div>
       </div>`;
     }).join("")}</div>`;

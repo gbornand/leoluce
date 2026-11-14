@@ -407,6 +407,23 @@ body {
 .activite-bar { background: #8f6fe8; border-radius: 4px 4px 0 0; min-height: 2px; }
 .activite-bar.vide { background: #ece8fc; }
 .activite-col:hover .activite-bar:not(.vide) { background: #5b6ee8; }
-.activite-day { font-size: 10px; color: #a39ecf; text-align: center; margin-top: 3px; }
+.activite-day { font-size: 10px; color: #a39ecf; text-align: center; margin-top: 3px; line-height: 1.2; min-height: 24px; }
+.activite-col.auj .activite-day { color: #5b6ee8; font-weight: 900; }
+
+/* TRADUCTION AU CLIC */
+.mot { cursor: pointer; border-radius: 3px; transition: background .1s; }
+.mot:hover { background: #e8e4fd; }
+.mot-expr { background: #fff1b8; }
+.mot-expr:hover { background: #ffe680; }
+.astuce { text-transform: none; letter-spacing: 0; font-weight: 600; color: #a39ecf; }
+.pop-mot {
+  position: absolute; z-index: 100; width: 240px; background: #2d2a4a; color: #fff; border-radius: 12px;
+  padding: 10px 12px; box-shadow: 0 10px 30px rgba(30,20,90,.35); font-size: 13px;
+}
+.pop-titre { font-weight: 900; font-size: 15px; }
+.pop-nature { font-weight: 600; font-size: 11px; color: #b9b3ee; margin-left: 4px; }
+.pop-trad { margin-top: 4px; font-size: 14px; }
+.pop-base, .pop-note { margin-top: 4px; color: #cfcaf5; font-size: 12px; }
+.pop-load { color: #b9b3ee; }
 #modal-exos { margin-top: 14px; }
 .exo-explication { font-size: 13px; color: #6a6690; margin-top: 8px; background: #f6f4ff; border-radius: 10px; padding: 8px 12px; }
