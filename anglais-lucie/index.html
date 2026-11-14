@@ -52,6 +52,7 @@
       <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
       <button class="tab-btn" data-tab="add">+ Un cours</button>
       <button class="tab-btn" data-tab="notions">Mes notions</button>
+      <button class="tab-btn" data-tab="chansons">🎵 Chansons</button>
     </nav>
     <button id="btn-logout" class="btn-ghost">↪</button>
   </header>
@@ -102,8 +103,32 @@
       <div id="notions-list"></div>
     </section>
 
+    <!-- ONGLET CHANSONS -->
+    <section id="tab-chansons" class="tab-panel" hidden>
+      <div class="song-add">
+        <h2>🎵 Ajouter une chanson</h2>
+        <p class="muted">Astuce : choisis une « lyric video » sur YouTube, les paroles défilent à l'écran.</p>
+        <div class="song-form">
+          <input type="text" id="song-titre" placeholder="Titre (ex : I Believe I Can Fly)">
+          <input type="text" id="song-artiste" placeholder="Artiste">
+          <input type="url" id="song-url" placeholder="Lien YouTube">
+          <button id="btn-add-song" class="btn-primary btn-small">Ajouter</button>
+        </div>
+        <p id="song-status" class="muted" hidden></p>
+      </div>
+      <div id="songs-list" class="songs-grid"></div>
+    </section>
+
   </main>
 </section>
+
+<!-- MODALE JEUX / CHANSON (contenu libre) -->
+<div id="modal-libre" class="modal" hidden>
+  <div class="modal-card">
+    <button id="modal-libre-close" class="btn-ghost modal-close">✕</button>
+    <div id="modal-libre-corps"></div>
+  </div>
+</div>
 
 <!-- MODALE RÉCAP NOTION -->
 <div id="modal-notion" class="modal" hidden>

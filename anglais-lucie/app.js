@@ -102,6 +102,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-panel").forEach(p => p.hidden = true);
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
+    if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
   });
 });
@@ -479,17 +480,214 @@ async function loadNotions() {
       </button>`;
     }).join("")}</div>
     <h3 class="section-title">🔤 Vocabulaire <span>${vocab.length}</span></h3>
-    <div class="vocab-grid">${vocab.map(n => {
-      const st = statutNiveau(n.niveau || 0);
-      const v = coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label);
-      return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}">
-        <span class="vocab-mot">${esc(n.label)}</span>
-        ${v ? `<span class="vocab-trad">${esc(v.traduction)}</span>` : ""}
-      </button>`;
+    <div class="theme-grid">${themesVocab(vocab).map(([theme, mots], i) => {
+      const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
+      return `<div class="theme-card">
+        <div class="theme-head">
+          <div><div class="theme-name">${esc(theme)}</div><div class="theme-count">${mots.length} mot${mots.length > 1 ? "s" : ""} · ${pctTheme}% maîtrisé</div></div>
+        </div>
+        <div class="theme-progress"><span style="width:${pctTheme}%"></span></div>
+        <div class="theme-actions">
+          <button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button>
+          <button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>
+          <button class="btn-ghost-small" data-voir="${i}">Voir les mots</button>
+        </div>
+        <div class="vocab-grid" id="theme-mots-${i}" hidden>${mots.map(n => {
+          const st = statutNiveau(n.niveau || 0);
+          return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
+        }).join("")}</div>
+      </div>`;
     }).join("")}</div>`;
 
+  const themes = themesVocab(vocab);
   el.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.id)));
+  el.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
+    const box = document.getElementById(`theme-mots-${b.dataset.voir}`);
+    box.hidden = !box.hidden;
+    b.textContent = box.hidden ? "Voir les mots" : "Masquer";
+  }));
+  el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
+  el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
 }
+
+function tradDe(n) {
+  return coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label)?.traduction || "";
+}
+
+function themesVocab(vocab) {
+  const map = new Map();
+  vocab.forEach(n => {
+    const t = n.theme || coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label)?.theme || "Divers";
+    if (!map.has(t)) map.set(t, []);
+    map.get(t).push(n);
+  });
+  return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+}
+
+function melanger(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function ouvrirLibre(html) {
+  document.getElementById("modal-libre-corps").innerHTML = html;
+  document.getElementById("modal-libre").hidden = false;
+  return document.getElementById("modal-libre-corps");
+}
+
+let jeuTimer = null;
+document.getElementById("modal-libre-close").addEventListener("click", () => {
+  document.getElementById("modal-libre").hidden = true;
+  clearInterval(jeuTimer);
+  loadNotions();
+});
+
+// FLASHCARDS : les mots les moins maîtrisés d'abord, 20 max par série.
+function lancerFlashcards([theme, mots]) {
+  const paquet = [...mots].sort((a, b) => (a.niveau || 0) - (b.niveau || 0)).slice(0, 20);
+  let i = 0, sus = 0;
+  const corps = ouvrirLibre("");
+  const afficher = () => {
+    if (i >= paquet.length) {
+      corps.innerHTML = `<div class="game-head hdr-vocab"><div class="modal-kicker">🃏 Flashcards · ${esc(theme)}</div><h3>Série terminée !</h3></div>
+        <div class="game-body"><div class="today-score">🎉 ${sus}/${paquet.length} mots sus</div>
+        <button class="btn-primary btn-block" id="fc-encore">🔁 Nouvelle série</button></div>`;
+      corps.querySelector("#fc-encore").addEventListener("click", () => lancerFlashcards([theme, mots]));
+      return;
+    }
+    const n = paquet[i];
+    const v = coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label);
+    corps.innerHTML = `<div class="game-head hdr-vocab"><div class="modal-kicker">🃏 Flashcards · ${esc(theme)}</div><h3>${i + 1} / ${paquet.length}</h3></div>
+      <div class="game-body">
+        <div class="flashcard" id="fc-card">
+          <div class="fc-face fc-front"><div class="fc-mot">${esc(n.label)}</div><div class="fc-hint">Tu connais ? Clique pour retourner</div></div>
+          <div class="fc-face fc-back"><div class="fc-trad">${esc(v?.traduction || "")}</div>${v?.exemple ? `<div class="fc-ex">${esc(v.exemple)}</div>` : ""}</div>
+        </div>
+        <div class="fc-actions" id="fc-actions" hidden>
+          <button class="fc-btn fc-non">🔁 À revoir</button>
+          <button class="fc-btn fc-oui">✅ Je savais</button>
+        </div>
+      </div>`;
+    const card = corps.querySelector("#fc-card");
+    card.addEventListener("click", () => { card.classList.add("flipped"); corps.querySelector("#fc-actions").hidden = false; });
+    corps.querySelector(".fc-oui").addEventListener("click", () => { sus += 1; enregistrerReponse(n.id, true); i += 1; afficher(); });
+    corps.querySelector(".fc-non").addEventListener("click", () => { enregistrerReponse(n.id, false); i += 1; afficher(); });
+  };
+  afficher();
+}
+
+// JEU DE VITESSE : 60 s, mot français → choisir le bon mot anglais parmi 4.
+function lancerJeuVitesse([theme, mots], toutVocab) {
+  const pool = mots.length >= 4 ? mots : toutVocab;
+  let score = 0, erreurs = 0, restant = 60, courant = null;
+  const corps = ouvrirLibre(`<div class="game-head hdr-speed"><div class="modal-kicker">⚡ Jeu de vitesse · ${esc(theme)}</div>
+    <h3><span id="sp-score">0</span> points</h3><div class="sp-timer"><span id="sp-bar"></span></div></div>
+    <div class="game-body"><div class="sp-question" id="sp-q"></div><div class="sp-choix" id="sp-choix"></div></div>`);
+  const fin = () => {
+    clearInterval(jeuTimer);
+    const cle = `record-vitesse-${theme}`;
+    let record = 0;
+    try { record = Number(localStorage.getItem(cle) || 0); if (score > record) localStorage.setItem(cle, String(score)); } catch {}
+    corps.querySelector(".game-body").innerHTML = `<div class="today-score">⏱️ Temps écoulé ! ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}, ${erreurs} erreur${erreurs > 1 ? "s" : ""}</div>
+      <p class="sp-record">${score > record ? "🏆 Nouveau record !" : `Record : ${record}`}</p>
+      <button class="btn-primary btn-block" id="sp-rejouer">🔁 Rejouer</button>`;
+    corps.querySelector("#sp-rejouer").addEventListener("click", () => lancerJeuVitesse([theme, mots], toutVocab));
+  };
+  const suivante = () => {
+    courant = pool[Math.floor(Math.random() * pool.length)];
+    const leurres = melanger(pool.filter(n => n.label !== courant.label)).slice(0, 3);
+    corps.querySelector("#sp-q").textContent = tradDe(courant);
+    const zone = corps.querySelector("#sp-choix");
+    zone.innerHTML = "";
+    melanger([courant, ...leurres]).forEach(n => {
+      const b = document.createElement("button");
+      b.className = "choix-btn";
+      b.textContent = n.label;
+      b.addEventListener("click", () => {
+        if (restant <= 0) return;
+        const ok = n.label === courant.label;
+        if (ok) score += 1; else { erreurs += 1; enregistrerReponse(courant.id, false); }
+        b.classList.add(ok ? "correct" : "incorrect");
+        corps.querySelector("#sp-score").textContent = score;
+        setTimeout(suivante, ok ? 250 : 700);
+      });
+      zone.appendChild(b);
+    });
+  };
+  clearInterval(jeuTimer);
+  jeuTimer = setInterval(() => {
+    restant -= 1;
+    corps.querySelector("#sp-bar").style.width = `${(restant / 60) * 100}%`;
+    if (restant <= 0) fin();
+  }, 1000);
+  suivante();
+}
+
+// ------------------------------------------------------------
+// CHANSONS
+// ------------------------------------------------------------
+function youtubeIdDe(url) {
+  const m = String(url || "").match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : "";
+}
+
+async function loadChansons() {
+  const el = document.getElementById("songs-list");
+  const snap = await getDocs(collection(db, "chansonsAnglais"));
+  const chansons = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.dateAjout || "").localeCompare(a.dateAjout || ""));
+  if (!chansons.length) {
+    el.innerHTML = `<div class="panel-info">Pas encore de chanson — ajoute ta préférée ci-dessus 🎶</div>`;
+    return;
+  }
+  el.innerHTML = chansons.map((c, i) => `<button class="song-card" data-song="${i}">
+    ${c.youtubeId ? `<img src="https://i.ytimg.com/vi/${esc(c.youtubeId)}/mqdefault.jpg" alt="">` : `<div class="song-noimg">🎵</div>`}
+    <div class="song-info"><div class="song-titre">${esc(c.titre)}</div><div class="song-artiste">${esc(c.artiste)}</div></div>
+  </button>`).join("");
+  el.querySelectorAll("[data-song]").forEach(b => b.addEventListener("click", () => ouvrirChanson(chansons[b.dataset.song])));
+}
+
+function ouvrirChanson(c) {
+  const corps = ouvrirLibre(`<div class="game-head hdr-song"><div class="modal-kicker">🎵 ${esc(c.artiste)}</div><h3>${esc(c.titre)}</h3></div>
+    <div class="game-body">
+      ${c.youtubeId ? `<div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${esc(c.youtubeId)}" title="${esc(c.titre)}" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
+      <div class="regle-box"><div class="regle-title">De quoi ça parle ?</div>${esc(c.resume)}${c.contexte ? `<p class="song-contexte">${esc(c.contexte)}</p>` : ""}</div>
+      <div class="exemples-title">Expressions à retenir</div>
+      ${(c.expressions || []).map(x => `<div class="expr-card"><div class="expr-en">${esc(x.expression)}</div><div class="expr-fr">${esc(x.sens)}</div>${x.explication ? `<div class="expr-expl">${esc(x.explication)}</div>` : ""}</div>`).join("")}
+      <div class="exemples-title">As-tu bien compris ?</div>
+      <div id="song-questions"></div>
+    </div>`);
+  const zone = corps.querySelector("#song-questions");
+  (c.questions || []).forEach(q => zone.appendChild(renderExercise(q)));
+}
+
+document.getElementById("btn-add-song").addEventListener("click", async () => {
+  const titre = document.getElementById("song-titre").value.trim();
+  const artiste = document.getElementById("song-artiste").value.trim();
+  const url = document.getElementById("song-url").value.trim();
+  const status = document.getElementById("song-status");
+  const youtubeId = youtubeIdDe(url);
+  status.hidden = false;
+  if (!titre) { status.textContent = "Indique au moins le titre."; return; }
+  if (url && !youtubeId) { status.textContent = "Ce lien YouTube n'est pas reconnu."; return; }
+  const btn = document.getElementById("btn-add-song");
+  btn.disabled = true;
+  status.textContent = "La prof IA prépare la fiche de la chanson… 🎧";
+  try {
+    const ficheChansonAnglais = httpsCallable(functions, "ficheChansonAnglais", { timeout: 180000 });
+    await ficheChansonAnglais({ titre, artiste, youtubeId });
+    status.textContent = "✅ Chanson ajoutée !";
+    ["song-titre", "song-artiste", "song-url"].forEach(id => { document.getElementById(id).value = ""; });
+    loadChansons();
+  } catch (err) {
+    console.error(err);
+    status.textContent = err?.code === "functions/not-found"
+      ? "🤔 La prof IA ne connaît pas assez cette chanson pour faire une fiche fiable."
+      : "❌ Impossible de créer la fiche. Réessaie dans un instant.";
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 let modalNotionId = null;
 

@@ -455,6 +455,52 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
   }
 );
 
+// Fiche pédagogique d'une chanson (sans reproduire les paroles : droits d'auteur).
+exports.ficheChansonAnglais = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180 },
+  async (request) => {
+    requireLucie(request);
+    const titre = String(request.data?.titre || "").trim().slice(0, 120);
+    const artiste = String(request.data?.artiste || "").trim().slice(0, 120);
+    const youtubeId = String(request.data?.youtubeId || "").trim();
+    if (!titre) throw new HttpsError("invalid-argument", "Titre requis.");
+    if (youtubeId && !/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) throw new HttpsError("invalid-argument", "Lien YouTube invalide.");
+
+    const prompt = `Tu es un(e) prof d'anglais ludique. Une collégienne française veut travailler son anglais avec la chanson « ${titre} »${artiste ? ` de ${artiste}` : ""}.
+
+Prépare une fiche d'étude. CONTRAINTE ABSOLUE (droits d'auteur) : ne reproduis PAS les paroles. Pas de couplet, pas de refrain, pas de vers complet. Tu peux seulement citer des expressions isolées de 2 à 5 mots maximum.
+
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{
+  "connue": true,
+  "resume": "de quoi parle la chanson, en français, 3-4 phrases, ton sympa",
+  "contexte": "1-2 phrases en français sur l'artiste/l'époque, si utile",
+  "expressions": [ { "expression": "expression anglaise courte (2-5 mots) entendue dans la chanson", "sens": "traduction en français", "explication": "explication courte en français (grammaire ou usage)" } ],
+  "questions": [ { "type": "qcm", "question": "question EN ANGLAIS sur le sens ou les thèmes de la chanson", "choix": ["...", "...", "..."], "bonneReponse": 0, "explication": "phrase courte en français" } ]
+}
+6 à 8 expressions utiles pour une collégienne, 4 questions. Si tu ne connais pas cette chanson avec certitude, renvoie { "connue": false } et rien d'autre.`;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const fiche = extractJsonAnglais(textBlock.text);
+    if (fiche.connue === false) throw new HttpsError("not-found", "La prof IA ne connaît pas assez cette chanson pour faire une fiche fiable.");
+
+    const docRef = await db.collection("chansonsAnglais").add({
+      titre, artiste, youtubeId,
+      resume: fiche.resume || "", contexte: fiche.contexte || "",
+      expressions: fiche.expressions || [], questions: fiche.questions || [],
+      dateAjout: new Date().toISOString(),
+    });
+    return { id: docRef.id };
+  }
+);
+
 // Génère (ou renvoie si déjà fait aujourd'hui) la séance du jour : sélectionne les notions
 // dues (répétition espacée), demande à l'IA de fabriquer les exercices, et les stocke.
 exports.genererExercicesDuJour = onCall(
