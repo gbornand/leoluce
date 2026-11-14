@@ -129,11 +129,18 @@ function renderContexte() {
   bar.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => choisirContexte(eleveCourant, b.dataset.matiere)));
 }
 
+function estParent() { return profil?.role === "parent"; }
+
 function appliquerMatiere() {
+  const parent = estParent();
+  document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = !parent;
+  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent;
+  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent;
+  document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
   tabChansons.hidden = !anglais;
-  if (!anglais && !document.getElementById("tab-chansons").hidden) document.querySelector('.tab-btn[data-tab="today"]').click();
+  if (!anglais && !document.getElementById("tab-chansons").hidden) document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : "today"}"]`).click();
   document.getElementById("btn-pron").hidden = !anglais;
   document.getElementById("btn-dictee").hidden = !["anglais", "francais"].includes(matiereCourante);
   document.getElementById("recap-parent").hidden = profil.role !== "parent";
@@ -155,6 +162,7 @@ onAuthStateChanged(auth, async (user) => {
   }
   const memo = lireLocal("eleve-courant");
   choisirContexte(profil.eleves.some(e => e.uid === memo) ? memo : profil.eleves[0].uid, null);
+  if (estParent()) document.querySelector('.tab-btn[data-tab="dashboard"]').click();
 });
 
 // ------------------------------------------------------------
@@ -167,6 +175,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-panel").forEach(p => p.hidden = true);
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
+    if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
@@ -188,6 +197,7 @@ async function genererSeance(regenerer) {
 }
 
 async function loadToday() {
+  if (estParent()) return;
   document.getElementById("today-loading").hidden = false;
   document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
   document.getElementById("today-empty").hidden = true;
@@ -332,6 +342,7 @@ function renderTodayList(containerId, items, suiviNotion) {
 async function finSeance() {
   const resultat = { score: score.bonnes, total: score.total, erreurs: score.erreurs, finieLe: new Date().toISOString() };
   afficherBilan(resultat);
+  if (estParent()) return;
   try {
     await addDoc(collection(db, "seancesAnglais"), { type: "jour", eleve: eleveCourant, matiere: matiereCourante, date: todayISO(), ...resultat });
     await updateDoc(doc(db, "exercicesAnglais", idSeanceDuJour()), { terminee: true, resultat });
@@ -538,6 +549,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
 
 // Journal de toutes les réponses (historique) — écriture seule, jamais modifiée.
 function journaliser({ notionId = null, correct, source, question = "", reponse = "" }) {
+  if (estParent()) return;
   addDoc(collection(db, "reponsesAnglais"), {
     at: new Date().toISOString(), date: todayISO(), eleve: eleveCourant, matiere: matiereCourante, notionId, correct: !!correct, source,
     question: String(question).slice(0, 300), reponse: String(reponse ?? "").slice(0, 200),
@@ -545,6 +557,7 @@ function journaliser({ notionId = null, correct, source, question = "", reponse 
 }
 
 async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance", question = "", reponse = "", journal = true } = {}) {
+  if (estParent()) return;
   if (journal) journaliser({ notionId, correct, source, question, reponse });
   try {
     const ref = doc(db, "progressionAnglais", notionId);
@@ -876,7 +889,7 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
     const cle = `record-vitesse-${eleveCourant}-${matiereCourante}-${theme}`;
     let record = 0;
     try { record = Number(localStorage.getItem(cle) || 0); if (score > record) localStorage.setItem(cle, String(score)); } catch {}
-    addDoc(collection(db, "seancesAnglais"), {
+    if (!estParent()) addDoc(collection(db, "seancesAnglais"), {
       type: "vitesse", eleve: eleveCourant, matiere: matiereCourante, theme, date: todayISO(), score, total: score + erreurs, erreursNb: erreurs, finieLe: new Date().toISOString(),
     }).catch(err => console.error("Enregistrement jeu", err));
     corps.querySelector(".game-body").innerHTML = `<div class="today-score">⏱️ Temps écoulé ! ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}, ${erreurs} erreur${erreurs > 1 ? "s" : ""}</div>
@@ -1481,6 +1494,108 @@ async function lancerControle(coursId) {
 document.getElementById("btn-recap-test").addEventListener("click", async (e) => {
   const btn = e.currentTarget;
   const status = document.getElementById("recap-status");
+  btn.disabled = true;
+  status.textContent = "Envoi…";
+  try {
+    const recapAnglaisTest = httpsCallable(functions, "recapAnglaisTest", { timeout: 60000 });
+    const r = await recapAnglaisTest({}).then(res => res.data);
+    status.textContent = `✅ Aperçu envoyé à ${r.destinataire}`;
+  } catch (err) {
+    console.error(err);
+    status.textContent = "❌ Envoi impossible";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ------------------------------------------------------------
+// TABLEAU DE BORD PARENT (lecture seule)
+// ------------------------------------------------------------
+function serieDe(reponses) {
+  const jours = new Set(reponses.map(r => r.date));
+  let serie = 0;
+  const d = new Date();
+  if (!jours.has(todayISO())) d.setDate(d.getDate() - 1);
+  while (jours.has(d.toISOString().slice(0, 10))) { serie += 1; d.setDate(d.getDate() - 1); }
+  return { serie, aujourdhui: jours.has(todayISO()) };
+}
+
+async function carteEnfant(e) {
+  const [progSnap, seanceSnap, repSnap] = await Promise.all([
+    getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", e.uid))),
+    getDocs(query(collection(db, "seancesAnglais"), where("eleve", "==", e.uid))),
+    getDocs(query(collection(db, "reponsesAnglais"), where("eleve", "==", e.uid))),
+  ]);
+  const progression = progSnap.docs.map(d => d.data());
+  const seances = seanceSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
+  const reponses = repSnap.docs.map(d => d.data());
+  const depuis = new Date(Date.now() - 7 * 86400000).toISOString();
+  const semaine = reponses.filter(r => r.at >= depuis);
+  const joursSemaine = new Set(semaine.map(r => r.date)).size;
+  const reussite = semaine.length ? Math.round(semaine.filter(r => r.correct).length / semaine.length * 100) : null;
+  const { serie, aujourdhui } = serieDe(reponses);
+  const derniere = reponses.reduce((m, r) => (r.at > m ? r.at : m), "");
+  const mat = m => x => (x.matiere || "anglais") === m;
+
+  const lignesMatieres = e.matieres.map(m => {
+    const prog = progression.filter(mat(m));
+    const rep = semaine.filter(mat(m));
+    const pct = prog.length ? Math.round(prog.reduce((s, n) => s + (n.niveau || 0), 0) / (prog.length * 5) * 100) : 0;
+    const aReprendre = prog.filter(n => n.dernierResultat === false).length;
+    return `<button class="dash-matiere" data-voir="${esc(e.uid)}|${m}">
+      <span class="dm-nom">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</span>
+      <span class="dm-bar"><span style="width:${pct}%"></span></span>
+      <span class="dm-pct">${prog.length ? `${pct}%` : "—"}</span>
+      <span class="dm-info">${prog.length ? `${rep.length ? `${rep.length} rép. · ${Math.round(rep.filter(r => r.correct).length / rep.length * 100)}%` : "rien cette semaine"}${aReprendre ? ` · <b class="dm-ko">${aReprendre} à reprendre</b>` : ""}` : "aucun cours"}</span>
+    </button>`;
+  }).join("");
+
+  const aReprendre = progression.filter(n => n.dernierResultat === false).slice(0, 8);
+  return `<div class="dash-carte">
+    <div class="dash-head">
+      <div><div class="dash-nom">${esc(e.prenom)}</div>
+        <div class="dash-sous">${e.niveau === "ce2" ? "CE2" : "Collège"} · ${derniere ? `dernière activité le ${new Date(derniere).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}` : "pas encore d'activité"}</div></div>
+      ${serie ? `<span class="streak${aujourdhui ? "" : " streak-attente"}">🔥 ${serie}</span>` : ""}
+    </div>
+    <div class="stats-row dash-stats">
+      <div class="stat"><div class="stat-val">${joursSemaine}<span>/7</span></div><div class="stat-lbl">jours actifs</div></div>
+      <div class="stat"><div class="stat-val">${semaine.length}</div><div class="stat-lbl">réponses (7 j)</div></div>
+      <div class="stat"><div class="stat-val">${reussite === null ? "—" : `${reussite}<span>%</span>`}</div><div class="stat-lbl">de réussite</div></div>
+      <div class="stat"><div class="stat-val">${seances.filter(s => (s.finieLe || "") >= depuis && (!s.type || s.type === "jour")).length}</div><div class="stat-lbl">séances (7 j)</div></div>
+    </div>
+    <div class="exemples-title">Par matière <span class="astuce">· clique pour voir les notions</span></div>
+    <div class="dash-matieres">${lignesMatieres}</div>
+    ${aReprendre.length ? `<div class="exemples-title">À reprendre</div><div class="dash-ko">${aReprendre.map(n => `<span class="dash-ko-item">${MATIERES_UI[n.matiere || "anglais"].emoji} ${esc(n.label)}</span>`).join("")}</div>` : ""}
+    ${seances.length ? `<div class="exemples-title">Dernières séances</div><div class="dash-seances">${seances.slice(0, 5).map(s => `<div class="dash-seance">
+      <span>${esc(new Date(s.finieLe || s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }))}</span>
+      <span>${MATIERES_UI[s.matiere || "anglais"].emoji} ${s.type === "vitesse" ? "Jeu de vitesse" : "Séance du jour"}</span>
+      <span class="dash-score">${s.type === "vitesse" ? `${s.score} pts` : `${s.score}/${s.total}`}</span>
+    </div>`).join("")}</div>` : ""}
+    ${graphiqueActivite(reponses)}
+  </div>`;
+}
+
+async function loadDashboard() {
+  if (!estParent()) return;
+  const zone = document.getElementById("dashboard-contenu");
+  zone.innerHTML = `<div class="panel-info">Chargement…</div>`;
+  try {
+    const cartes = await Promise.all(profil.eleves.map(carteEnfant));
+    zone.innerHTML = `<div class="dash-grid">${cartes.join("")}</div>`;
+    zone.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
+      const [uid, m] = b.dataset.voir.split("|");
+      choisirContexte(uid, m);
+      document.querySelector('.tab-btn[data-tab="notions"]').click();
+    }));
+  } catch (err) {
+    console.error(err);
+    zone.innerHTML = `<div class="panel-info">❌ Impossible de charger le tableau de bord.</div>`;
+  }
+}
+
+document.getElementById("btn-recap-test-dash").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  const status = document.getElementById("recap-status-dash");
   btn.disabled = true;
   status.textContent = "Envoi…";
   try {

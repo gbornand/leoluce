@@ -45,6 +45,7 @@
   <header class="topbar">
     <div class="topbar-title">🦉 Mes révisions</div>
     <nav class="tabs">
+      <button class="tab-btn" data-tab="dashboard" hidden>📊 Tableau de bord</button>
       <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
       <button class="tab-btn" data-tab="add">+ Un cours</button>
       <button class="tab-btn" data-tab="notions">Mes notions</button>
@@ -57,6 +58,16 @@
 
   <div id="contexte-bar" class="contexte-bar"></div>
   <main class="content">
+
+    <!-- ONGLET TABLEAU DE BORD (parent) -->
+    <section id="tab-dashboard" class="tab-panel" hidden>
+      <div id="dashboard-contenu"><div class="panel-info">Chargement…</div></div>
+      <div class="recap-parent">
+        <span>📧 Récap hebdo envoyé chaque dimanche à 18 h</span>
+        <button class="btn-ghost-small" id="btn-recap-test-dash">Envoyer un aperçu maintenant</button>
+        <span class="muted" id="recap-status-dash"></span>
+      </div>
+    </section>
 
     <!-- ONGLET AUJOURD'HUI -->
     <section id="tab-today" class="tab-panel">

@@ -421,6 +421,31 @@ body {
 .ctx-matiere.active { border-color: #8f6fe8; background: #f4f0ff; color: #5b6ee8; }
 .tab-btn[hidden], .train-card[hidden] { display: none; }
 
+/* TABLEAU DE BORD PARENT */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.dash-carte { background: #fff; border-radius: 20px; padding: 18px; box-shadow: 0 4px 18px rgba(91,110,232,.10); }
+.dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+.dash-nom { font-size: 22px; font-weight: 900; }
+.dash-sous { font-size: 13px; color: #8a84b5; margin-top: 2px; }
+.dash-stats { margin: 0 0 6px; grid-template-columns: repeat(4, 1fr); }
+.dash-stats .stat { box-shadow: none; background: #faf9ff; padding: 10px; }
+.dash-stats .stat-val { font-size: 20px; }
+.dash-matieres { display: flex; flex-direction: column; gap: 6px; }
+.dash-matiere { display: grid; grid-template-columns: 120px 1fr 40px; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left; background: #faf9ff; border: 2px solid transparent; border-radius: 12px; padding: 8px 12px; cursor: pointer; font: inherit; color: inherit; }
+.dash-matiere:hover { border-color: #d6cff7; }
+.dm-nom { font-weight: 800; font-size: 14px; }
+.dm-bar { height: 7px; border-radius: 4px; background: #ece8fc; overflow: hidden; }
+.dm-bar span { display: block; height: 100%; background: linear-gradient(90deg, #f0a020, #2fa36b); }
+.dm-pct { font-size: 12px; font-weight: 800; color: #5b6ee8; text-align: right; }
+.dm-info { grid-column: 1 / -1; font-size: 12px; color: #8a84b5; margin-top: 3px; }
+.dm-ko { color: #e5484d; }
+.dash-ko { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-ko-item { background: #fdecec; color: #8f2a2a; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+.dash-seance { display: grid; grid-template-columns: 60px 1fr auto; gap: 8px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #f1eefc; }
+.dash-score { font-weight: 800; color: #5b6ee8; }
+.dash-carte .activite { box-shadow: none; background: #faf9ff; }
+#tab-dashboard .recap-parent { margin-top: 18px; }
+
 /* SÉRIE & BADGES */
 .streak { font-weight: 900; color: #f04e7a; background: #fff0f4; border-radius: 999px; padding: 6px 12px; font-size: 14px; white-space: nowrap; }
 .streak-attente { opacity: .55; }
