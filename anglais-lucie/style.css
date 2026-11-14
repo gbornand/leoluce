@@ -16,18 +16,9 @@ body {
   padding: 20px;
 }
 #screen-login[hidden] { display: none; }
-.floatie {
-  position: absolute; font-size: 34px; opacity: .55; filter: drop-shadow(0 4px 10px rgba(0,0,0,.15));
-  animation: bob 6s ease-in-out infinite; pointer-events: none;
-}
-.f1 { top: 8%; left: 10%; font-size: 30px; animation-delay: 0s; }
-.f2 { top: 18%; right: 12%; animation-delay: .8s; }
-.f3 { bottom: 14%; left: 14%; animation-delay: 1.6s; }
-.f4 { top: 48%; left: 5%; font-size: 24px; animation-delay: 2.4s; }
-.f5 { bottom: 10%; right: 10%; animation-delay: 1.1s; }
-.f6 { top: 10%; right: 32%; font-size: 26px; animation-delay: 2s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-14px) rotate(4deg); } }
-@media (max-width: 480px) { .floatie { display: none; } }
+.halo { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+.halo-1 { width: 420px; height: 420px; top: -120px; left: -100px; background: rgba(255,255,255,.28); }
+.halo-2 { width: 380px; height: 380px; bottom: -120px; right: -80px; background: rgba(255,190,240,.35); }
 
 .login-card {
   position: relative; z-index: 1;
