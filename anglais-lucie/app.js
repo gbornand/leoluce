@@ -102,6 +102,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-panel").forEach(p => p.hidden = true);
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
+    if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
   });
 });
 
@@ -307,6 +308,7 @@ document.getElementById("btn-envoyer-cours").addEventListener("click", async () 
     document.getElementById("photo-preview").innerHTML = "";
     document.getElementById("photo-input").value = "";
     loadNotions();
+    loadToday();
   } catch (err) {
     statusEl.textContent = "❌ Oups, la prof IA n'a pas réussi à lire ce cours. Réessaie avec une photo plus nette.";
     console.error(err);
