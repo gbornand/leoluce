@@ -3,7 +3,7 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where
@@ -11,6 +11,10 @@ import {
 import {
   getFunctions, httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyBpKc6h0mjkTff5KJBD0_A4IBePsR4cU3w",
@@ -33,6 +37,15 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 // ------------------------------------------------------------
 // AUTH
 // ------------------------------------------------------------
+document.getElementById("btn-toggle-password").addEventListener("click", () => {
+  const input = document.getElementById("login-password");
+  const btn = document.getElementById("btn-toggle-password");
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  btn.textContent = showing ? "👁" : "🙈";
+  btn.title = showing ? "Afficher le mot de passe" : "Masquer le mot de passe";
+});
+
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("login-email").value.trim();
@@ -44,6 +57,27 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   } catch (err) {
     errorEl.textContent = "Email ou mot de passe incorrect.";
     errorEl.hidden = false;
+  }
+});
+
+document.getElementById("btn-forgot-password").addEventListener("click", async () => {
+  const email = document.getElementById("login-email").value.trim();
+  const errorEl = document.getElementById("login-error");
+  const okEl = document.getElementById("login-reset-ok");
+  errorEl.hidden = true;
+  okEl.hidden = true;
+  if (!email) {
+    errorEl.textContent = "Entre d'abord ton email ci-dessus.";
+    errorEl.hidden = false;
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    okEl.textContent = "Email envoyé ! Regarde ta boîte mail pour choisir un nouveau mot de passe.";
+    okEl.hidden = false;
+  } catch {
+    okEl.textContent = "Si ce compte existe, un email vient d'être envoyé.";
+    okEl.hidden = false;
   }
 });
 

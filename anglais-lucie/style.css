@@ -28,6 +28,12 @@ body {
   border: 1px solid #ddd6f8; font-size: 15px;
 }
 .login-error { color: #d14b4b; font-size: 13px; margin: 0; }
+.login-reset-ok { color: #2e7d32; font-size: 13px; margin: 0; }
+.btn-link { background: none; border: none; color: #5b6ee8; font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px 0; align-self: center; }
+.password-field { position: relative; display: flex; }
+.password-field input { flex: 1; padding-right: 38px; }
+.btn-toggle-password { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; padding: 6px; line-height: 1; opacity: .55; }
+.btn-toggle-password:hover { opacity: 1; }
 
 /* TOPBAR */
 .topbar {

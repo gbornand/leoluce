@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>English Time</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#5b6ee8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="English">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,9 +23,16 @@
     <p class="login-sub">10 minutes par jour, c'est tout.</p>
     <form id="login-form">
       <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
-      <label>Mot de passe <input type="password" id="login-password" required autocomplete="current-password"></label>
+      <label>Mot de passe
+        <div class="password-field">
+          <input type="password" id="login-password" required autocomplete="current-password">
+          <button type="button" id="btn-toggle-password" class="btn-toggle-password" title="Afficher le mot de passe" aria-label="Afficher le mot de passe">👁</button>
+        </div>
+      </label>
       <p id="login-error" class="login-error" hidden></p>
+      <p id="login-reset-ok" class="login-reset-ok" hidden></p>
       <button type="submit" class="btn-primary btn-block">C'est parti !</button>
+      <button type="button" id="btn-forgot-password" class="btn-link">Mot de passe oublié ?</button>
     </form>
   </div>
 </section>
