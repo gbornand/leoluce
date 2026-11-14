@@ -528,12 +528,16 @@ exports.genererExercicesDuJour = onCall(
     // Priorité : notions ratées à la dernière réponse, puis jamais vues, puis les plus faibles.
     const rang = n => (n.dernierResultat === false ? 0 : n.dernierVu ? 2 : 1);
     const candidates = dueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const ratees = candidates.filter(n => n.dernierResultat === false);
-    const autres = candidates.filter(n => n.dernierResultat !== false);
-    for (let i = autres.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [autres[i], autres[j]] = [autres[j], autres[i]]; }
-    const notions = [...ratees, ...autres]
-      .sort((a, b) => rang(a) - rang(b) || (a.niveau || 0) - (b.niveau || 0))
-      .slice(0, 8);
+    for (let i = candidates.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
+    candidates.sort((a, b) => rang(a) - rang(b) || (a.niveau || 0) - (b.niveau || 0));
+    // Séance équilibrée : 5 mots de vocabulaire + 3 règles de grammaire, complétée par l'autre type si l'un manque.
+    const vocabDue = candidates.filter(n => n.type === "vocabulaire");
+    const gramDue = candidates.filter(n => n.type === "grammaire");
+    let notions = [...vocabDue.slice(0, 5), ...gramDue.slice(0, 3)];
+    if (notions.length < 8) {
+      const restants = candidates.filter(n => !notions.includes(n));
+      notions = [...notions, ...restants.slice(0, 8 - notions.length)];
+    }
     const coursIds = [...new Set(notions.map(n => n.coursId))];
     const coursDocs = await Promise.all(coursIds.map(id => db.collection("coursAnglais").doc(id).get()));
     const coursById = Object.fromEntries(coursDocs.filter(d => d.exists).map(d => [d.id, d.data()]));

@@ -143,7 +143,10 @@ function renderToday(data) {
   document.getElementById("today-content").hidden = false;
   document.getElementById("today-score").hidden = true;
   score = { bonnes: 0, total: 0, repondues: 0, erreurs: [] };
-  ["block-comprehension", "block-vocabulaire", "block-grammaire"].forEach(id => { document.getElementById(id).hidden = false; });
+  document.getElementById("today-date").textContent = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("block-comprehension").hidden = false;
+  document.getElementById("block-vocabulaire").hidden = !(data.vocabulaire || []).length;
+  document.getElementById("block-grammaire").hidden = !(data.grammaire || []).length;
   if (data.terminee && data.resultat) {
     ["block-comprehension", "block-vocabulaire", "block-grammaire"].forEach(id => { document.getElementById(id).hidden = true; });
     afficherBilan(data.resultat);
@@ -269,6 +272,22 @@ function afficherBilan(resultat) {
   s.querySelector("#btn-nouvelle-seance").addEventListener("click", nouvelleSeance);
   s.scrollIntoView({ behavior: "smooth", block: "center" });
 }
+
+document.getElementById("btn-autre-seance").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "Préparation… ✍️";
+  try {
+    const genererExercicesDuJour = httpsCallable(functions, "genererExercicesDuJour", { timeout: 180000 });
+    const data = await genererExercicesDuJour({ regenerer: true }).then(r => r.data);
+    renderToday(data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔁 Autre séance";
+  }
+});
 
 async function nouvelleSeance() {
   const btn = document.getElementById("btn-nouvelle-seance");
