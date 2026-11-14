@@ -147,7 +147,10 @@ function renderToday(data) {
   const ceBlock = document.getElementById("block-comprehension");
   if (data.comprehensionEcrite?.texte) {
     ceBlock.hidden = false;
-    document.getElementById("ce-texte").textContent = data.comprehensionEcrite.texte;
+    texteEcoute = data.comprehensionEcrite.texte;
+    document.getElementById("ce-texte").textContent = texteEcoute;
+    document.getElementById("ce-texte").hidden = true;
+    document.getElementById("btn-show-text").hidden = false;
     renderTodayList("ce-questions", data.comprehensionEcrite.questions || [], false);
   } else {
     ceBlock.hidden = true;
@@ -155,6 +158,57 @@ function renderToday(data) {
   renderTodayList("vocab-questions", data.vocabulaire || [], true);
   renderTodayList("gram-questions", data.grammaire || [], true);
 }
+
+// ÉCOUTE : synthèse vocale du navigateur, voix anglaise (gratuit, hors ligne selon l'appareil).
+let texteEcoute = "";
+let vitesseEcoute = 0.95;
+
+function voixAnglaise() {
+  const voix = speechSynthesis.getVoices();
+  return voix.find(v => /en-GB/i.test(v.lang) && /google|natural|online/i.test(v.name))
+    || voix.find(v => /en-GB/i.test(v.lang))
+    || voix.find(v => /^en/i.test(v.lang));
+}
+
+function majBoutonEcoute(enCours) {
+  document.getElementById("btn-play").textContent = enCours ? "❚❚" : "▶";
+  document.getElementById("audio-title").textContent = enCours ? "Lecture en cours…" : "Écouter le texte";
+}
+
+document.getElementById("btn-play").addEventListener("click", () => {
+  if (!("speechSynthesis" in window)) {
+    document.getElementById("audio-title").textContent = "Lecture audio non disponible sur cet appareil";
+    return;
+  }
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+    majBoutonEcoute(false);
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(texteEcoute);
+  const v = voixAnglaise();
+  if (v) u.voice = v;
+  u.lang = v?.lang || "en-GB";
+  u.rate = vitesseEcoute;
+  u.onend = () => majBoutonEcoute(false);
+  u.onerror = () => majBoutonEcoute(false);
+  speechSynthesis.speak(u);
+  majBoutonEcoute(true);
+});
+
+document.querySelectorAll(".speed-btn").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".speed-btn").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  vitesseEcoute = Number(b.dataset.rate);
+  if (speechSynthesis.speaking) { speechSynthesis.cancel(); majBoutonEcoute(false); }
+}));
+
+document.getElementById("btn-show-text").addEventListener("click", (e) => {
+  document.getElementById("ce-texte").hidden = false;
+  e.currentTarget.hidden = true;
+});
+
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
 
 function renderTodayList(containerId, items, suiviNotion) {
   const el = document.getElementById(containerId);

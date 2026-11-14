@@ -68,8 +68,20 @@
       <div id="today-content" hidden>
 
         <section class="exo-block" id="block-comprehension">
-          <h2>📖 Compréhension écrite</h2>
-          <p id="ce-texte" class="ce-texte"></p>
+          <h2>🎧 Écoute &amp; compréhension</h2>
+          <p class="muted">Écoute d'abord, réponds aux questions. Lis le texte seulement si tu bloques.</p>
+          <div class="audio-player">
+            <button id="btn-play" class="audio-play" aria-label="Écouter">▶</button>
+            <div class="audio-info">
+              <div class="audio-title" id="audio-title">Écouter le texte</div>
+              <div class="audio-speeds">
+                <button class="speed-btn active" data-rate="0.95">Normal</button>
+                <button class="speed-btn" data-rate="0.7">🐢 Lent</button>
+              </div>
+            </div>
+          </div>
+          <button id="btn-show-text" class="btn-ghost-small">📖 Besoin d'aide ? Lire le texte</button>
+          <p id="ce-texte" class="ce-texte" hidden></p>
           <div id="ce-questions"></div>
         </section>
 

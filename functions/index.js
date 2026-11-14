@@ -457,7 +457,7 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
 
 // Fiche pédagogique d'une chanson (sans reproduire les paroles : droits d'auteur).
 exports.ficheChansonAnglais = onCall(
-  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180 },
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180, invoker: "public" },
   async (request) => {
     requireLucie(request);
     const titre = String(request.data?.titre || "").trim().slice(0, 120);
