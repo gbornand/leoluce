@@ -55,7 +55,16 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (err) {
-    errorEl.textContent = "Email ou mot de passe incorrect.";
+    const messages = {
+      "auth/invalid-credential": "Email ou mot de passe incorrect.",
+      "auth/wrong-password": "Email ou mot de passe incorrect.",
+      "auth/user-not-found": "Aucun compte avec cet email.",
+      "auth/invalid-email": "Cette adresse email n'est pas valide (vérifie les espaces ou majuscules).",
+      "auth/too-many-requests": "Trop d'essais : attends quelques minutes, ou utilise « Mot de passe oublié ? ».",
+      "auth/network-request-failed": "Pas de connexion internet, réessaie.",
+      "auth/user-disabled": "Ce compte est désactivé.",
+    };
+    errorEl.textContent = messages[err?.code] || `Connexion impossible (${err?.code || "erreur inconnue"}).`;
     errorEl.hidden = false;
   }
 });
