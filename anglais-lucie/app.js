@@ -1074,7 +1074,7 @@ document.addEventListener("click", async (e) => {
 function htmlParoles(c) {
   if (!c.paroles) return "";
   const parLigne = {};
-  (c.annotations || []).forEach(a => { (parLigne[a.ligne] ||= []).push(a); });
+  (c.annotations || []).forEach(a => { if (!parLigne[a.ligne]) parLigne[a.ligne] = []; parLigne[a.ligne].push(a); });
   return `<div class="exemples-title">Paroles &amp; explications <span class="astuce">· clique sur un mot pour sa traduction</span></div>
     <div class="paroles">${c.paroles.split("\n").map((ligne, i) => {
       const notes = parLigne[i] || [];
