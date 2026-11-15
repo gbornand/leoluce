@@ -455,6 +455,9 @@ body {
 .fig-ajout { border: 2px dashed #d6cff7; border-radius: 16px; background: #faf9ff; color: #5b6ee8; font: inherit; font-weight: 800; cursor: pointer; min-height: 120px; }
 .fig-ajout:hover { border-color: #8f6fe8; }
 .fig-titre-jour { margin-bottom: 6px; }
+.fig-bandeau { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; background: #e5f6ed; border: 2px solid #2fa36b; border-radius: 14px; padding: 12px 16px; margin-bottom: 12px; cursor: pointer; font: inherit; color: #1f5f40; }
+.fig-bandeau span { font-size: 13px; color: #3c7a5a; }
+.fig-bandeau:hover { background: #d5f0e2; }
 
 /* TABLEAU DE BORD PARENT */
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }

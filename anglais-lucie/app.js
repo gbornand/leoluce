@@ -2058,7 +2058,12 @@ async function ajouterSectionFigures(el) {
   const snap = await getDocs(query(collection(db, "figuresRevisions"), where("eleve", "==", eleveCourant)));
   const figs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => f.matiere === matiereCourante);
   figuresById = Object.fromEntries(figs.map(f => [f.id, f]));
-  el.insertAdjacentHTML("beforeend", `<h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>
+  const faites = new Set(figs.map(f => normaliser(f.titre)));
+  const aConfigurer = Object.values(coursById).flatMap(c => (c.figuresProposees || []).filter(f => !faites.has(normaliser(f.titre))));
+  const bandeau = aConfigurer.length
+    ? `<button class="fig-bandeau" id="fig-bandeau">🗺️ <b>${aConfigurer.length} schéma${aConfigurer.length > 1 ? "s" : ""} repéré${aConfigurer.length > 1 ? "s" : ""} dans les cours, à configurer</b><span>${aConfigurer.slice(0, 3).map(f => esc(f.titre)).join(" · ")}${aConfigurer.length > 3 ? "…" : ""} — clique pour les préparer (il faudra la photo de la page)</span></button>`
+    : "";
+  el.insertAdjacentHTML("beforeend", `<h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>${bandeau}
     <div class="fig-grid">${figs.map(f => {
       const n = notionsById[`fig_${f.id}`];
       const st = statutNiveau(n?.niveau || 0);
@@ -2069,6 +2074,7 @@ async function ajouterSectionFigures(el) {
     <button class="fig-ajout" id="fig-ajout">➕ Ajouter un schéma${matiereCourante === "histoire" ? " ou une carte" : ""}</button></div>`);
   el.querySelectorAll("[data-fig]").forEach(b => b.addEventListener("click", () => ouvrirFigure(figuresById[b.dataset.fig])));
   el.querySelector("#fig-ajout").addEventListener("click", ajouterFigurePlusTard);
+  el.querySelector("#fig-bandeau")?.addEventListener("click", ajouterFigurePlusTard);
 }
 
 async function afficherFigureDuJour() {
