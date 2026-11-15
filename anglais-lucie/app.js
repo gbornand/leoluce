@@ -180,6 +180,24 @@ function renderContexte() {
 
 function estParent() { return profil?.role === "parent"; }
 
+// À chaque changement de compte : rien de la session précédente ne doit rester affiché.
+function reinitialiserEcran() {
+  document.getElementById("modal-libre").hidden = true;
+  document.getElementById("modal-notion").hidden = true;
+  clearInterval(jeuTimer);
+  ["dashboard-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+    .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
+  document.getElementById("today-score").hidden = true;
+  document.getElementById("today-content").hidden = true;
+  document.getElementById("streak").hidden = true;
+  document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== "tab-today"; });
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "today"));
+  document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
+  notionsById = {};
+  coursById = {};
+  figuresById = {};
+}
+
 function appliquerMatiere() {
   const parent = estParent();
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = !parent;
@@ -200,7 +218,8 @@ function appliquerMatiere() {
 onAuthStateChanged(auth, async (user) => {
   document.getElementById("screen-login").hidden = !!user;
   document.getElementById("screen-app").hidden = !user;
-  if (!user) { profil = null; return; }
+  reinitialiserEcran();
+  if (!user) { profil = null; eleveCourant = null; matiereCourante = null; return; }
   try {
     const initialiserRevisions = httpsCallable(functions, "initialiserRevisions", { timeout: 300000 });
     profil = await initialiserRevisions({}).then(r => r.data);
@@ -211,7 +230,7 @@ onAuthStateChanged(auth, async (user) => {
   }
   const memo = lireLocal("eleve-courant");
   choisirContexte(profil.eleves.some(e => e.uid === memo) ? memo : profil.eleves[0].uid, null);
-  if (estParent()) document.querySelector('.tab-btn[data-tab="dashboard"]').click();
+  document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`).click();
 });
 
 // ------------------------------------------------------------
