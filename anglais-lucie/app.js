@@ -3,7 +3,7 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc, deleteDoc
@@ -84,13 +84,53 @@ document.getElementById("btn-forgot-password").addEventListener("click", async (
     await sendPasswordResetEmail(auth, email);
     okEl.textContent = "Email envoyé ! Regarde ta boîte mail pour choisir un nouveau mot de passe.";
     okEl.hidden = false;
-  } catch {
-    okEl.textContent = "Si ce compte existe, un email vient d'être envoyé.";
-    okEl.hidden = false;
+  } catch (err) {
+    if (err?.code === "auth/too-many-requests") {
+      errorEl.textContent = "Trop de demandes pour ce compte : Google bloque les envois pendant un moment. Réessaie dans une heure.";
+      errorEl.hidden = false;
+    } else if (err?.code === "auth/invalid-email") {
+      errorEl.textContent = "Cette adresse email n'est pas valide.";
+      errorEl.hidden = false;
+    } else {
+      okEl.textContent = "Si ce compte existe, un email vient d'être envoyé.";
+      okEl.hidden = false;
+    }
   }
 });
 
 document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+
+// Changer son mot de passe une fois connecté (sans passer par un email).
+document.getElementById("btn-mdp").addEventListener("click", () => {
+  const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">🔑 Mon compte</div><h3>Changer mon mot de passe</h3></div>
+    <div class="game-body">
+      <label class="fig-label">Nouveau mot de passe (6 caractères minimum)
+        <div class="password-field"><input type="password" id="mdp-nouveau" autocomplete="new-password"><button type="button" class="btn-toggle-password" data-cible="mdp-nouveau">👁</button></div></label>
+      <label class="fig-label">Confirme-le
+        <div class="password-field"><input type="password" id="mdp-confirme" autocomplete="new-password"><button type="button" class="btn-toggle-password" data-cible="mdp-confirme">👁</button></div></label>
+      <button class="btn-primary btn-block" id="mdp-valider">Enregistrer</button>
+      <p class="muted" id="mdp-statut"></p>
+    </div>`);
+  corps.querySelectorAll("[data-cible]").forEach(b => b.addEventListener("click", () => {
+    const input = corps.querySelector(`#${b.dataset.cible}`);
+    input.type = input.type === "password" ? "text" : "password";
+  }));
+  corps.querySelector("#mdp-valider").addEventListener("click", async () => {
+    const nouveau = corps.querySelector("#mdp-nouveau").value;
+    const statut = corps.querySelector("#mdp-statut");
+    if (nouveau.length < 6) { statut.textContent = "6 caractères minimum."; return; }
+    if (nouveau !== corps.querySelector("#mdp-confirme").value) { statut.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    try {
+      await updatePassword(auth.currentUser, nouveau);
+      statut.textContent = "✅ Mot de passe changé ! Utilise-le maintenant sur tous tes appareils.";
+    } catch (err) {
+      console.error(err);
+      statut.textContent = err?.code === "auth/requires-recent-login"
+        ? "Par sécurité, déconnecte-toi puis reconnecte-toi, et recommence tout de suite."
+        : "❌ Impossible de changer le mot de passe pour l'instant.";
+    }
+  });
+});
 
 // ------------------------------------------------------------
 // ÉLÈVES & MATIÈRES
