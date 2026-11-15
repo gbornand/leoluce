@@ -16,6 +16,12 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
+// Branche un événement sans planter si l'élément manque (page en cache plus ancienne que le script).
+function sur(id, evenement, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(evenement, fn);
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyBpKc6h0mjkTff5KJBD0_A4IBePsR4cU3w",
   authDomain: "leoluce-edu.firebaseapp.com",
@@ -37,7 +43,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 // ------------------------------------------------------------
 // AUTH
 // ------------------------------------------------------------
-document.getElementById("btn-toggle-password").addEventListener("click", () => {
+sur("btn-toggle-password", "click", () => {
   const input = document.getElementById("login-password");
   const btn = document.getElementById("btn-toggle-password");
   const showing = input.type === "text";
@@ -46,7 +52,7 @@ document.getElementById("btn-toggle-password").addEventListener("click", () => {
   btn.title = showing ? "Afficher le mot de passe" : "Masquer le mot de passe";
 });
 
-document.getElementById("login-form").addEventListener("submit", async (e) => {
+sur("login-form", "submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value;
@@ -69,7 +75,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("btn-forgot-password").addEventListener("click", async () => {
+sur("btn-forgot-password", "click", async () => {
   const email = document.getElementById("login-email").value.trim();
   const errorEl = document.getElementById("login-error");
   const okEl = document.getElementById("login-reset-ok");
@@ -98,10 +104,10 @@ document.getElementById("btn-forgot-password").addEventListener("click", async (
   }
 });
 
-document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+sur("btn-logout", "click", () => signOut(auth));
 
 // Changer son mot de passe une fois connecté (sans passer par un email).
-document.getElementById("btn-mdp").addEventListener("click", () => {
+sur("btn-mdp", "click", () => {
   const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">🔑 Mon compte</div><h3>Changer mon mot de passe</h3></div>
     <div class="game-body">
       <label class="fig-label">Nouveau mot de passe (6 caractères minimum)
@@ -353,7 +359,7 @@ function majBoutonEcoute(enCours) {
   document.getElementById("audio-title").textContent = enCours ? "Lecture en cours…" : "Écouter le texte";
 }
 
-document.getElementById("btn-play").addEventListener("click", () => {
+sur("btn-play", "click", () => {
   if (!("speechSynthesis" in window)) {
     document.getElementById("audio-title").textContent = "Lecture audio non disponible sur cet appareil";
     return;
@@ -381,7 +387,7 @@ document.querySelectorAll(".speed-btn").forEach(b => b.addEventListener("click",
   if (speechSynthesis.speaking) { speechSynthesis.cancel(); majBoutonEcoute(false); }
 }));
 
-document.getElementById("btn-show-text").addEventListener("click", (e) => {
+sur("btn-show-text", "click", (e) => {
   document.getElementById("ce-texte").hidden = false;
   e.currentTarget.hidden = true;
 });
@@ -445,7 +451,7 @@ function afficherBilan(resultat) {
   s.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-document.getElementById("btn-autre-seance").addEventListener("click", async (e) => {
+sur("btn-autre-seance", "click", async (e) => {
   const btn = e.currentTarget;
   btn.disabled = true;
   btn.textContent = "Préparation… ✍️";
@@ -652,7 +658,7 @@ async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance
 // ------------------------------------------------------------
 let photosEnAttente = [];
 
-document.getElementById("photo-input").addEventListener("change", async (e) => {
+sur("photo-input", "change", async (e) => {
   photosEnAttente = [];
   document.getElementById("photo-preview").innerHTML = "";
   for (const file of e.target.files) {
@@ -706,7 +712,7 @@ function resizeImage(file, maxDim, quality) {
   });
 }
 
-document.getElementById("btn-envoyer-cours").addEventListener("click", async () => {
+sur("btn-envoyer-cours", "click", async () => {
   const statusEl = document.getElementById("add-status");
   const btn = document.getElementById("btn-envoyer-cours");
   btn.disabled = true;
@@ -911,7 +917,7 @@ function ouvrirLibre(html) {
 }
 
 let jeuTimer = null;
-document.getElementById("modal-libre-close").addEventListener("click", () => {
+sur("modal-libre-close", "click", () => {
   document.getElementById("modal-libre").hidden = true;
   clearInterval(jeuTimer);
   loadNotions();
@@ -1132,7 +1138,7 @@ function ouvrirChanson(c) {
   });
 }
 
-document.getElementById("btn-add-song").addEventListener("click", async () => {
+sur("btn-add-song", "click", async () => {
   const titre = document.getElementById("song-titre").value.trim();
   const artiste = document.getElementById("song-artiste").value.trim();
   const url = document.getElementById("song-url").value.trim();
@@ -1234,7 +1240,7 @@ async function afficherHistoriqueNotion(notionId) {
   }
 }
 
-document.getElementById("btn-entrainer").addEventListener("click", async () => {
+sur("btn-entrainer", "click", async () => {
   const btn = document.getElementById("btn-entrainer");
   const zone = document.getElementById("modal-exos");
   const notionId = modalNotionId;
@@ -1279,7 +1285,7 @@ document.getElementById("btn-entrainer").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("modal-close").addEventListener("click", () => {
+sur("modal-close", "click", () => {
   document.getElementById("modal-notion").hidden = true;
   modalNotionId = null;
 });
@@ -1405,7 +1411,7 @@ function finEntrainement(corps, titre, bonnes, total, relancer) {
 }
 
 // PRONONCIATION
-document.getElementById("btn-pron").addEventListener("click", lancerPrononciation);
+sur("btn-pron", "click", lancerPrononciation);
 
 function lancerPrononciation() {
   const Reco = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1470,7 +1476,7 @@ function lancerPrononciation() {
 }
 
 // DICTÉE
-document.getElementById("btn-dictee").addEventListener("click", lancerDictee);
+sur("btn-dictee", "click", lancerDictee);
 
 function lancerDictee() {
   const phrases = phrasesEntrainement(6);
@@ -1512,7 +1518,7 @@ function lancerDictee() {
 }
 
 // CONTRÔLE BLANC
-document.getElementById("btn-controle").addEventListener("click", async () => {
+sur("btn-controle", "click", async () => {
   if (!Object.keys(coursById).length) await loadNotions();
   const cours = Object.entries(coursById).sort((a, b) => (b[1].dateAjout || "").localeCompare(a[1].dateAjout || ""));
   const corps = ouvrirLibre(`<div class="game-head hdr-controle"><div class="modal-kicker">📝 Contrôle blanc</div><h3>Quel cours réviser ?</h3></div>
@@ -1565,7 +1571,7 @@ async function lancerControle(coursId) {
 }
 
 // RÉCAP PARENT (aperçu)
-document.getElementById("btn-recap-test").addEventListener("click", async (e) => {
+sur("btn-recap-test", "click", async (e) => {
   const btn = e.currentTarget;
   const status = document.getElementById("recap-status");
   btn.disabled = true;
@@ -1667,7 +1673,7 @@ async function loadDashboard() {
   }
 }
 
-document.getElementById("btn-recap-test-dash").addEventListener("click", async (e) => {
+sur("btn-recap-test-dash", "click", async (e) => {
   const btn = e.currentTarget;
   const status = document.getElementById("recap-status-dash");
   btn.disabled = true;
