@@ -2089,3 +2089,5 @@ async function afficherFigureDuJour() {
     console.error("Figure du jour", err);
   }
 }
+
+window.__appPrete = true;

@@ -24,7 +24,7 @@
     <div class="login-emoji-badge"><span class="login-emoji">🦉</span></div>
     <h1>Mes révisions</h1>
     <p class="login-sub">10 minutes par jour, c'est tout.</p>
-    <form id="login-form">
+    <form id="login-form" onsubmit="return false;">
       <label>Email <input type="email" id="login-email" required autocomplete="username" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
       <label>Mot de passe
         <div class="password-field">
@@ -188,6 +188,21 @@
   </div>
 </div>
 
+<script>
+  // Diagnostic : si le module ne démarre pas (navigateur trop ancien, erreur), afficher pourquoi.
+  window.__erreursApp = [];
+  window.addEventListener("error", function (e) {
+    window.__erreursApp.push((e.message || "erreur") + " @ " + String(e.filename || "").split("/").pop() + ":" + (e.lineno || "?"));
+  });
+  setTimeout(function () {
+    if (window.__appPrete) return;
+    var el = document.getElementById("login-error");
+    el.hidden = false;
+    el.style.wordBreak = "break-word";
+    el.textContent = "L'appli n'a pas pu démarrer sur cet appareil. Envoie une capture de ce message. "
+      + "[" + navigator.userAgent + "] " + window.__erreursApp.join(" | ");
+  }, 6000);
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
