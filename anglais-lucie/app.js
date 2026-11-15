@@ -1797,10 +1797,73 @@ async function enregistrerFigure({ coursId, titre, type, image, legendes }) {
     type: "figure", label: titre, figureId: ref.id,
     niveau: 0, dernierResultat: null, prochaineDate: todayISO(), dernierVu: null,
   });
+  return ref.id;
+}
+
+async function supprimerFigure(id) {
+  await deleteDoc(doc(db, "figuresRevisions", id));
+  await deleteDoc(doc(db, "progressionAnglais", `fig_${id}`));
+}
+
+// L'IA localise le cadre de la figure et le texte de chaque légende sur la page ;
+// on recadre et on convertit les boîtes dans le repère de l'image recadrée.
+async function preparerFigureAuto(pageDataUrl, figure) {
+  const envoi = await recadrer(pageDataUrl, { x: 0, y: 0, w: 1, h: 1 }, 1600);
+  const localiser = httpsCallable(functions, "localiserFigureRevisions", { timeout: 120000 });
+  const r = await localiser({ eleve: eleveCourant, image: envoi.split(",")[1], titre: figure.titre || "", legendes: figure.legendes || [] }).then(x => x.data);
+  const marge = 0.02;
+  const f = r.figure;
+  const rect = {
+    x: Math.max(0, f.x0 / 1000 - marge), y: Math.max(0, f.y0 / 1000 - marge),
+    w: 0, h: 0,
+  };
+  rect.w = Math.min(1, f.x1 / 1000 + marge) - rect.x;
+  rect.h = Math.min(1, f.y1 / 1000 + marge) - rect.y;
+  if (rect.w < 0.05 || rect.h < 0.05) throw new Error("Figure non localisée");
+  const pad = 0.005;
+  const clamp = v => Math.min(1, Math.max(0, v));
+  const legendes = r.legendes.map(l => {
+    const x0 = clamp((l.x0 / 1000 - pad - rect.x) / rect.w), y0 = clamp((l.y0 / 1000 - pad - rect.y) / rect.h);
+    const x1 = clamp((l.x1 / 1000 + pad - rect.x) / rect.w), y1 = clamp((l.y1 / 1000 + pad - rect.y) / rect.h);
+    return { texte: l.texte, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }).filter(l => l.w > 0.01 && l.h > 0.01);
+  if (legendes.length < 2) throw new Error("Légendes non localisées");
+  return { titre: figure.titre || "Figure", type: figure.type || "schema", image: await recadrer(pageDataUrl, rect), legendes };
+}
+
+function tournerImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalHeight; c.height = img.naturalWidth;
+      const ctx = c.getContext("2d");
+      ctx.translate(c.width, 0);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function apercuFigure(fig) {
+  const stage = document.createElement("div");
+  stage.className = "fig-stage fig-apercu";
+  stage.innerHTML = `<img src="${fig.image}" class="fig-img" alt="" draggable="false">`;
+  fig.legendes.forEach((l, n) => {
+    const b = document.createElement("div");
+    b.className = "fig-masque rempli";
+    Object.assign(b.style, { left: `${l.x * 100}%`, top: `${l.y * 100}%`, width: `${l.w * 100}%`, height: `${l.h * 100}%` });
+    b.innerHTML = `<span class="fig-num">${n + 1}</span>`;
+    stage.appendChild(b);
+  });
+  return stage;
 }
 
 // Assistant de configuration : image → recadrage → légendes → placement. Résout "ok" | "passe".
-function assistantFigure({ coursId, figure = {}, pages = [], rang = "" }) {
+function assistantFigure({ coursId, figure = {}, pages = [], rang = "", manuel = false }) {
   return new Promise(resolve => {
     const corps = document.getElementById("modal-libre-corps");
     document.getElementById("modal-libre").hidden = false;
@@ -1812,23 +1875,51 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "" }) {
         ${pages.length ? `<p class="muted">Sur quelle page se trouve la figure ?</p><div class="fig-pages">${pages.map((p, i) => `<button class="fig-page${figure.page === i + 1 ? " suggeree" : ""}" data-page="${i}"><img src="${p}" alt=""><span>Page ${i + 1}${figure.page === i + 1 ? " · proposée" : ""}</span></button>`).join("")}</div>` : ""}
         <label class="btn-ghost-small fig-upload">📷 ${pages.length ? "Utiliser une autre photo" : "Choisir une photo de la figure"}<input type="file" accept="image/*" hidden></label>
         <div class="fig-nav"><button class="btn-ghost-small" id="fig-passer">Passer cette figure</button></div></div>`;
-      corps.querySelectorAll("[data-page]").forEach(b => b.addEventListener("click", () => { image = pages[Number(b.dataset.page)]; etapeCadrage(); }));
+      corps.querySelectorAll("[data-page]").forEach(b => b.addEventListener("click", () => { image = pages[Number(b.dataset.page)]; apresChoixImage(); }));
       corps.querySelector(".fig-upload input").addEventListener("change", async e => {
         const f = e.target.files[0];
         if (!f) return;
         const r = await resizeImage(f, 2000, 0.9);
         image = `data:${r.mimeType};base64,${r.data}`;
-        etapeCadrage();
+        apresChoixImage();
       });
       corps.querySelector("#fig-passer").addEventListener("click", () => resolve("passe"));
+    };
+
+    const apresChoixImage = () => (manuel ? etapeCadrage() : etapeAuto());
+
+    const etapeAuto = async () => {
+      corps.innerHTML = `${entete("Préparation automatique")}<div class="game-body"><div class="loading-exos">✂️ L'IA repère le schéma et cache les légendes…</div></div>`;
+      try {
+        const prete = await preparerFigureAuto(image, figure);
+        corps.innerHTML = `${entete("Vérifie le schéma vierge")}<div class="game-body">
+          <p class="muted">Chaque légende doit être cachée par une case numérotée.</p>
+          <div id="fig-apercu-auto"></div>
+          <button class="btn-primary btn-block" id="fig-ok-auto">✅ C'est bon, enregistrer</button>
+          <div class="fig-nav"><button class="btn-ghost-small" id="fig-tourner-auto">↻ Photo de travers ? Tourner</button><button class="btn-ghost-small" id="fig-manuel">✋ Faire à la main</button></div></div>`;
+        corps.querySelector("#fig-apercu-auto").appendChild(apercuFigure(prete));
+        corps.querySelector("#fig-tourner-auto").addEventListener("click", async () => { image = await tournerImage(image); etapeAuto(); });
+        corps.querySelector("#fig-manuel").addEventListener("click", etapeCadrage);
+        corps.querySelector("#fig-ok-auto").addEventListener("click", async e => {
+          e.currentTarget.disabled = true;
+          e.currentTarget.textContent = "Enregistrement…";
+          await enregistrerFigure({ coursId, ...prete });
+          resolve("ok");
+        });
+      } catch (err) {
+        console.error(err);
+        etapeCadrage();
+        corps.querySelector(".game-body").insertAdjacentHTML("afterbegin", `<p class="pr-verdict ko">L'IA n'a pas réussi à placer les cases : fais-le à la main, c'est rapide.</p>`);
+      }
     };
 
     const etapeCadrage = () => {
       corps.innerHTML = `${entete("2. Recadre la figure")}<div class="game-body">
         <p class="muted">Trace un rectangle autour de la figure (clic-glisser, ou au doigt).</p>
         <div class="fig-stage"><img src="${image}" class="fig-img" alt="" draggable="false"></div>
-        <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Retour</button><button class="btn-ghost-small" id="fig-tout">Garder toute l'image</button></div></div>`;
+        <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Retour</button><button class="btn-ghost-small" id="fig-tourner">↻ Tourner</button><button class="btn-ghost-small" id="fig-tout">Garder toute l'image</button></div></div>`;
       corps.querySelector("#fig-retour").addEventListener("click", etapeSource);
+      corps.querySelector("#fig-tourner").addEventListener("click", async () => { image = await tournerImage(image); etapeCadrage(); });
       const suite = async rect => { recadree = await recadrer(image, rect); etapeLegendes(); };
       corps.querySelector("#fig-tout").addEventListener("click", () => suite({ x: 0, y: 0, w: 1, h: 1 }));
       zoneDeSelection(corps.querySelector(".fig-stage"), suite);
@@ -1908,24 +1999,57 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "" }) {
   });
 }
 
+// Après l'import : chaque figure repérée est préparée automatiquement (schéma vierge), puis aperçu.
 async function proposerFigures(coursId, figures) {
-  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>${figures.length} figure${figures.length > 1 ? "s" : ""} trouvée${figures.length > 1 ? "s" : ""} dans ce cours</h3></div>
-    <div class="game-body"><p class="muted">Lesquelles faut-il apprendre ?</p>
-    ${figures.map((f, i) => `<label class="fig-choix"><input type="checkbox" value="${i}" checked><span><b>${esc(f.titre)}</b><br><span class="muted">${f.type === "carte" ? "Carte" : "Schéma"} · ${(f.legendes || []).length} légendes${f.page ? ` · page ${esc(f.page)}` : ""}</span></span></label>`).join("")}
-    <button class="btn-primary btn-block" id="fig-go">Configurer les figures cochées</button>
-    <div class="fig-nav"><button class="btn-ghost-small" id="fig-plus-tard">Plus tard</button></div></div>`);
-  corps.querySelector("#fig-plus-tard").addEventListener("click", () => document.getElementById("modal-libre-close").click());
-  corps.querySelector("#fig-go").addEventListener("click", async () => {
-    const choisies = [...corps.querySelectorAll("input:checked")].map(c => ({ ...figures[Number(c.value)] }));
-    if (!choisies.length) return;
-    corps.querySelector(".game-body").innerHTML = `<div class="loading-exos">Préparation des pages…</div>`;
-    let pages = [];
-    try { pages = await pagesDepuisSources(derniersSources); } catch (err) { console.error(err); }
-    for (let i = 0; i < choisies.length; i++) {
-      await assistantFigure({ coursId, figure: choisies[i], pages, rang: `${i + 1}/${choisies.length}` });
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Préparation de ${figures.length} figure${figures.length > 1 ? "s" : ""}…</h3></div>
+    <div class="game-body"><div class="loading-exos" id="fig-progres">Lecture des pages du cours…</div></div>`);
+  const progres = corps.querySelector("#fig-progres");
+  let pages = [];
+  try { pages = await pagesDepuisSources(derniersSources); } catch (err) { console.error(err); }
+  const resultats = [];
+  for (let i = 0; i < figures.length; i++) {
+    const f = figures[i];
+    progres.textContent = `✂️ Préparation du schéma vierge ${i + 1}/${figures.length} : ${f.titre}…`;
+    const page = pages[(Number(f.page) || 1) - 1] || (pages.length === 1 ? pages[0] : null);
+    try {
+      if (!page) throw new Error("Page introuvable");
+      const prete = await preparerFigureAuto(page, f);
+      const id = await enregistrerFigure({ coursId, ...prete });
+      resultats.push({ ok: true, id, figure: f, page, prete });
+    } catch (err) {
+      console.error("Figure auto", f.titre, err);
+      resultats.push({ ok: false, figure: f, page });
     }
-    document.getElementById("modal-libre-close").click();
+  }
+  afficherBilanFigures(coursId, resultats, pages);
+}
+
+function afficherBilanFigures(coursId, resultats, pages) {
+  const ok = resultats.filter(r => r.ok).length;
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>${ok} schéma${ok > 1 ? "s" : ""} vierge${ok > 1 ? "s" : ""} prêt${ok > 1 ? "s" : ""}</h3></div>
+    <div class="game-body" id="fig-bilan"><p class="muted">Vérifie que chaque légende est bien cachée par une case. Sinon, refais-la à la main.</p></div>`);
+  const zone = corps.querySelector("#fig-bilan");
+  resultats.forEach(r => {
+    const bloc = document.createElement("div");
+    bloc.className = "fig-bilan-item";
+    bloc.innerHTML = `<div class="gram-card-title">${r.ok ? "✅" : "⚠️"} ${esc(r.figure.titre)}</div>${r.ok ? "" : `<p class="muted">L'IA n'a pas réussi à placer les cases automatiquement.</p>`}`;
+    if (r.ok) bloc.appendChild(apercuFigure(r.prete));
+    const nav = document.createElement("div");
+    nav.className = "fig-nav";
+    nav.innerHTML = `<button class="btn-ghost-small">✋ ${r.ok ? "Refaire à la main" : "Faire à la main"}</button>`;
+    nav.querySelector("button").addEventListener("click", async () => {
+      if (r.ok) await supprimerFigure(r.id);
+      await assistantFigure({ coursId, figure: { ...r.figure }, pages, manuel: true });
+      afficherBilanFigures(coursId, resultats.filter(x => x !== r), pages);
+    });
+    bloc.appendChild(nav);
+    zone.appendChild(bloc);
   });
+  const fin = document.createElement("button");
+  fin.className = "btn-primary btn-block";
+  fin.textContent = "C'est bon !";
+  fin.addEventListener("click", () => document.getElementById("modal-libre-close").click());
+  zone.appendChild(fin);
 }
 
 async function ajouterFigurePlusTard() {

@@ -452,11 +452,15 @@ function reparateurIds(notions) {
   };
 }
 
-async function appelIA(prompt, maxTokens = 8000) {
+// Effort réduit pour aller vite (téléphone) ; un peu plus de réflexion en maths/physique pour la justesse des calculs.
+function effortPour(matiere) { return SCIENCES.includes(matiere) ? "medium" : "low"; }
+
+async function appelIA(prompt, maxTokens = 8000, effort = "low") {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const response = await client.messages.create({
     model: "claude-opus-5-5",
     max_tokens: maxTokens,
+    output_config: { effort },
     messages: [{ role: "user", content: prompt }],
   });
   const textBlock = response.content.find(b => b.type === "text");
@@ -553,6 +557,49 @@ exports.extraireCoursAnglais = onCall(
   }
 );
 
+// Localise sur une page de cours le cadre d'une figure et le texte de chacune de ses légendes
+// (coordonnées en millièmes de l'image), pour fabriquer automatiquement le schéma vierge.
+exports.localiserFigureRevisions = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120, memory: "512MiB", invoker: "public" },
+  async (request) => {
+    contexteAppel(request, { matiereRequise: false });
+    const image = String(request.data?.image || "");
+    const titre = String(request.data?.titre || "").slice(0, 120);
+    const legendes = (Array.isArray(request.data?.legendes) ? request.data.legendes : []).map(String).slice(0, 40);
+    if (!image) throw new HttpsError("invalid-argument", "Image requise.");
+
+    const prompt = `Cette image est une page de cours. Elle contient la figure « ${titre || "schéma"} »${legendes.length ? ` avec ces légendes : ${legendes.map(l => `« ${l} »`).join(", ")}` : ""}.
+1. Donne la boîte englobante de la figure entière, légendes comprises.
+2. Pour CHAQUE légende, donne la boîte englobante serrée du TEXTE de la légende tel qu'il est écrit sur l'image (pas le trait ni la zone pointée).${legendes.length ? "" : " Relève toi-même les légendes de la figure."}
+Coordonnées en millièmes de la largeur et de la hauteur de l'image (entiers de 0 à 1000), origine en haut à gauche. Sois précis.
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{ "figure": { "x0": 0, "y0": 0, "x1": 1000, "y1": 1000 }, "legendes": [ { "texte": "...", "x0": 0, "y0": 0, "x1": 0, "y1": 0 } ] }
+Omets une légende qui n'est pas visible.`;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image } },
+        { type: "text", text: prompt },
+      ] }],
+    });
+    const textBlock = response.content.find(b => b.type === "text");
+    if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
+    const r = extractJsonAnglais(textBlock.text);
+    const boite = b => {
+      const v = ["x0", "y0", "x1", "y1"].map(k => Math.min(1000, Math.max(0, Number(b?.[k]) || 0)));
+      return { x0: Math.min(v[0], v[2]), y0: Math.min(v[1], v[3]), x1: Math.max(v[0], v[2]), y1: Math.max(v[1], v[3]) };
+    };
+    return {
+      figure: boite(r.figure),
+      legendes: (r.legendes || []).filter(l => l?.texte).map(l => ({ texte: String(l.texte), ...boite(l) }))
+        .filter(l => l.x1 - l.x0 > 2 && l.y1 - l.y0 > 2),
+    };
+  }
+);
+
 // Exercices à la demande sur une seule notion (depuis « Mes notions ») — non stockés.
 exports.exercicesNotionAnglais = onCall(
   { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120 },
@@ -576,7 +623,7 @@ ${matiere === "anglais" ? `Vocabulaire autorisé : celui du cours (${(cours.voca
 ${formatsExos(matiere, profil)}
 
 Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) : { "exercices": [ ... ] }`;
-    const parsed = await appelIA(prompt, 4096);
+    const parsed = await appelIA(prompt, 4096, effortPour(matiere));
     return { exercices: parsed.exercices || [] };
   }
 );
@@ -736,7 +783,7 @@ Génère exactement un exercice par notion ci-dessus, du plus simple au plus dif
 ${formatsExos(matiere, profil)}
 
 Chaque exercice a en plus "notionId" = l'id exact donné ci-dessus. Réponds UNIQUEMENT avec un objet JSON : { "exercices": [ ... ] }`;
-    const { exercices = [] } = await appelIA(prompt, 8000);
+    const { exercices = [] } = await appelIA(prompt, 8000, effortPour(matiere));
     const reparer = reparateurIds(notions);
     return { titre: cours.titre, exercices: exercices.map(e => ({ ...e, notionId: reparer(e.notionId) })) };
   }
@@ -872,7 +919,7 @@ Génère la séance. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/
 "vocabulaire" = un exercice par notion « À SAVOIR » ; "grammaire" = un exercice par notion « RÈGLE », « MÉTHODE » ou « À COMPRENDRE ». Pas plus d'un exercice par notion. Ton enjoué, jamais scolaire-ennuyeux.
 
 ${formatsExos(matiere, profil)}`;
-    const parsed = await appelIA(prompt, 8000);
+    const parsed = await appelIA(prompt, 8000, effortPour(matiere));
     const reparer = reparateurIds(notions);
     const avecIds = items => (items || []).map(it => ({ ...it, notionId: reparer(it.notionId) }));
 
