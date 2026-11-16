@@ -847,8 +847,9 @@ async function loadNotions() {
     </div>
     ${graphiqueActivite(reponses)}
     ${htmlBadges(motivation)}
-    <h3 class="section-title">${esc(ui().regle)} <span>${grammaire.length}</span></h3>
-    <div class="gram-grid">${grammaire.map(n => {
+    ${categoriesGram(grammaire).map(([cat, items]) => `
+    <h3 class="section-title">${esc(cat || ui().regle)} <span>${items.length}</span></h3>
+    <div class="gram-grid">${items.map(n => {
       const st = statutNiveau(n.niveau || 0);
       return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
         <span class="pill ${st.cls}">${st.label}</span>${marqueDerniere(n)}
@@ -856,7 +857,7 @@ async function loadNotions() {
         <div class="gram-card-cours">${esc(coursById[n.coursId]?.titre || "")}</div>
         ${barreNiveau(n.niveau || 0)}
       </button>`;
-    }).join("")}</div>
+    }).join("")}</div>`).join("")}
     <h3 class="section-title">${esc(ui().savoir)} <span>${vocab.length}</span></h3>
     <div class="accordion">${themesVocab(vocab).map(([theme, mots], i) => {
       const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
@@ -895,6 +896,18 @@ async function loadNotions() {
 
 function tradDe(n) {
   return coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label)?.traduction || "";
+}
+
+function categoriesGram(grammaire) {
+  if (!grammaire.some(n => n.categorie)) return [[null, grammaire]];
+  const ordre = ["Grammaire", "Conjugaison", "Orthographe", "Texte", "Méthode"];
+  const map = new Map();
+  grammaire.forEach(n => {
+    const c = n.categorie || "Autre";
+    if (!map.has(c)) map.set(c, []);
+    map.get(c).push(n);
+  });
+  return [...map.entries()].sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0]));
 }
 
 function themesVocab(vocab) {

@@ -373,10 +373,10 @@ ${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire", 
 Relève TOUS les mots à apprendre, sans en omettre. ${commun}`;
   }
   if (matiere === "francais") {
-    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une évaluation corrigée, OU un sujet de rédaction.
-${schema(`{ "mot": "mot-clé ou notion de vocabulaire à retenir (terme grammatical, mot de la leçon, ou mot important souligné/en gras dans un bilan)", "traduction": "définition ou explication courte", "theme": "thème court (ex: Bilan séance 3, Orthographe, Vocabulaire du roman)", "exemple": "exemple ou courte citation" }`,
-  `{ "titre": "nom court de la règle de grammaire/orthographe/conjugaison, OU 'Bilan séance X : <sujet en 3-4 mots>' si c'est un bilan de lecture, OU 'Méthode : la rédaction' si le document donne un sujet de rédaction", "explication": "l'explication pédagogique de la règle (définition + comment la repérer), OU le texte intégral du bilan à apprendre par cœur si c'en est un (ne pas le résumer), OU les conseils de méthode pour la rédaction", "exemples": ["phrase d'exemple, citation clé, ou courte illustration"] }`)}
-Si le document contient un "Bilan" à recopier/apprendre sur un texte ou roman, reproduis-le intégralement (texte complet, pas de résumé) dans une entrée de "grammaire". Si c'est une leçon de grammaire/orthographe, explique la règle et comment la repérer. Si c'est un sujet de rédaction, ajoute une entrée "Méthode : la rédaction" avec les conseils donnés (adjectifs variés, éviter les connecteurs répétitifs, structure du récit...). ${commun}`;
+    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une évaluation ou dictée CORRIGÉE (fautes barrées/entourées en rouge par le professeur), OU un sujet de rédaction.
+${schema(`{ "mot": "mot-clé/notion de vocabulaire à retenir (terme grammatical, mot de la leçon, mot important souligné dans un bilan), OU, si c'est une dictée/évaluation corrigée, le mot CORRECTEMENT écrit d'une faute qu'elle a commise", "traduction": "définition/explication courte, OU pour une faute corrigée : 'Piège : elle a écrit « ... » au lieu de « ... » — <la règle à retenir>'", "theme": "thème court (ex: Bilan séance 3, Vocabulaire du roman), OU 'Mes fautes de dictée' si c'est une faute corrigée", "exemple": "exemple/citation, OU la phrase exacte de la dictée où se trouvait la faute" }`,
+  `{ "titre": "nom court de la règle, OU 'Bilan séance X : <sujet en 3-4 mots>' si c'est un bilan de lecture, OU 'Méthode : la rédaction' si le document donne un sujet de rédaction", "categorie": "une seule valeur EXACTE parmi : Grammaire, Conjugaison, Orthographe, Texte, Méthode", "explication": "l'explication pédagogique de la règle (définition + comment la repérer), OU le texte intégral du bilan à apprendre par cœur si c'en est un (ne pas le résumer), OU les conseils de méthode pour la rédaction", "exemples": ["phrase d'exemple, citation clé, ou courte illustration"] }`)}
+Si le document contient un "Bilan" à recopier/apprendre sur un texte ou roman, reproduis-le intégralement (texte complet, pas de résumé) dans une entrée de "grammaire" avec "categorie": "Texte". Si c'est une leçon de grammaire/orthographe/conjugaison, explique la règle et comment la repérer, avec la "categorie" correspondante (Grammaire, Orthographe ou Conjugaison — une leçon peut mélanger plusieurs règles : fais une entrée par règle avec sa propre catégorie). Si c'est une dictée ou évaluation CORRIGÉE avec des fautes visibles (ratures, mots barrés, corrections en rouge du professeur), relève CHAQUE faute individuellement dans "vocabulaire" (pas dans "grammaire") avec le thème "Mes fautes de dictée", pour qu'elle puisse s'entraîner spécifiquement dessus — ignore les fautes illisibles. Si c'est un sujet de rédaction, ajoute une entrée "Méthode : la rédaction" (categorie "Méthode") avec les conseils donnés (adjectifs variés, éviter les connecteurs répétitifs, structure du récit...). ${commun}`;
   }
   if (MATIERES_DOCUMENTS.includes(matiere)) {
     const quoi = matiere === "svt"
@@ -453,7 +453,8 @@ function ligneNotion(n, cours) {
     return `- [id:${n.id}] À SAVOIR "${n.label}"${v ? ` = ${v.traduction}${v.exemple ? ` (ex: ${v.exemple})` : ""}` : ""}`;
   }
   const g = (cours?.grammaire || []).find(x => x.titre === n.label);
-  const etiquette = /^Bilan /i.test(n.label || "") ? "BILAN À RETENIR" : ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
+  const etiquette = n.categorie === "Texte" ? "BILAN À RETENIR" : n.categorie ? n.categorie.toUpperCase()
+    : ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
   return `- [id:${n.id}] ${etiquette} "${n.label}"${g ? ` : ${g.explication}` : ""}`;
 }
 
@@ -556,7 +557,7 @@ exports.extraireCoursAnglais = onCall(
     const base = { eleve, matiere, coursId: docRef.id, niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null };
     const ecritures = [
       ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, { ...base, type: "vocabulaire", label: v.mot, theme: v.theme || "" }]),
-      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, { ...base, type: "grammaire", label: g.titre }]),
+      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, { ...base, type: "grammaire", label: g.titre, ...(g.categorie ? { categorie: g.categorie } : {}) }]),
     ];
     for (let i = 0; i < ecritures.length; i += 400) {
       const batch = db.batch();
