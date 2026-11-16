@@ -219,6 +219,7 @@ function appliquerMatiere() {
   document.getElementById("recap-parent").hidden = profil.role !== "parent";
   document.getElementById("titre-bloc-savoir").textContent = ui().savoir;
   document.getElementById("titre-bloc-regle").textContent = ui().regle;
+  document.getElementById("add-matiere-badge").textContent = `📥 Ce cours sera rangé dans : ${ui().emoji} ${MATIERES_UI[matiereCourante].nom} — vérifie l'onglet en haut si ce n'est pas ça`;
 }
 
 onAuthStateChanged(auth, async (user) => {

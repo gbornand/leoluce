@@ -93,6 +93,10 @@ body {
   background: #fff; border-radius: 16px; padding: 18px; text-align: center;
   color: #6a6690; box-shadow: 0 2px 10px rgba(91,110,232,.08);
 }
+.add-matiere-badge {
+  background: #f4f0ff; border: 1.5px solid #8f6fe8; border-radius: 12px;
+  padding: 10px 14px; margin: 10px 0; font-weight: 700; font-size: 14px; color: #5b6ee8;
+}
 
 /* BOUTONS */
 .btn-primary {

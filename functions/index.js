@@ -288,7 +288,7 @@ const PARENT_UID = "GoxalGBKNWcyC6OkdENgz8j1u883";
 const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
 const RECAP_DESTINATAIRE = "gbornand@gmail.com";
 const ELEVES = {
-  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "maths", "physique", "svt", "histoire"] },
+  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "maths", "physique", "svt", "histoire", "francais"] },
   "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "maths", "anglais", "histoire"] },
 };
 const NOMS_MATIERES = { anglais: "anglais", francais: "français", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
@@ -366,11 +366,17 @@ ${schema(`{ "mot": "mot ou expression en anglais", "traduction": "traduction en 
 VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page et relève ABSOLUMENT TOUS les mots et expressions (listes, tableaux, encadrés, lexiques, mots illustrés), sans omettre ni résumer. Plusieurs pages = plusieurs centaines d'entrées, c'est normal. Regroupe par "theme" (titre de rubrique du cours s'il existe). Exemples courts.
 ${commun}`;
   }
-  if (matiere === "francais") {
+  if (matiere === "francais" && profil.niveau === "ce2") {
     return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de français fourni (leçon, mots à apprendre, dictée préparée…).
 ${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire", "traduction": "sens très simple ou indice (ex: nom féminin, ce qu'on met sur la tête)", "theme": "thème court (ex: Mots de la semaine, Les sons [an])", "exemple": "courte phrase d'exemple simple" }`,
   `{ "titre": "nom court de la règle (grammaire, conjugaison, orthographe)", "explication": "explication très simple pour une enfant de 8 ans", "exemples": ["phrase d'exemple"] }`)}
 Relève TOUS les mots à apprendre, sans en omettre. ${commun}`;
+  }
+  if (matiere === "francais") {
+    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une évaluation corrigée, OU un sujet de rédaction.
+${schema(`{ "mot": "mot-clé ou notion de vocabulaire à retenir (terme grammatical, mot de la leçon, ou mot important souligné/en gras dans un bilan)", "traduction": "définition ou explication courte", "theme": "thème court (ex: Bilan séance 3, Orthographe, Vocabulaire du roman)", "exemple": "exemple ou courte citation" }`,
+  `{ "titre": "nom court de la règle de grammaire/orthographe/conjugaison, OU 'Bilan séance X : <sujet en 3-4 mots>' si c'est un bilan de lecture, OU 'Méthode : la rédaction' si le document donne un sujet de rédaction", "explication": "l'explication pédagogique de la règle (définition + comment la repérer), OU le texte intégral du bilan à apprendre par cœur si c'en est un (ne pas le résumer), OU les conseils de méthode pour la rédaction", "exemples": ["phrase d'exemple, citation clé, ou courte illustration"] }`)}
+Si le document contient un "Bilan" à recopier/apprendre sur un texte ou roman, reproduis-le intégralement (texte complet, pas de résumé) dans une entrée de "grammaire". Si c'est une leçon de grammaire/orthographe, explique la règle et comment la repérer. Si c'est un sujet de rédaction, ajoute une entrée "Méthode : la rédaction" avec les conseils donnés (adjectifs variés, éviter les connecteurs répétitifs, structure du récit...). ${commun}`;
   }
   if (MATIERES_DOCUMENTS.includes(matiere)) {
     const quoi = matiere === "svt"
@@ -407,9 +413,13 @@ LANGUE : tout ce que l'élève lit pour répondre (question, phrase, choix, mots
     return `${base}
 LANGUE : consignes en FRANÇAIS très simple (8 ans). Contenu anglais très court : mots isolés ou phrases de 3 à 5 mots. Privilégie "qcm" (images mentales, couleurs, animaux, nombres…). Explications en français, une phrase.`;
   }
-  if (matiere === "francais") {
+  if (matiere === "francais" && ce2) {
     return `${base}
 LANGUE : tout en français, phrases courtes et simples pour une enfant de 8 ans. Pour l'orthographe, utilise "trou" (écrire le mot) et "qcm" (choisir la bonne orthographe). Pour "ordre", les éléments sont les mots d'une phrase.`;
+  }
+  if (matiere === "francais") {
+    return `${base}
+LANGUE : tout en français, niveau collège. Pour un bilan de lecture, utilise "trou" pour faire retrouver les mots-clés importants du texte (teste la mémorisation par cœur du bilan) et "qcm" pour des questions de compréhension. Pour une règle de grammaire/orthographe, utilise "qcm" (identifier la fonction/nature d'un mot dans une phrase) et "trou" (compléter l'accord ou la règle). Pour "ordre", remets dans l'ordre les mots d'une phrase ou les étapes d'une méthode.`;
   }
   if (MATIERES_DOCUMENTS.includes(matiere)) {
     return `${base}
@@ -425,8 +435,11 @@ function blocDecouverte(matiere, profil) {
   if (matiere === "anglais") {
     return `"comprehensionEcrite": { "mode": "ecoute", "titre": "Écoute & compréhension", "texte": "${ce2 ? "3 ou 4 phrases anglaises très simples" : "court texte en anglais (5-8 phrases), amusant"}, qui réutilise le vocabulaire ci-dessus", "questions": [ 3 questions "qcm" ${ce2 ? "en français" : "in English"} ] }`;
   }
-  if (matiere === "francais") {
+  if (matiere === "francais" && ce2) {
     return `"comprehensionEcrite": { "mode": "lecture", "titre": "Lecture", "texte": "petit texte de 4 à 6 phrases pour une enfant de 8 ans, qui utilise des mots du cours", "questions": [ 3 questions "qcm" de compréhension ] }`;
+  }
+  if (matiere === "francais") {
+    return `"comprehensionEcrite": { "mode": "lecture", "titre": "Lecture", "texte": "court extrait ou mini-question de compréhension (4-8 phrases), niveau collège, en lien avec le bilan de lecture ou la notion de grammaire ci-dessus", "questions": [ 3 questions "qcm" ou "trou" ] }`;
   }
   if (MATIERES_DOCUMENTS.includes(matiere)) {
     return `"comprehensionEcrite": { "mode": "lecture", "titre": "${matiere === "svt" ? "Document scientifique" : "Document"}", "texte": "court document (4-6 phrases) ${matiere === "svt" ? "décrivant une observation ou une expérience" : "racontant un événement ou décrivant un lieu"}, ${ce2 ? "niveau CE2" : "niveau collège"}, en lien avec les notions ci-dessus", "questions": [ 3 questions "qcm" ou "trou" sur le document ] }`;
@@ -440,7 +453,7 @@ function ligneNotion(n, cours) {
     return `- [id:${n.id}] À SAVOIR "${n.label}"${v ? ` = ${v.traduction}${v.exemple ? ` (ex: ${v.exemple})` : ""}` : ""}`;
   }
   const g = (cours?.grammaire || []).find(x => x.titre === n.label);
-  const etiquette = ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
+  const etiquette = /^Bilan /i.test(n.label || "") ? "BILAN À RETENIR" : ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
   return `- [id:${n.id}] ${etiquette} "${n.label}"${g ? ` : ${g.explication}` : ""}`;
 }
 
@@ -453,7 +466,7 @@ function reparateurIds(notions) {
 }
 
 // Effort réduit pour aller vite (téléphone) ; un peu plus de réflexion en maths/physique pour la justesse des calculs.
-function effortPour(matiere) { return SCIENCES.includes(matiere) ? "medium" : "low"; }
+function effortPour(matiere) { return SCIENCES.includes(matiere) || matiere === "francais" ? "medium" : "low"; }
 
 async function appelIA(prompt, maxTokens = 8000, effort = "low") {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
