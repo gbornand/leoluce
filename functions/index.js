@@ -415,7 +415,7 @@ LANGUE : consignes en FRANÇAIS très simple (8 ans). Contenu anglais très cour
   }
   if (matiere === "francais" && ce2) {
     return `${base}
-LANGUE : tout en français, phrases courtes et simples pour une enfant de 8 ans. Pour l'orthographe, utilise "trou" (écrire le mot) et "qcm" (choisir la bonne orthographe). Pour "ordre", les éléments sont les mots d'une phrase.`;
+LANGUE : tout en français, phrases TRÈS courtes (5 à 10 mots) et simples, vocabulaire concret, adapté à une enfant de 8 ans dyslexique — une seule idée par question, jamais de phrase à rallonge. Privilégie "qcm" (3 choix maximum, peu de texte à lire) dès que possible. Réserve "trou" aux mots à écrire (un seul mot ou une courte expression, jamais une phrase entière à recopier). Pour "ordre", 3 à 5 éléments maximum (les mots d'une phrase courte).`;
   }
   if (matiere === "francais") {
     return `${base}
