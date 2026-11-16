@@ -723,7 +723,7 @@ sur("btn-envoyer-cours", "click", async () => {
     const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
     const nbFigures = (result.figures || []).length;
-    statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
+    statusEl.textContent = `✅ Cours ajouté dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom} : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
     const sources = photosEnAttente;
     photosEnAttente = [];
     document.getElementById("photo-preview").innerHTML = "";
@@ -853,17 +853,44 @@ async function loadNotions() {
         <span class="cours-manage-titre">${esc(c.titre || "Cours")}</span>
         <button class="btn-ghost-small" data-suppr-cours="${esc(id)}">🗑️ Supprimer</button>
       </div>`).join("")}</div>
-    ${categoriesGram(grammaire).map(([cat, items]) => `
-    <h3 class="section-title">${esc(cat || ui().regle)} <span>${items.length}</span></h3>
-    <div class="gram-grid">${items.map(n => {
-      const st = statutNiveau(n.niveau || 0);
-      return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
-        <span class="pill ${st.cls}">${st.label}</span>${marqueDerniere(n)}
-        <div class="gram-card-title">${esc(n.label)}</div>
-        <div class="gram-card-cours">${esc(coursById[n.coursId]?.titre || "")}</div>
-        ${barreNiveau(n.niveau || 0)}
-      </button>`;
-    }).join("")}</div>`).join("")}
+    ${categoriesGram(grammaire).map(([cat, items], gi, arr) => {
+      const estMethodes = cat === "🧭 Méthodes (toute l'année)";
+      const parChapitres = ["svt", "histoire"].includes(matiereCourante) && !estMethodes;
+      const parTexte = matiereCourante === "francais" && cat === "Texte";
+      if (parChapitres) {
+        const ouvert = gi === arr.length - 1;
+        const key = `ch-${gi}`;
+        return `<div class="acc-item">
+          <button class="acc-head" data-acc-g="${key}" aria-expanded="${ouvert}">
+            <span class="acc-name">${esc(cat)}</span>
+            <span class="acc-count">${items.length}</span>
+            <span class="acc-chevron">▾</span>
+          </button>
+          <div class="acc-body" id="acc-body-${key}" ${ouvert ? "" : "hidden"}>
+            <div class="gram-grid">${items.map(carteGram).join("")}</div>
+          </div>
+        </div>`;
+      }
+      if (parTexte) {
+        return items.map((n, ni) => {
+          const ouvert = ni === items.length - 1;
+          const key = `tx-${ni}`;
+          const st = statutNiveau(n.niveau || 0);
+          return `<div class="acc-item">
+            <button class="acc-head" data-acc-g="${key}" aria-expanded="${ouvert}">
+              <span class="acc-name">${esc(n.label)}</span>
+              <span class="pill ${st.cls}">${st.label}</span>
+              <span class="acc-chevron">▾</span>
+            </button>
+            <div class="acc-body" id="acc-body-${key}" ${ouvert ? "" : "hidden"}>
+              <div class="gram-grid">${carteGram(n)}</div>
+            </div>
+          </div>`;
+        }).join("");
+      }
+      return `<h3 class="section-title">${esc(cat || ui().regle)} <span>${items.length}</span></h3>
+        <div class="gram-grid">${items.map(carteGram).join("")}</div>`;
+    }).join("")}
     <h3 class="section-title">${esc(ui().savoir)} <span>${vocab.length}</span></h3>
     <div class="accordion">${themesVocab(vocab).map(([theme, mots], i) => {
       const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
@@ -876,10 +903,9 @@ async function loadNotions() {
           <span class="acc-chevron">▾</span>
         </button>
         <div class="acc-body" id="acc-body-${i}" hidden>
-          <div class="theme-actions">
-            <button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button>
-            <button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>
-          </div>
+          <div class="theme-actions">${matiereCourante === "francais"
+            ? `<button class="btn-primary btn-small" data-dictee-theme="${i}">🎧 Dictée sur ce thème</button>`
+            : `<button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button><button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>`}</div>
           <div class="vocab-grid">${mots.map(n => {
             const st = statutNiveau(n.niveau || 0);
             return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)} ${marqueDerniere(n)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
@@ -895,8 +921,14 @@ async function loadNotions() {
     body.hidden = !body.hidden;
     b.setAttribute("aria-expanded", String(!body.hidden));
   }));
+  el.querySelectorAll("[data-acc-g]").forEach(b => b.addEventListener("click", () => {
+    const body = document.getElementById(`acc-body-${b.dataset.accG}`);
+    body.hidden = !body.hidden;
+    b.setAttribute("aria-expanded", String(!body.hidden));
+  }));
   el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
+  el.querySelectorAll("[data-dictee-theme]").forEach(b => b.addEventListener("click", () => lancerDictee(new Set(themes[b.dataset.dicteeTheme][1].map(n => n.id)))));
   el.querySelectorAll("[data-suppr-cours]").forEach(b => b.addEventListener("click", () => supprimerCours(b.dataset.supprCours, b)));
   await ajouterSectionFigures(el);
 }
@@ -904,16 +936,18 @@ async function loadNotions() {
 async function supprimerCours(coursId, btn) {
   if (!btn.dataset.confirme) { btn.dataset.confirme = "1"; btn.textContent = "❓ Confirmer la suppression ?"; return; }
   btn.disabled = true;
+  const notions = Object.values(notionsById).filter(n => n.coursId === coursId);
+  let echecs = 0;
   try {
-    const progSnap = await getDocs(query(collection(db, "progressionAnglais"), where("coursId", "==", coursId)));
-    const batch = writeBatch(db);
-    progSnap.forEach(d => batch.delete(d.ref));
-    batch.delete(doc(db, "coursAnglais", coursId));
-    await batch.commit();
+    for (const n of notions) {
+      try { await deleteDoc(doc(db, "progressionAnglais", n.id)); } catch (err) { console.error("Échec suppression notion", n.id, n, err); echecs++; }
+    }
+    await deleteDoc(doc(db, "coursAnglais", coursId));
     loadNotions();
   } catch (err) {
-    console.error(err);
-    btn.textContent = "❌ Suppression impossible";
+    const uidConnecte = auth.currentUser?.uid || "aucun";
+    console.error(err, { coursId, coursEleve: coursById[coursId]?.eleve, eleveCourant, uidConnecte });
+    btn.textContent = `❌ ${err.code || err.message} — connecté=${uidConnecte} — cours.eleve=${coursById[coursId]?.eleve}`;
     btn.disabled = false;
   }
 }
@@ -922,7 +956,29 @@ function tradDe(n) {
   return coursById[n.coursId]?.vocabulaire?.find(x => x.mot === n.label)?.traduction || "";
 }
 
+function dateCoursDe(n) { return coursById[n.coursId]?.dateAjout || ""; }
+
+function carteGram(n) {
+  const st = statutNiveau(n.niveau || 0);
+  return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
+    <span class="pill ${st.cls}">${st.label}</span>${marqueDerniere(n)}
+    <div class="gram-card-title">${esc(n.label)}</div>
+    ${barreNiveau(n.niveau || 0)}
+  </button>`;
+}
+
 function categoriesGram(grammaire) {
+  if (["svt", "histoire"].includes(matiereCourante)) {
+    const methodes = grammaire.filter(n => n.categorie === "Méthode");
+    const parChapitre = new Map();
+    grammaire.filter(n => n.categorie !== "Méthode").forEach(n => {
+      const c = coursById[n.coursId]?.titre || "Autre";
+      if (!parChapitre.has(c)) parChapitre.set(c, []);
+      parChapitre.get(c).push(n);
+    });
+    const groupes = [...parChapitre.entries()].sort((a, b) => dateCoursDe(a[1][0]).localeCompare(dateCoursDe(b[1][0])));
+    return methodes.length ? [["🧭 Méthodes (toute l'année)", methodes], ...groupes] : groupes;
+  }
   if (!grammaire.some(n => n.categorie)) return [[null, grammaire]];
   const ordre = ["Grammaire", "Conjugaison", "Orthographe", "Texte", "Méthode"];
   const map = new Map();
@@ -931,7 +987,10 @@ function categoriesGram(grammaire) {
     if (!map.has(c)) map.set(c, []);
     map.get(c).push(n);
   });
-  return [...map.entries()].sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0]));
+  const groupes = [...map.entries()].sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0]));
+  const texte = groupes.find(([c]) => c === "Texte");
+  if (texte) texte[1].sort((a, b) => dateCoursDe(a).localeCompare(dateCoursDe(b)));
+  return groupes;
 }
 
 function themesVocab(vocab) {
@@ -1403,9 +1462,10 @@ function htmlBadges({ serie, badges }) {
 // ------------------------------------------------------------
 // S'ENTRAÎNER : phrases d'exemple des cours (prononciation, dictée)
 // ------------------------------------------------------------
-function phrasesEntrainement(n = 8) {
+function phrasesEntrainement(n = 8, idsFiltre = null) {
   const pool = [];
   Object.values(notionsById).forEach(no => {
+    if (idsFiltre && !idsFiltre.has(no.id)) return;
     const cours = coursById[no.coursId];
     if (!cours) return;
     const ex = no.type === "vocabulaire"
@@ -1516,15 +1576,15 @@ function lancerPrononciation() {
 }
 
 // DICTÉE
-sur("btn-dictee", "click", lancerDictee);
+sur("btn-dictee", "click", () => lancerDictee());
 
-function lancerDictee() {
-  const phrases = phrasesEntrainement(6);
+function lancerDictee(idsFiltre = null) {
+  const phrases = phrasesEntrainement(6, idsFiltre);
   const corps = ouvrirLibre(`<div class="game-head hdr-dictee"><div class="modal-kicker">✍️ Dictée</div><h3 id="di-compteur"></h3></div><div class="game-body"></div>`);
   if (!phrases.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ajoute d'abord un cours 📸</div>`; return; }
   let i = 0, bonnes = 0;
   const afficher = () => {
-    if (i >= phrases.length) return finEntrainement(corps, "✍️ Phrases sans faute", bonnes, phrases.length, lancerDictee);
+    if (i >= phrases.length) return finEntrainement(corps, "✍️ Phrases sans faute", bonnes, phrases.length, () => lancerDictee(idsFiltre));
     const p = phrases[i];
     corps.querySelector("#di-compteur").textContent = `${i + 1} / ${phrases.length}`;
     corps.querySelector(".game-body").innerHTML = `
