@@ -6,7 +6,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc, deleteDoc
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, getDocs, query, where, addDoc, deleteDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -847,6 +847,12 @@ async function loadNotions() {
     </div>
     ${graphiqueActivite(reponses)}
     ${htmlBadges(motivation)}
+    <h3 class="section-title">Cours importés <span>${Object.keys(coursById).length}</span></h3>
+    <div class="cours-manage-list">${Object.entries(coursById).map(([id, c]) => `
+      <div class="cours-manage-item">
+        <span class="cours-manage-titre">${esc(c.titre || "Cours")}</span>
+        <button class="btn-ghost-small" data-suppr-cours="${esc(id)}">🗑️ Supprimer</button>
+      </div>`).join("")}</div>
     ${categoriesGram(grammaire).map(([cat, items]) => `
     <h3 class="section-title">${esc(cat || ui().regle)} <span>${items.length}</span></h3>
     <div class="gram-grid">${items.map(n => {
@@ -891,7 +897,25 @@ async function loadNotions() {
   }));
   el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
+  el.querySelectorAll("[data-suppr-cours]").forEach(b => b.addEventListener("click", () => supprimerCours(b.dataset.supprCours, b)));
   await ajouterSectionFigures(el);
+}
+
+async function supprimerCours(coursId, btn) {
+  if (!btn.dataset.confirme) { btn.dataset.confirme = "1"; btn.textContent = "❓ Confirmer la suppression ?"; return; }
+  btn.disabled = true;
+  try {
+    const progSnap = await getDocs(query(collection(db, "progressionAnglais"), where("coursId", "==", coursId)));
+    const batch = writeBatch(db);
+    progSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(doc(db, "coursAnglais", coursId));
+    await batch.commit();
+    loadNotions();
+  } catch (err) {
+    console.error(err);
+    btn.textContent = "❌ Suppression impossible";
+    btn.disabled = false;
+  }
 }
 
 function tradDe(n) {
