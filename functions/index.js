@@ -368,9 +368,9 @@ ${commun}`;
   }
   if (matiere === "francais" && profil.niveau === "ce2") {
     return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de français fourni (leçon, mots à apprendre, dictée préparée ou corrigée…).
-${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire, OU si c'est une dictée corrigée, le mot CORRECTEMENT écrit d'une faute qu'elle a commise", "traduction": "sens très simple ou indice (ex: nom féminin, ce qu'on met sur la tête), OU pour une faute corrigée : 'Piège : elle a écrit « ... » au lieu de « ... »'", "theme": "identifiant COURT et UNIQUE de CE document précis (ex: 'Dictée du 14/11', ou le titre écrit en haut de la copie) — jamais un thème générique style 'Mots de dictée' qui mélangerait plusieurs dictées entre elles", "exemple": "courte phrase d'exemple simple, ou la phrase exacte de la dictée où était la faute" }`,
+${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire, OU si c'est une dictée corrigée, le mot CORRECTEMENT écrit d'une faute qu'elle a commise", "traduction": "sens très simple ou indice (ex: nom féminin, ce qu'on met sur la tête), OU pour une faute corrigée : 'Piège : elle a écrit « ... » au lieu de « ... »'", "theme": "identifiant COURT et UNIQUE de CE document précis (ex: 'Dictée du 14/11', ou le titre écrit en haut de la copie) — jamais un thème générique style 'Mots de dictée' qui mélangerait plusieurs dictées entre elles", "exemple": "courte phrase d'exemple simple, ou la phrase exacte de la dictée où était la faute", "prioritaire": "true UNIQUEMENT si ce mot est surligné au feutre fluo/surligneur sur le document (couleur de surlignage, pas une simple correction au stylo rouge) ; sinon ne mets pas ce champ" }`,
   `{ "titre": "nom court de la règle (grammaire, conjugaison, orthographe)", "explication": "explication très simple pour une enfant de 8 ans", "exemples": ["phrase d'exemple"] }`)}
-Relève TOUS les mots à apprendre ou toutes les fautes visibles (ratures, corrections en rouge), sans en omettre. Chaque dictée/document garde SON PROPRE thème distinct des autres (pour pouvoir les retravailler séparément). ${commun}`;
+Relève TOUS les mots à apprendre ou toutes les fautes visibles (ratures, corrections en rouge), sans en omettre. Chaque dictée/document garde SON PROPRE thème distinct des autres (pour pouvoir les retravailler séparément). Repère bien les mots surlignés au fluo (une couleur de surlignage, pas le stylo de correction) : ce sont ceux à travailler en priorité, marque-les "prioritaire": true. ${commun}`;
   }
   if (matiere === "francais") {
     return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une DICTÉE corrigée (fautes d'orthographe/accord sur des mots), OU une ÉVALUATION corrigée (erreurs de compréhension/d'analyse, pas seulement orthographiques), OU un sujet de rédaction.
@@ -415,7 +415,8 @@ LANGUE : consignes en FRANÇAIS très simple (8 ans). Contenu anglais très cour
   }
   if (matiere === "francais" && ce2) {
     return `${base}
-LANGUE : tout en français, phrases TRÈS courtes (5 à 10 mots) et simples, vocabulaire concret, adapté à une enfant de 8 ans dyslexique — une seule idée par question, jamais de phrase à rallonge. Privilégie "qcm" (3 choix maximum, peu de texte à lire) dès que possible. Réserve "trou" aux mots à écrire (un seul mot ou une courte expression, jamais une phrase entière à recopier). Pour "ordre", 3 à 5 éléments maximum (les mots d'une phrase courte).`;
+LANGUE : tout en français, phrases TRÈS courtes (5 à 10 mots) et simples, vocabulaire concret, adapté à une enfant de 8 ans dyslexique — une seule idée par question, jamais de phrase à rallonge. Privilégie "qcm" (3 choix maximum, peu de texte à lire) dès que possible. Réserve "trou" aux mots à écrire (un seul mot ou une courte expression, jamais une phrase entière à recopier). Pour "ordre", 3 à 5 éléments maximum (les mots d'une phrase courte).
+Pour une règle de grammaire (ex: le sujet du verbe) : reste collée à la leçon, varie les sujets et les verbes d'un exercice à l'autre (pas toujours le même exemple), et réutilise si possible les mots de vocabulaire/dictée du moment dans les phrases d'exercice plutôt que d'inventer un contexte sans lien avec son travail.`;
   }
   if (matiere === "francais") {
     return `${base}
@@ -435,7 +436,7 @@ function blocDecouverte(matiere, profil) {
   if (matiere === "anglais") {
     return `"comprehensionEcrite": { "mode": "ecoute", "titre": "Écoute & compréhension", "texte": "${ce2 ? "3 ou 4 phrases anglaises très simples" : "court texte en anglais (5-8 phrases), amusant"}, qui réutilise le vocabulaire ci-dessus", "questions": [ 3 questions "qcm" ${ce2 ? "en français" : "in English"} ] }`;
   }
-  if (matiere === "francais" && ce2) {
+  if (ce2) {
     return `"comprehensionEcrite": null`;
   }
   if (matiere === "francais") {
@@ -556,7 +557,7 @@ exports.extraireCoursAnglais = onCall(
     const today = todayISOAnglais();
     const base = { eleve, matiere, coursId: docRef.id, niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null };
     const ecritures = [
-      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, { ...base, type: "vocabulaire", label: v.mot, theme: v.theme || "" }]),
+      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, { ...base, type: "vocabulaire", label: v.mot, theme: v.theme || "", ...(v.prioritaire ? { prioritaire: true } : {}) }]),
       ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, { ...base, type: "grammaire", label: g.titre, ...(g.categorie ? { categorie: g.categorie } : {}) }]),
     ];
     for (let i = 0; i < ecritures.length; i += 400) {
@@ -911,7 +912,11 @@ exports.genererExercicesDuJour = onCall(
     for (let i = candidates.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
     candidates.sort((a, b) => rang(a) - rang(b) || (a.niveau || 0) - (b.niveau || 0));
     const [nbSavoir, nbRegles] = profil.niveau === "ce2" ? [4, 2] : [5, 3];
-    let notions = [...candidates.filter(n => n.type === "vocabulaire").slice(0, nbSavoir), ...candidates.filter(n => n.type === "grammaire").slice(0, nbRegles)];
+    const vocabTous = candidates.filter(n => n.type === "vocabulaire");
+    const vocabPrioritaire = vocabTous.filter(n => n.prioritaire);
+    const prioritairesMaitrises = vocabPrioritaire.length > 0 && vocabPrioritaire.every(n => (n.niveau || 0) >= 3);
+    const poolVocab = vocabPrioritaire.length > 0 && !prioritairesMaitrises ? vocabPrioritaire : vocabTous;
+    let notions = [...poolVocab.slice(0, nbSavoir), ...candidates.filter(n => n.type === "grammaire").slice(0, nbRegles)];
     if (notions.length < nbSavoir + nbRegles) {
       notions = [...notions, ...candidates.filter(n => !notions.includes(n)).slice(0, nbSavoir + nbRegles - notions.length)];
     }
