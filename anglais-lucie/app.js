@@ -723,13 +723,15 @@ sur("btn-envoyer-cours", "click", async () => {
     const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
     const nbFigures = (result.figures || []).length;
     statusEl.textContent = `✅ Cours ajouté : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
-    derniersSources = photosEnAttente;
+    const sources = photosEnAttente;
     photosEnAttente = [];
     document.getElementById("photo-preview").innerHTML = "";
     document.getElementById("photo-input").value = "";
     loadNotions();
     loadToday();
-    if (nbFigures && MATIERES_FIGURES.includes(matiereCourante)) proposerFigures(result.coursId, result.figures);
+    const pagesCours = pagesDepuisSources(sources).catch(err => { console.error("Lecture des pages", err); return []; });
+    pagesCours.then(pages => enregistrerPagesCours(result.coursId, pages)).catch(err => console.error("Sauvegarde des pages", err));
+    if (nbFigures && MATIERES_FIGURES.includes(matiereCourante)) proposerFigures(result.coursId, result.figures, pagesCours);
   } catch (err) {
     statusEl.textContent = "❌ Oups, la prof IA n'a pas réussi à lire ce cours. Réessaie avec une photo plus nette.";
     console.error(err);
@@ -1694,7 +1696,6 @@ sur("btn-recap-test-dash", "click", async (e) => {
 // SCHÉMAS & CARTES À COMPLÉTER
 // ------------------------------------------------------------
 const MATIERES_FIGURES = ["svt", "histoire", "physique"];
-let derniersSources = [];
 let figuresById = {};
 let pdfjsPret = null;
 
@@ -1736,7 +1737,7 @@ async function pagesDepuisSources(sources) {
   return pages;
 }
 
-function recadrer(dataUrl, rect, maxDim = 1100) {
+function recadrer(dataUrl, rect, maxDim = 1100, qualite = 0.82) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -1746,10 +1747,49 @@ function recadrer(dataUrl, rect, maxDim = 1100) {
       const c = document.createElement("canvas");
       c.width = Math.max(1, Math.round(sw * ratio)); c.height = Math.max(1, Math.round(sh * ratio));
       c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", 0.82));
+      resolve(c.toDataURL("image/jpeg", qualite));
     };
     img.onerror = reject;
     img.src = dataUrl;
+  });
+}
+
+// Pages du cours gardées (une par doc, < 1 Mo) pour préparer les schémas plus tard sans nouvelle photo.
+async function enregistrerPagesCours(coursId, pages) {
+  if (!coursId || !pages.length) return;
+  const eleve = eleveCourant, matiere = matiereCourante;
+  for (let i = 0; i < pages.length; i++) {
+    let image = "";
+    for (const [dim, q] of [[1600, 0.8], [1300, 0.7], [1000, 0.6]]) {
+      image = await recadrer(pages[i], { x: 0, y: 0, w: 1, h: 1 }, dim, q);
+      if (image.length < 900000) break;
+    }
+    await setDoc(doc(db, "pagesCours", `${coursId}_p${i + 1}`), {
+      eleve, matiere, coursId, page: i + 1, image, dateAjout: new Date().toISOString(),
+    });
+  }
+}
+
+async function chargerPagesCours(coursId) {
+  const snap = await getDocs(query(collection(db, "pagesCours"), where("eleve", "==", eleveCourant), where("coursId", "==", coursId)));
+  return snap.docs.map(d => d.data()).sort((a, b) => a.page - b.page).map(p => p.image);
+}
+
+function choisirFichiersCours() {
+  return new Promise(resolve => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,application/pdf";
+    input.multiple = true;
+    input.addEventListener("change", async () => {
+      const sources = [];
+      for (const file of input.files) {
+        if (file.type === "application/pdf") sources.push({ mimeType: "application/pdf", data: await fileToBase64(file) });
+        else sources.push(await resizeImage(file, 1600, 0.85));
+      }
+      resolve(sources);
+    });
+    input.click();
   });
 }
 
@@ -1758,6 +1798,7 @@ function zoneDeSelection(stage, onRect) {
   const sel = document.createElement("div");
   sel.className = "fig-sel";
   sel.hidden = true;
+  stage.style.touchAction = "none";
   stage.appendChild(sel);
   let depart = null;
   const pos = e => {
@@ -1811,6 +1852,13 @@ async function preparerFigureAuto(pageDataUrl, figure) {
   const envoi = await recadrer(pageDataUrl, { x: 0, y: 0, w: 1, h: 1 }, 1600);
   const localiser = httpsCallable(functions, "localiserFigureRevisions", { timeout: 120000 });
   const r = await localiser({ eleve: eleveCourant, image: envoi.split(",")[1], titre: figure.titre || "", legendes: figure.legendes || [] }).then(x => x.data);
+  const quarts = ((Math.round((Number(r.rotation) || 0) / 90) % 4) + 4) % 4;
+  const tournerBoite = b => ({ x0: 1000 - b.y1, x1: 1000 - b.y0, y0: b.x0, y1: b.x1 });
+  for (let t = 0; t < quarts; t++) {
+    pageDataUrl = await tournerImage(pageDataUrl);
+    r.figure = tournerBoite(r.figure);
+    r.legendes = r.legendes.map(l => ({ texte: l.texte, ...tournerBoite(l) }));
+  }
   const marge = 0.02;
   const f = r.figure;
   const rect = {
@@ -1820,15 +1868,75 @@ async function preparerFigureAuto(pageDataUrl, figure) {
   rect.w = Math.min(1, f.x1 / 1000 + marge) - rect.x;
   rect.h = Math.min(1, f.y1 / 1000 + marge) - rect.y;
   if (rect.w < 0.05 || rect.h < 0.05) throw new Error("Figure non localisée");
-  const pad = 0.005;
+  const pad = 0.004;
   const clamp = v => Math.min(1, Math.max(0, v));
-  const legendes = r.legendes.map(l => {
+  const legendes = separerCases(r.legendes.map(l => {
     const x0 = clamp((l.x0 / 1000 - pad - rect.x) / rect.w), y0 = clamp((l.y0 / 1000 - pad - rect.y) / rect.h);
     const x1 = clamp((l.x1 / 1000 + pad - rect.x) / rect.w), y1 = clamp((l.y1 / 1000 + pad - rect.y) / rect.h);
     return { texte: l.texte, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-  }).filter(l => l.w > 0.01 && l.h > 0.01);
+  }).filter(l => l.w > 0.01 && l.h > 0.01));
   if (legendes.length < 2) throw new Error("Légendes non localisées");
-  return { titre: figure.titre || "Figure", type: figure.type || "schema", image: await recadrer(pageDataUrl, rect), legendes };
+  return { titre: figure.titre || "Figure", type: figure.type || "schema", image: await imageFigure(pageDataUrl, rect), legendes };
+}
+
+async function imageFigure(page, rect) {
+  for (const [dim, q] of [[1600, 0.85], [1300, 0.78], [1000, 0.7]]) {
+    const im = await recadrer(page, rect, dim, q);
+    if (im.length < 800000) return im;
+  }
+  return recadrer(page, rect, 800, 0.6);
+}
+
+// Deux cases qui se chevauchent sont coupées au milieu de leur zone commune.
+function separerCases(cases) {
+  const l = cases.map(c => ({ ...c }));
+  const ecart = 0.004;
+  const couper = (a, b, pos, taille) => {
+    const [avant, apres] = a[pos] <= b[pos] ? [a, b] : [b, a];
+    const milieu = (Math.max(avant[pos], apres[pos]) + Math.min(avant[pos] + avant[taille], apres[pos] + apres[taille])) / 2;
+    const finApres = apres[pos] + apres[taille];
+    avant[taille] = Math.max(0.006, milieu - ecart / 2 - avant[pos]);
+    apres[pos] = Math.min(milieu + ecart / 2, finApres - 0.006);
+    apres[taille] = finApres - apres[pos];
+  };
+  for (let passe = 0; passe < 3; passe++) {
+    for (let i = 0; i < l.length; i++) {
+      for (let j = i + 1; j < l.length; j++) {
+        const a = l[i], b = l[j];
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+        const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+        if (ox <= 0 || oy <= 0) continue;
+        if (oy <= ox) couper(a, b, "y", "h");
+        else couper(a, b, "x", "w");
+      }
+    }
+  }
+  return l;
+}
+
+async function tournerFigure(fig) {
+  return {
+    ...fig,
+    image: await tournerImage(fig.image),
+    legendes: fig.legendes.map(l => ({ ...l, x: 1 - (l.y + l.h), y: l.x, w: l.h, h: l.w })),
+  };
+}
+
+function avecZoom(stage) {
+  const bloc = document.createElement("div");
+  const zone = document.createElement("div");
+  zone.className = "fig-zoom";
+  zone.appendChild(stage);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-ghost-small fig-zoom-btn";
+  btn.textContent = "🔍 Agrandir";
+  btn.addEventListener("click", () => {
+    const grand = zone.classList.toggle("zoome");
+    btn.textContent = grand ? "🔍 Réduire" : "🔍 Agrandir";
+  });
+  bloc.append(btn, zone);
+  return bloc;
 }
 
 function tournerImage(dataUrl) {
@@ -1890,27 +1998,39 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "", manuel =
 
     const etapeAuto = async () => {
       corps.innerHTML = `${entete("Préparation automatique")}<div class="game-body"><div class="loading-exos">✂️ L'IA repère le schéma et cache les légendes…</div></div>`;
+      let prete;
       try {
-        const prete = await preparerFigureAuto(image, figure);
-        corps.innerHTML = `${entete("Vérifie le schéma vierge")}<div class="game-body">
-          <p class="muted">Chaque légende doit être cachée par une case numérotée.</p>
-          <div id="fig-apercu-auto"></div>
-          <button class="btn-primary btn-block" id="fig-ok-auto">✅ C'est bon, enregistrer</button>
-          <div class="fig-nav"><button class="btn-ghost-small" id="fig-tourner-auto">↻ Photo de travers ? Tourner</button><button class="btn-ghost-small" id="fig-manuel">✋ Faire à la main</button></div></div>`;
-        corps.querySelector("#fig-apercu-auto").appendChild(apercuFigure(prete));
-        corps.querySelector("#fig-tourner-auto").addEventListener("click", async () => { image = await tournerImage(image); etapeAuto(); });
-        corps.querySelector("#fig-manuel").addEventListener("click", etapeCadrage);
-        corps.querySelector("#fig-ok-auto").addEventListener("click", async e => {
-          e.currentTarget.disabled = true;
-          e.currentTarget.textContent = "Enregistrement…";
-          await enregistrerFigure({ coursId, ...prete });
-          resolve("ok");
-        });
+        prete = await preparerFigureAuto(image, figure);
       } catch (err) {
         console.error(err);
         etapeCadrage();
         corps.querySelector(".game-body").insertAdjacentHTML("afterbegin", `<p class="pr-verdict ko">L'IA n'a pas réussi à placer les cases : fais-le à la main, c'est rapide.</p>`);
+        return;
       }
+      const afficher = () => {
+        corps.innerHTML = `${entete("Vérifie le schéma vierge")}<div class="game-body">
+          <p class="muted">Chaque légende doit être cachée par une case numérotée.</p>
+          <div id="fig-apercu-auto"></div>
+          <button class="btn-primary btn-block" id="fig-ok-auto">✅ C'est bon, enregistrer</button>
+          <div class="fig-nav"><button class="btn-ghost-small" id="fig-tourner-auto">↻ Tourner</button><button class="btn-ghost-small" id="fig-manuel">✋ Faire à la main</button></div></div>`;
+        corps.querySelector("#fig-apercu-auto").appendChild(avecZoom(apercuFigure(prete)));
+        corps.querySelector("#fig-tourner-auto").addEventListener("click", async () => { prete = await tournerFigure(prete); afficher(); });
+        corps.querySelector("#fig-manuel").addEventListener("click", etapeCadrage);
+        corps.querySelector("#fig-ok-auto").addEventListener("click", async e => {
+          const btn = e.currentTarget;
+          btn.disabled = true;
+          btn.textContent = "Enregistrement…";
+          try {
+            await enregistrerFigure({ coursId, ...prete });
+            resolve("ok");
+          } catch (err) {
+            console.error(err);
+            btn.disabled = false;
+            btn.textContent = "❌ Échec, réessayer";
+          }
+        });
+      };
+      afficher();
     };
 
     const etapeCadrage = () => {
@@ -1920,7 +2040,7 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "", manuel =
         <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Retour</button><button class="btn-ghost-small" id="fig-tourner">↻ Tourner</button><button class="btn-ghost-small" id="fig-tout">Garder toute l'image</button></div></div>`;
       corps.querySelector("#fig-retour").addEventListener("click", etapeSource);
       corps.querySelector("#fig-tourner").addEventListener("click", async () => { image = await tournerImage(image); etapeCadrage(); });
-      const suite = async rect => { recadree = await recadrer(image, rect); etapeLegendes(); };
+      const suite = async rect => { recadree = await imageFigure(image, rect); etapeLegendes(); };
       corps.querySelector("#fig-tout").addEventListener("click", () => suite({ x: 0, y: 0, w: 1, h: 1 }));
       zoneDeSelection(corps.querySelector(".fig-stage"), suite);
     };
@@ -2000,12 +2120,12 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "", manuel =
 }
 
 // Après l'import : chaque figure repérée est préparée automatiquement (schéma vierge), puis aperçu.
-async function proposerFigures(coursId, figures) {
+async function proposerFigures(coursId, figures, pagesCours) {
   const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Préparation de ${figures.length} figure${figures.length > 1 ? "s" : ""}…</h3></div>
     <div class="game-body"><div class="loading-exos" id="fig-progres">Lecture des pages du cours…</div></div>`);
   const progres = corps.querySelector("#fig-progres");
   let pages = [];
-  try { pages = await pagesDepuisSources(derniersSources); } catch (err) { console.error(err); }
+  try { pages = await pagesCours; } catch (err) { console.error(err); }
   const resultats = [];
   for (let i = 0; i < figures.length; i++) {
     const f = figures[i];
@@ -2033,11 +2153,23 @@ function afficherBilanFigures(coursId, resultats, pages) {
     const bloc = document.createElement("div");
     bloc.className = "fig-bilan-item";
     bloc.innerHTML = `<div class="gram-card-title">${r.ok ? "✅" : "⚠️"} ${esc(r.figure.titre)}</div>${r.ok ? "" : `<p class="muted">L'IA n'a pas réussi à placer les cases automatiquement.</p>`}`;
-    if (r.ok) bloc.appendChild(apercuFigure(r.prete));
+    if (r.ok) bloc.appendChild(avecZoom(apercuFigure(r.prete)));
     const nav = document.createElement("div");
     nav.className = "fig-nav";
-    nav.innerHTML = `<button class="btn-ghost-small">✋ ${r.ok ? "Refaire à la main" : "Faire à la main"}</button>`;
-    nav.querySelector("button").addEventListener("click", async () => {
+    nav.innerHTML = `${r.ok ? `<button class="btn-ghost-small fig-tourner-bilan">↻ Tourner</button>` : ""}<button class="btn-ghost-small fig-main-bilan">✋ ${r.ok ? "Refaire à la main" : "Faire à la main"}</button>`;
+    nav.querySelector(".fig-tourner-bilan")?.addEventListener("click", async e => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        r.prete = await tournerFigure(r.prete);
+        await updateDoc(doc(db, "figuresRevisions", r.id), { image: r.prete.image, legendes: r.prete.legendes });
+        afficherBilanFigures(coursId, resultats, pages);
+      } catch (err) {
+        console.error(err);
+        btn.textContent = "❌ Échec";
+      }
+    });
+    nav.querySelector(".fig-main-bilan").addEventListener("click", async () => {
       if (r.ok) await supprimerFigure(r.id);
       await assistantFigure({ coursId, figure: { ...r.figure }, pages, manuel: true });
       afficherBilanFigures(coursId, resultats.filter(x => x !== r), pages);
@@ -2053,25 +2185,56 @@ function afficherBilanFigures(coursId, resultats, pages) {
 }
 
 async function ajouterFigurePlusTard() {
-  const cours = Object.entries(coursById);
   const dejaFaites = new Set(Object.values(figuresById).map(f => normaliser(f.titre)));
-  const propositions = cours.flatMap(([id, c]) => (c.figuresProposees || [])
-    .filter(f => !dejaFaites.has(normaliser(f.titre)))
-    .map(f => ({ coursId: id, coursTitre: c.titre, figure: f })));
+  const parCours = Object.entries(coursById)
+    .map(([id, c]) => ({ coursId: id, titre: c.titre, figures: (c.figuresProposees || []).filter(f => !dejaFaites.has(normaliser(f.titre))) }))
+    .filter(c => c.figures.length);
   const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Ajouter une figure</h3></div>
-    <div class="game-body">
-      ${propositions.length ? `<p class="muted">Repérées dans tes cours (il faudra une photo de la page) :</p>${propositions.map((p, i) => `<button class="cours-choix" data-prop="${i}"><span>${esc(p.figure.titre)}</span><span class="muted">${esc(p.coursTitre)} · ${(p.figure.legendes || []).length} légendes</span></button>`).join("")}` : ""}
-      <button class="cours-choix" id="fig-libre"><span>📷 Une autre figure (photo)</span><span class="muted">tu tapes les légendes toi-même</span></button>
-    </div>`);
-  const lancer = async (coursId, figure) => {
-    await assistantFigure({ coursId, figure: { ...figure }, pages: [] });
-    document.getElementById("modal-libre-close").click();
-  };
-  corps.querySelectorAll("[data-prop]").forEach(b => b.addEventListener("click", () => {
-    const p = propositions[Number(b.dataset.prop)];
-    lancer(p.coursId, p.figure);
+    <div class="game-body" id="fig-ajout-corps"><div class="loading-exos">Recherche des pages des cours…</div></div>`);
+  const zone = corps.querySelector("#fig-ajout-corps");
+  await Promise.all(parCours.map(async c => {
+    try { c.pages = await chargerPagesCours(c.coursId); } catch (err) { console.error(err); c.pages = []; }
   }));
-  corps.querySelector("#fig-libre").addEventListener("click", () => lancer(null, {}));
+  zone.innerHTML = `${parCours.map((c, i) => `<div class="fig-bilan-item">
+      <div class="gram-card-title">${esc(c.titre)}</div>
+      <p class="muted">${c.figures.map(f => esc(f.titre)).join(" · ")}</p>
+      ${c.pages.length
+        ? `<button class="btn-primary btn-block" data-auto="${i}">✨ Préparer automatiquement (${c.figures.length})</button>`
+        : `<button class="btn-primary btn-block" data-pages="${i}">📎 Donner les pages de ce cours (photo ou PDF)</button>
+           <p class="muted">Une seule fois : elles sont gardées pour la suite.</p>`}
+      <div class="fig-nav">${c.figures.map((f, j) => `<button class="btn-ghost-small" data-main="${i}_${j}">✋ ${esc(f.titre)} à la main</button>`).join("")}</div>
+    </div>`).join("")}
+    <button class="cours-choix" id="fig-libre"><span>📷 Une autre figure (photo)</span><span class="muted">tu tapes les légendes toi-même</span></button>`;
+  zone.querySelectorAll("[data-auto]").forEach(b => b.addEventListener("click", () => {
+    const c = parCours[Number(b.dataset.auto)];
+    proposerFigures(c.coursId, c.figures, Promise.resolve(c.pages));
+  }));
+  zone.querySelectorAll("[data-pages]").forEach(b => b.addEventListener("click", async () => {
+    const c = parCours[Number(b.dataset.pages)];
+    const sources = await choisirFichiersCours();
+    if (!sources.length) return;
+    b.disabled = true;
+    b.textContent = "Lecture et sauvegarde des pages…";
+    try {
+      const pages = await pagesDepuisSources(sources);
+      await enregistrerPagesCours(c.coursId, pages);
+      proposerFigures(c.coursId, c.figures, Promise.resolve(pages));
+    } catch (err) {
+      console.error(err);
+      b.disabled = false;
+      b.textContent = "❌ Échec, réessayer";
+    }
+  }));
+  zone.querySelectorAll("[data-main]").forEach(b => b.addEventListener("click", async () => {
+    const [i, j] = b.dataset.main.split("_").map(Number);
+    const c = parCours[i];
+    await assistantFigure({ coursId: c.coursId, figure: { ...c.figures[j] }, pages: c.pages, manuel: true });
+    document.getElementById("modal-libre-close").click();
+  }));
+  zone.querySelector("#fig-libre").addEventListener("click", async () => {
+    await assistantFigure({ coursId: null, figure: {}, pages: [] });
+    document.getElementById("modal-libre-close").click();
+  });
 }
 
 // Exercice : replacer chaque étiquette sur sa case numérotée.
@@ -2087,6 +2250,7 @@ function renderFigureExercice(fig, { onAnswered } = {}) {
     <div class="fig-resultat"></div>`;
   const stage = wrap.querySelector(".fig-stage");
   const etiq = wrap.querySelector(".fig-etiquettes");
+  wrap.insertBefore(avecZoom(stage), etiq);
   const valider = wrap.querySelector(".fig-valider");
   const placement = new Array(legendes.length).fill(null);
   let selection = null;
@@ -2185,7 +2349,7 @@ async function ajouterSectionFigures(el) {
   const faites = new Set(figs.map(f => normaliser(f.titre)));
   const aConfigurer = Object.values(coursById).flatMap(c => (c.figuresProposees || []).filter(f => !faites.has(normaliser(f.titre))));
   const bandeau = aConfigurer.length
-    ? `<button class="fig-bandeau" id="fig-bandeau">🗺️ <b>${aConfigurer.length} schéma${aConfigurer.length > 1 ? "s" : ""} repéré${aConfigurer.length > 1 ? "s" : ""} dans les cours, à configurer</b><span>${aConfigurer.slice(0, 3).map(f => esc(f.titre)).join(" · ")}${aConfigurer.length > 3 ? "…" : ""} — clique pour les préparer (il faudra la photo de la page)</span></button>`
+    ? `<button class="fig-bandeau" id="fig-bandeau">🗺️ <b>${aConfigurer.length} schéma${aConfigurer.length > 1 ? "s" : ""} repéré${aConfigurer.length > 1 ? "s" : ""} dans les cours, à configurer</b><span>${aConfigurer.slice(0, 3).map(f => esc(f.titre)).join(" · ")}${aConfigurer.length > 3 ? "…" : ""} — clique pour les préparer</span></button>`
     : "";
   el.insertAdjacentHTML("beforeend", `<h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>${bandeau}
     <div class="fig-grid">${figs.map(f => {

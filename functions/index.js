@@ -571,9 +571,10 @@ exports.localiserFigureRevisions = onCall(
     const prompt = `Cette image est une page de cours. Elle contient la figure « ${titre || "schéma"} »${legendes.length ? ` avec ces légendes : ${legendes.map(l => `« ${l} »`).join(", ")}` : ""}.
 1. Donne la boîte englobante de la figure entière, légendes comprises.
 2. Pour CHAQUE légende, donne la boîte englobante serrée du TEXTE de la légende tel qu'il est écrit sur l'image (pas le trait ni la zone pointée).${legendes.length ? "" : " Relève toi-même les légendes de la figure."}
-Coordonnées en millièmes de la largeur et de la hauteur de l'image (entiers de 0 à 1000), origine en haut à gauche. Sois précis.
+3. Indique "rotation" : l'angle (0, 90, 180 ou 270) dont il faut tourner l'image dans le sens des aiguilles d'une montre pour que le texte de la figure se lise à l'endroit (0 si elle est déjà droite).
+Coordonnées en millièmes de la largeur et de la hauteur de l'image TELLE QU'ELLE EST FOURNIE, sans la tourner (entiers de 0 à 1000), origine en haut à gauche. Sois précis.
 Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
-{ "figure": { "x0": 0, "y0": 0, "x1": 1000, "y1": 1000 }, "legendes": [ { "texte": "...", "x0": 0, "y0": 0, "x1": 0, "y1": 0 } ] }
+{ "rotation": 0, "figure": { "x0": 0, "y0": 0, "x1": 1000, "y1": 1000 }, "legendes": [ { "texte": "...", "x0": 0, "y0": 0, "x1": 0, "y1": 0 } ] }
 Omets une légende qui n'est pas visible.`;
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -592,7 +593,9 @@ Omets une légende qui n'est pas visible.`;
       const v = ["x0", "y0", "x1", "y1"].map(k => Math.min(1000, Math.max(0, Number(b?.[k]) || 0)));
       return { x0: Math.min(v[0], v[2]), y0: Math.min(v[1], v[3]), x1: Math.max(v[0], v[2]), y1: Math.max(v[1], v[3]) };
     };
+    const rotation = [0, 90, 180, 270].includes(Number(r.rotation)) ? Number(r.rotation) : 0;
     return {
+      rotation,
       figure: boite(r.figure),
       legendes: (r.legendes || []).filter(l => l?.texte).map(l => ({ texte: String(l.texte), ...boite(l) }))
         .filter(l => l.x1 - l.x0 > 2 && l.y1 - l.y0 > 2),

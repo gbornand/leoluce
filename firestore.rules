@@ -130,6 +130,12 @@ service cloud.firestore {
       allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
     }
 
+    match /pagesCours/{id} {
+      allow read, delete: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update: if accesRev(resource.data) && request.resource.data.eleve == resource.data.eleve;
+    }
+
     match /figuresRevisions/{id} {
       allow read, delete: if accesRev(resource.data);
       allow create: if accesRev(request.resource.data);
