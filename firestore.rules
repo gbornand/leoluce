@@ -124,6 +124,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Contrôles / DST à venir : un document par élève (id = uid), liste des échéances.
+    match /echeancesRevisions/{id} {
+      allow read: if estParentRev() || (estEleveRev() && id == request.auth.uid);
+      allow create, update: if estParentRev() && request.resource.data.eleve == id;
+    }
+
     // Tables de multiplication : un document par élève (id = uid de l'élève).
     match /tablesRevisions/{id} {
       allow read: if estParentRev() || (estEleveRev() && id == request.auth.uid);

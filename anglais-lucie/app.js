@@ -174,6 +174,7 @@ function choisirContexte(eleve, matiere) {
   loadToday();
   loadNotions();
   if (!document.getElementById("tab-chansons").hidden) loadChansons();
+  if (!document.getElementById("tab-controles").hidden) loadControles();
 }
 
 function renderContexte() {
@@ -193,7 +194,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -203,6 +204,8 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
+  document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
   notionsById = {};
   coursById = {};
@@ -221,12 +224,13 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="add"]').hidden = tables;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
+  document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
   if (titreAjout) titreAjout.textContent = dictee ? "Ajoute ta nouvelle liste de mots" : "Ajoute un cours";
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
-  if (!actif || actif.hidden || (special && actif.dataset.tab !== "add" && actif.dataset.tab !== "dashboard")) {
+  if (!actif || actif.hidden || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
     document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : parent ? "dashboard" : "today"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
@@ -273,6 +277,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "notions") loadNotions();
     if (btn.dataset.tab === "dictee") loadDictee();
     if (btn.dataset.tab === "tables") loadTables();
+    if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
@@ -296,6 +301,7 @@ async function genererSeance(regenerer) {
 
 async function loadToday() {
   if (estParent() || matiereCourante === "dictee" || matiereCourante === "tables") return;
+  afficherBandeauControle();
   document.getElementById("today-loading").hidden = false;
   document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
   document.getElementById("today-empty").hidden = true;
@@ -824,6 +830,7 @@ function barreNiveau(niveau) {
 async function loadNotions() {
   if (matiereCourante === "dictee") return loadDictee();
   if (matiereCourante === "tables") return loadTables();
+  setTimeout(afficherBandeauControle, 1500);
   const el = document.getElementById("notions-list");
   const [progSnap, coursSnap, seancesSnap, reponsesSnap] = await Promise.all([
     getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleveCourant))),
@@ -2589,6 +2596,102 @@ function jeuTablesDefi() {
   });
 }
 
+// ------------------------------------------------------------
+// CONTRÔLES / DST — échéances par élève (saisies par le parent), priorité automatique 7 jours avant
+// ------------------------------------------------------------
+const echeancesCache = {};
+
+async function echeancesDe(eleve) {
+  if (echeancesCache[eleve]) return echeancesCache[eleve];
+  try {
+    const snap = await getDoc(doc(db, "echeancesRevisions", eleve));
+    echeancesCache[eleve] = snap.exists() ? (snap.data().liste || []) : [];
+  } catch (err) {
+    console.error("Échéances", err);
+    echeancesCache[eleve] = [];
+  }
+  return echeancesCache[eleve];
+}
+
+function dateFr(iso, opts = { day: "numeric", month: "short" }) {
+  return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", opts);
+}
+
+function quandControle(e) {
+  const auj = todayISO();
+  if (e.debut <= auj && e.fin >= auj) return { cls: "ct-maintenant", txt: "cette semaine" };
+  const jours = Math.round((Date.parse(e.debut + "T12:00:00") - Date.parse(auj + "T12:00:00")) / 86400000);
+  if (jours <= 7) return { cls: "ct-bientot", txt: jours <= 1 ? "lundi prochain" : `dans ${jours} jours` };
+  if (jours <= 21) return { cls: "ct-proche", txt: `dans ${Math.round(jours / 7)} semaine${jours >= 11 ? "s" : ""}` };
+  return { cls: "", txt: `le ${dateFr(e.debut, { day: "numeric", month: "long" })}` };
+}
+
+function libelleControle(e) {
+  return e.matiere ? `${MATIERES_UI[e.matiere]?.emoji || ""} ${MATIERES_UI[e.matiere]?.nom || e.libelle}` : `📌 ${e.libelle}`;
+}
+
+function controleProche(liste, matiere) {
+  const auj = todayISO();
+  const dans7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  return liste.find(e => e.matiere === matiere && e.fin >= auj && e.debut <= dans7) || null;
+}
+
+async function afficherBandeauControle() {
+  const el = document.getElementById("dst-bandeau");
+  if (!el) return;
+  const eleve = eleveCourant, matiere = matiereCourante;
+  const c = controleProche(await echeancesDe(eleve), matiere);
+  if (eleve !== eleveCourant || matiere !== matiereCourante) return;
+  if (!c) { el.hidden = true; return; }
+  const aRevoir = Object.values(notionsById).filter(n => (n.matiere || "anglais") === matiere && n.type !== "figure" && (n.niveau || 0) < 3).length;
+  el.hidden = false;
+  el.innerHTML = `📅 <b>${esc(c.libelle)} ${quandControle(c).txt}</b> (semaine du ${dateFr(c.debut)} au ${dateFr(c.fin)}) — tes séances reprennent en priorité les notions pas encore sues${aRevoir ? ` : <b>${aRevoir} à revoir</b>` : ""}. Pense aussi au 📝 Contrôle blanc dans S'entraîner !`;
+}
+
+async function loadControles() {
+  const el = document.getElementById("controles-contenu");
+  const eleve = eleveCourant;
+  const [liste, progSnap, coursSnap] = await Promise.all([
+    echeancesDe(eleve),
+    getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleve))),
+    getDocs(query(collection(db, "coursAnglais"), where("eleve", "==", eleve))),
+  ]);
+  if (eleve !== eleveCourant) return;
+  const prog = progSnap.docs.map(d => d.data()).filter(n => n.type !== "figure");
+  const cours = coursSnap.docs.map(d => d.data());
+  const auj = todayISO();
+  const aVenir = liste.filter(e => e.fin >= auj).sort((a, b) => a.debut.localeCompare(b.debut));
+  const passes = liste.filter(e => e.fin < auj).sort((a, b) => b.debut.localeCompare(a.debut));
+  const ligne = (e, passe) => {
+    const q = quandControle(e);
+    const notions = e.matiere ? prog.filter(n => n.matiere === e.matiere) : [];
+    const sus = notions.filter(n => (n.niveau || 0) >= 3).length;
+    const nbCours = e.matiere ? cours.filter(c => c.matiere === e.matiere).length : 0;
+    const etat = !e.matiere ? "" : !nbCours
+      ? `<span class="ct-alerte">⚠️ Aucun cours importé : ajoute-le pour réviser</span>`
+      : `<span class="ct-etat">${sus} / ${notions.length} notions sues</span>`;
+    return `<div class="ct-ligne${passe ? " ct-passe" : ""}">
+      <div class="ct-date"><b>${dateFr(e.debut)}</b><span>au ${dateFr(e.fin)}</span></div>
+      <div class="ct-info"><div class="ct-mat">${esc(libelleControle(e))}</div>${passe ? "" : etat}</div>
+      ${passe ? "" : `<span class="ct-quand ${q.cls}">${q.txt}</span>`}
+      ${!passe && e.matiere && eleveInfo()?.matieres.includes(e.matiere) ? `<button class="btn-ghost-small ct-go" data-reviser="${e.matiere}">${nbCours ? "Réviser →" : "+ Ajouter le cours"}</button>` : ""}
+    </div>`;
+  };
+  el.innerHTML = liste.length ? `
+    <div class="ct-hero"><div class="dic-kicker">📅 Contrôles & DST</div>
+      <h2>${aVenir[0] ? `Prochain : ${esc(libelleControle(aVenir[0]))}, ${quandControle(aVenir[0]).txt}` : "Plus de contrôle prévu"}</h2>
+      <div class="dic-sub">7 jours avant chaque contrôle, les séances du jour de la matière reprennent en priorité tout ce qui n'est pas encore su.</div></div>
+    <h3 class="section-title">À venir <span>${aVenir.length}</span></h3>
+    <div class="ct-liste">${aVenir.map(e => ligne(e, false)).join("")}</div>
+    ${passes.length ? `<details class="dic-archive"><summary><b>Déjà passés</b> <span class="muted">· ${passes.length}</span></summary><div class="ct-liste">${passes.map(e => ligne(e, true)).join("")}</div></details>` : ""}`
+    : `<div class="panel-info">Aucun contrôle enregistré pour l'instant.</div>`;
+  el.querySelectorAll("[data-reviser]").forEach(b => b.addEventListener("click", () => {
+    choisirContexte(eleveCourant, b.dataset.reviser);
+    const avecCours = cours.some(c => c.matiere === b.dataset.reviser);
+    document.querySelector(`.tab-btn[data-tab="${avecCours ? (estParent() ? "notions" : "today") : "add"}"]`).click();
+  }));
+}
+
 // RÉCAP PARENT (aperçu)
 sur("btn-recap-test", "click", async (e) => {
   const btn = e.currentTarget;
@@ -2650,12 +2753,15 @@ function notionsARetravailler(prog, n = 6) {
 }
 
 async function carteEnfant(e) {
-  const [progSnap, seanceSnap, repSnap, tablesSnap] = await Promise.all([
+  const [progSnap, seanceSnap, repSnap, tablesSnap, echeances] = await Promise.all([
     getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", e.uid))),
     getDocs(query(collection(db, "seancesAnglais"), where("eleve", "==", e.uid))),
     getDocs(query(collection(db, "reponsesAnglais"), where("eleve", "==", e.uid))),
     getDoc(doc(db, "tablesRevisions", e.uid)).catch(() => null),
+    echeancesDe(e.uid),
   ]);
+  const prochains = echeances.filter(x => x.fin >= todayISO()).sort((a, b) => a.debut.localeCompare(b.debut)).slice(0, 3);
+  const coursParMatiere = new Set(progression.map(n => n.matiere));
   const progression = progSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const seances = seanceSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   const reponses = repSnap.docs.map(d => d.data());
@@ -2718,6 +2824,7 @@ async function carteEnfant(e) {
       <div class="stat"><div class="stat-val">${semaine.length}</div><div class="stat-lbl">réponses (7 j)</div></div>
       <div class="stat"><div class="stat-val">${reussite === null ? "—" : `${reussite}<span>%</span>`}</div><div class="stat-lbl">de réussite</div></div>
     </div>
+    ${prochains.length ? `<div class="exemples-title">📅 Prochains contrôles</div><div class="dash-ct">${prochains.map(x => `<div class="dash-ct-ligne"><span class="ct-quand ${quandControle(x).cls}">${quandControle(x).txt}</span><span>${esc(libelleControle(x))}</span>${x.matiere && !coursParMatiere.has(x.matiere) ? `<span class="ct-alerte">⚠️ aucun cours importé</span>` : ""}</div>`).join("")}</div>` : ""}
     <div class="exemples-title">Par matière <span class="astuce">· 7 derniers jours, ▲▼ = par rapport à la semaine d'avant · clique sur une notion pour la revoir avec elle</span></div>
     <div class="dash-mats">${actifs.map(b => b.html).join("")}</div>
     ${vides.length ? `<div class="dash-vides">Pas encore commencé : ${vides.map(b => b.html).join("")}</div>` : ""}

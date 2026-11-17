@@ -964,7 +964,11 @@ exports.genererExercicesDuJour = onCall(
     const progSnap = await db.collection("progressionAnglais").where("eleve", "==", eleve).get();
     const toutes = progSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => (n.matiere || "anglais") === matiere && n.type !== "figure");
     if (!toutes.length) throw new HttpsError("not-found", "Aucune notion à réviser — ajoute un nouveau cours.");
-    let candidates = toutes.filter(n => (n.prochaineDate || "") <= today);
+    // Contrôle de cette matière dans les 7 jours (ou en cours) : toutes les notions sont candidates, les moins sues d'abord.
+    const echeances = (await db.collection("echeancesRevisions").doc(eleve).get()).data()?.liste || [];
+    const dans7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const controle = echeances.find(e => e.matiere === matiere && e.fin >= today && e.debut <= dans7);
+    let candidates = controle ? [...toutes] : toutes.filter(n => (n.prochaineDate || "") <= today);
     if (!candidates.length) candidates = [...toutes].sort((a, b) => (a.niveau || 0) - (b.niveau || 0)).slice(0, 30);
 
     // Priorité : ratées à la dernière réponse, puis jamais vues, puis les plus faibles ; séance équilibrée.
