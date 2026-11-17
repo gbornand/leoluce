@@ -665,3 +665,41 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .dic-a-revoir span { background: #fff; border: 2px solid #f6b3b6; border-radius: 12px; padding: 6px 12px; font-size: 20px; font-weight: 800; }
 .dic-repris-info { margin: -4px 0 10px; font-size: 13px; }
 .dic-mot-repris { border-left: 4px solid #f0a020; }
+
+/* TABLES DE MULTIPLICATION */
+.tb-hero { background: linear-gradient(135deg, #5b6ee8, #1fa2a0); color: #fff; border-radius: 22px; padding: 20px; box-shadow: 0 8px 24px rgba(91,110,232,.25); }
+.tb-hero h2 { margin: 2px 0 4px; font-size: 22px; }
+.tb-choix-titre { font-size: 13px; font-weight: 800; margin-top: 14px; opacity: .95; }
+.tb-choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tb-choix button { width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255,255,255,.6); background: transparent; color: #fff; font: inherit; font-weight: 900; font-size: 16px; cursor: pointer; }
+.tb-choix button.on { background: #fff; color: #3f5bd8; border-color: #fff; }
+.tb-choix-grand { justify-content: center; }
+.tb-choix-grand button { width: 64px; height: 64px; font-size: 26px; background: linear-gradient(135deg, #5b6ee8, #1fa2a0); border: none; }
+.tj-apprendre, .hdr-tapprendre { background: linear-gradient(135deg, #2e9d6a, #1d6fd8); }
+.tj-apprendre { grid-column: 1 / -1; padding: 20px 18px; }
+.tj-apprendre .tc-title { font-size: 20px; }
+.tj-entrainement, .hdr-tentrainement { background: linear-gradient(135deg, #5b6ee8, #a152d6); }
+.tj-qcm, .hdr-tqcm { background: linear-gradient(135deg, #1fa2a0, #3f7fe0); }
+.tj-defi, .hdr-tdefi { background: linear-gradient(135deg, #f06a3c, #e5484d); }
+.tb-legende { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tb-ligne { background: #fff; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(91,110,232,.07); }
+.tb-ligne-titre { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
+.tb-cases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.tb-case { text-align: center; border-radius: 8px; padding: 6px 2px; font-size: 13px; font-weight: 800; }
+.tb-legende .tb-case { padding: 3px 10px; font-size: 12px; }
+.tb-neuf { background: #f1eefb; color: #9a95c0; }
+.tb-encours { background: #fff1d6; color: #a3710c; }
+.tb-rate { background: #fbe0e0; color: #c03535; }
+.tb-su { background: #dcf3e5; color: #1f7a4f; }
+.tb-table { display: flex; flex-direction: column; gap: 6px; max-width: 280px; margin: 0 auto; }
+.tb-table-ligne { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
+.tb-calc { min-width: 120px; text-align: right; color: #3d3a6a; }
+.tb-res { color: #1d6fd8; }
+.tb-trou { width: 70px; font: inherit; font-size: 22px; text-align: center; padding: 4px; border-radius: 10px; border: 2px solid #e6e1fb; }
+.tb-trou.correct { border-color: #4caf50; background: #e9f7ec; }
+.tb-trou.incorrect { border-color: #d14b4b; background: #fbe9e9; }
+.tb-corr { color: #1f7a4f; font-size: 18px; }
+.tj-question { font-size: clamp(40px, 12vw, 60px); font-weight: 900; text-align: center; margin: 8px 0 14px; color: #2d2a4a; }
+.tj-ecrire .exo-input { font-size: 30px; }
+.tj-astuce { text-align: center; color: #6a6690; font-size: 14px; margin: 6px 0 4px; }
+.tj-choix .bonmot-btn { font-size: 28px; }

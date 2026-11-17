@@ -124,6 +124,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Tables de multiplication : un document par élève (id = uid de l'élève).
+    match /tablesRevisions/{id} {
+      allow read: if estParentRev() || (estEleveRev() && id == request.auth.uid);
+      allow create, update: if (estParentRev() || (estEleveRev() && id == request.auth.uid)) && request.resource.data.eleve == id;
+    }
+
     match /chansonsAnglais/{id} {
       allow read, delete: if accesRev(resource.data);
       allow create: if accesRev(request.resource.data);

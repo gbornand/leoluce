@@ -192,7 +192,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -201,6 +201,7 @@ function reinitialiserEcran() {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "today"));
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
   dicteeChoisie = null;
   notionsById = {};
   coursById = {};
@@ -215,6 +216,9 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent || dictee;
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = dictee;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
+  document.querySelector('.tab-btn[data-tab="tables"]').hidden = matiereCourante !== "maths";
+  if (matiereCourante !== "maths" && !document.getElementById("tab-tables").hidden) document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : dictee ? "dictee" : "today"}"]`).click();
+  if (matiereCourante === "maths" && !document.getElementById("tab-tables").hidden) loadTables();
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
   if (titreAjout) titreAjout.textContent = dictee ? "Ajoute ta nouvelle liste de mots" : "Ajoute un cours";
@@ -265,6 +269,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
     if (btn.dataset.tab === "dictee") loadDictee();
+    if (btn.dataset.tab === "tables") loadTables();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
@@ -1044,6 +1049,10 @@ let jeuTimer = null;
 sur("modal-libre-close", "click", () => {
   document.getElementById("modal-libre").hidden = true;
   clearInterval(jeuTimer);
+  clearInterval(tablesMinuteur);
+  clearTimeout(tablesMinuteur);
+  clearTimeout(dicteeMinuteur);
+  if (!document.getElementById("tab-tables").hidden) loadTables();
   loadNotions();
 });
 
@@ -2213,6 +2222,363 @@ function jeuPhrases() {
     });
   };
   afficher();
+}
+
+// ------------------------------------------------------------
+// TABLES DE MULTIPLICATION (maths) — un document par élève : tables de la semaine + suivi de chaque calcul
+// ------------------------------------------------------------
+let tablesEtat = null;
+let tablesMinuteur = null;
+const TABLES_DEFAUT = { ce2: [5, 6], college: [2, 3, 4, 5, 6, 7, 8, 9] };
+
+function cleFait(f) { return `${f.t}x${f.n}`; }
+function infoFait(f) { return tablesEtat?.faits?.[cleFait(f)] || null; }
+function delaiRapide() { return eleveInfo()?.niveau === "ce2" ? 8000 : 5000; }
+function faitsDeTable(t) { return Array.from({ length: 10 }, (_, k) => ({ t, n: k + 1 })); }
+function faitsActifs() { return tablesEtat.actives.flatMap(faitsDeTable); }
+function estSu(f) { return (infoFait(f)?.niveau || 0) >= 3; }
+function enonce(f) { return f.inverse ? `${f.n} × ${f.t}` : `${f.t} × ${f.n}`; }
+function listeTables(ts) { return ts.length > 1 ? `${ts.slice(0, -1).join(", ")} et ${ts[ts.length - 1]}` : String(ts[0] ?? ""); }
+
+function astuceFait(f) {
+  const { t, n } = f, r = t * n;
+  if (n === 1) return `N'importe quel nombre × 1 reste le même : ${r}.`;
+  if (n === 10) return `× 10 : on écrit un 0 à droite → ${r}.`;
+  if (n === 2) return `× 2, c'est le double : ${t} + ${t} = ${r}.`;
+  if (t === 9 && n <= 10) return `Table de 9 : ${n} × 9 = ${n} × 10 − ${n} = ${n * 10} − ${n} = ${r}.`;
+  if (t === 5) return `Table de 5 : le résultat finit toujours par 0 ou par 5. ${n} × 5 = moitié de ${n} × 10 = ${r}.`;
+  if (n === 5) return `× 5 = la moitié de × 10 : ${t * 10} ÷ 2 = ${r}.`;
+  if (n > 5) return `${t} × 5 = ${t * 5}, puis + ${t} × ${n - 5} = ${t * (n - 5)} → ${r}.`;
+  return `${t} × ${n - 1} = ${t * (n - 1)}, + ${t} → ${r}.`;
+}
+
+// Ratés la dernière fois, puis jamais vus, puis à revoir aujourd'hui, puis les moins sus.
+function serieTables(n = 12, pool = faitsActifs()) {
+  const auj = todayISO();
+  const rang = f => {
+    const x = infoFait(f);
+    if (!x) return 1;
+    if (x.dernierResultat === false) return 0;
+    if ((x.prochaineDate || "") <= auj) return 2 + x.niveau / 10;
+    return 3 + x.niveau;
+  };
+  return melanger(pool).sort((a, b) => rang(a) - rang(b)).slice(0, n)
+    .map(f => ({ ...f, inverse: eleveInfo()?.niveau === "ce2" ? Math.random() < 0.25 : Math.random() < 0.5 }));
+}
+
+async function enregistrerTables(champs) {
+  try {
+    await setDoc(doc(db, "tablesRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("Tables", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+// rapideCompte = false : on ne monte pas de niveau (jeu de reconnaissance ou mode apprentissage).
+function noterFait(f, correct, { ms = Infinity, donne = "", rapideCompte = true } = {}) {
+  if (estParent()) return;
+  const cle = cleFait(f);
+  const x = { niveau: 0, vus: 0, rates: 0, ...(tablesEtat.faits[cle] || {}) };
+  const monte = rapideCompte && ms <= delaiRapide();
+  x.niveau = correct ? Math.min(x.niveau + (monte ? 1 : 0), 5) : Math.max(x.niveau - 1, 0);
+  x.vus += 1;
+  if (!correct) x.rates += 1;
+  x.dernierResultat = correct;
+  const d = new Date();
+  d.setDate(d.getDate() + (correct ? NIVEAUX_JOURS[x.niveau] : 0));
+  x.prochaineDate = d.toISOString().slice(0, 10);
+  tablesEtat.faits[cle] = x;
+  journaliser({ correct, source: "tables", question: enonce(f), reponse: donne });
+  enregistrerTables({ faits: { [cle]: x } });
+}
+
+async function loadTables() {
+  const el = document.getElementById("tables-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "tablesRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger les tables. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "maths") return;
+  tablesEtat = {
+    actives: (data?.actives?.length ? data.actives : TABLES_DEFAUT[eleveInfo()?.niveau] || TABLES_DEFAUT.college).slice().sort((a, b) => a - b),
+    faits: data?.faits || {},
+    record: data?.record || 0,
+  };
+  const faits = faitsActifs();
+  const sus = faits.filter(estSu).length;
+  const cellule = f => {
+    const x = infoFait(f);
+    const cls = !x ? "tb-neuf" : x.niveau >= 3 ? "tb-su" : x.dernierResultat === false ? "tb-rate" : "tb-encours";
+    return `<span class="tb-case ${cls}" title="${f.t} × ${f.n} = ${f.t * f.n}${x ? ` · vu ${x.vus} fois, raté ${x.rates} fois` : " · pas encore vu"}">${f.t}×${f.n}</span>`;
+  };
+  const autres = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(t => !tablesEtat.actives.includes(t) && faitsDeTable(t).some(infoFait));
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">✖️ Tables de multiplication</div>
+      <h2>${tablesEtat.actives.length === 1 ? "Table" : "Tables"} de la semaine : ${listeTables(tablesEtat.actives)}</h2>
+      <div class="dic-jauge"><span style="width:${faits.length ? Math.round(sus / faits.length * 100) : 0}%"></span></div>
+      <div class="dic-jauge-txt">${sus} / ${faits.length} calculs bien sus${tablesEtat.record ? ` · 🏆 record du défi : ${tablesEtat.record}` : ""}</div>
+      <div class="tb-choix-titre">Choisir les tables :</div>
+      <div class="tb-choix">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(t => `<button data-table="${t}" class="${tablesEtat.actives.includes(t) ? "on" : ""}">${t}</button>`).join("")}</div>
+    </div>
+    <div class="dic-jeux">
+      <button class="dic-jeu tj-apprendre" data-tjeu="apprendre"><span class="tc-emoji">📖</span><span class="tc-title">Apprendre une table</span><span class="tc-sub">Je la lis, puis je joue à cache-cache</span></button>
+      <button class="dic-jeu tj-entrainement" data-tjeu="entrainement"><span class="tc-emoji">🎯</span><span class="tc-title">Entraînement</span><span class="tc-sub">Mes erreurs reviennent en premier</span></button>
+      <button class="dic-jeu tj-qcm" data-tjeu="qcm"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon résultat</span><span class="tc-sub">Trouve la bonne réponse</span></button>
+      <button class="dic-jeu tj-defi" data-tjeu="defi"><span class="tc-emoji">⏱️</span><span class="tc-title">Défi 1 minute</span><span class="tc-sub">${tablesEtat.record ? `Bats ton record : ${tablesEtat.record}` : "Le plus de calculs possible"}</span></button>
+    </div>
+    <h3 class="section-title">🗺️ Ma carte des tables</h3>
+    <div class="tb-legende"><span class="tb-case tb-su">su</span><span class="tb-case tb-encours">en cours</span><span class="tb-case tb-rate">raté</span><span class="tb-case tb-neuf">pas vu</span></div>
+    ${tablesEtat.actives.map(t => `<div class="tb-ligne"><div class="tb-ligne-titre">Table de ${t}</div><div class="tb-cases">${faitsDeTable(t).map(cellule).join("")}</div></div>`).join("")}
+    ${autres.length ? `<details class="dic-archive"><summary><b>Autres tables déjà travaillées</b></summary>
+      ${autres.map(t => `<div class="tb-ligne"><div class="tb-ligne-titre">Table de ${t}</div><div class="tb-cases">${faitsDeTable(t).map(cellule).join("")}</div></div>`).join("")}</details>` : ""}`;
+  el.querySelectorAll("[data-table]").forEach(b => b.addEventListener("click", () => basculerTable(Number(b.dataset.table))));
+  el.querySelectorAll("[data-tjeu]").forEach(b => b.addEventListener("click", () => {
+    const jeu = b.dataset.tjeu;
+    if (jeu === "apprendre") choisirTableAApprendre();
+    if (jeu === "entrainement") jeuTablesEcrire();
+    if (jeu === "qcm") jeuTablesQcm();
+    if (jeu === "defi") jeuTablesDefi();
+  }));
+}
+
+async function basculerTable(t) {
+  const actives = tablesEtat.actives.includes(t) ? tablesEtat.actives.filter(x => x !== t) : [...tablesEtat.actives, t];
+  if (!actives.length) return toast("Garde au moins une table 🙂");
+  if (await enregistrerTables({ actives: actives.sort((a, b) => a - b) })) loadTables();
+}
+
+function fermerJeuTables() {
+  clearTimeout(tablesMinuteur);
+  clearInterval(tablesMinuteur);
+  document.getElementById("modal-libre-close").click();
+}
+
+function finJeuTables(corps, titre, bonnes, total, relancer, rates = []) {
+  clearInterval(tablesMinuteur);
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    ${rates.length ? `<div class="exemples-title">À revoir</div><div class="dic-a-revoir">${rates.map(f => `<span>${f.t} × ${f.n} = ${f.t * f.n}</span>`).join("")}</div>` : ""}
+    <button class="btn-primary btn-block" id="tj-encore">🔁 Encore une série</button>
+    <button class="btn-ghost-small dj-autre" id="tj-autre">🎮 Choisir un autre jeu</button>`;
+  corps.querySelector("#tj-encore").addEventListener("click", relancer);
+  corps.querySelector("#tj-autre").addEventListener("click", fermerJeuTables);
+}
+
+// Champ de réponse numérique (clavier chiffres sur téléphone) + bouton OK.
+function champNombre(corps, onValider) {
+  const input = corps.querySelector("#tj-saisie");
+  const valider = () => {
+    const v = input.value.trim().replace(/\s/g, "");
+    if (!v || input.disabled) return;
+    onValider(v);
+  };
+  corps.querySelector("#tj-ok").addEventListener("click", valider);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+  input.focus();
+  return input;
+}
+
+const HTML_SAISIE = `<div class="ap-ecrire tj-ecrire"><input type="text" inputmode="numeric" pattern="[0-9]*" class="exo-input" id="tj-saisie" placeholder="?" autocomplete="off"><button class="btn-primary btn-small" id="tj-ok">OK</button></div>`;
+
+// APPRENDRE : choix de la table, lecture, puis cache-cache en 3 manches (3, 6 puis 10 résultats cachés).
+function choisirTableAApprendre() {
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📖 Apprendre une table</div><h3>Quelle table ?</h3></div>
+    <div class="game-body"><div class="tb-choix tb-choix-grand">${tablesEtat.actives.map(t => `<button data-t="${t}">${t}</button>`).join("")}</div></div>`);
+  corps.querySelectorAll("[data-t]").forEach(b => b.addEventListener("click", () => apprendreTable(Number(b.dataset.t))));
+}
+
+function apprendreTable(t, manche = 0) {
+  const faits = faitsDeTable(t);
+  const nbCaches = [0, 3, 6, 10][manche];
+  const caches = new Set(melanger(faits.map(f => f.n)).slice(0, nbCaches));
+  const titres = ["Je lis la table", "Cache-cache : 3 résultats cachés", "Cache-cache : 6 résultats cachés", "Toute la table de tête !"];
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📖 Table de ${t}</div><h3>${titres[manche]}</h3></div>
+    <div class="game-body">
+      <div class="ap-points">${titres.map((_, k) => `<span class="${k <= manche ? "on" : ""}"></span>`).join("")}</div>
+      <div class="tb-table">${faits.map(f => `<div class="tb-table-ligne"><span class="tb-calc">${t} × ${f.n} =</span>${caches.has(f.n)
+        ? `<input type="text" inputmode="numeric" pattern="[0-9]*" class="tb-trou" data-n="${f.n}" autocomplete="off">`
+        : `<span class="tb-res">${t * f.n}</span>`}</div>`).join("")}</div>
+      ${manche === 0 ? `<p class="ap-legende">${astuceTable(t)}</p>
+        <div class="pr-actions"><button class="pr-micro di-play" id="tb-lire" title="Écouter la table">🔊</button></div>` : ""}
+      <div id="tb-resultat"></div>
+      <button class="btn-primary btn-block" id="tb-action">${manche === 0 ? "Je la connais, on joue à cache-cache →" : "Vérifier"}</button>
+    </div>`);
+  corps.querySelector("#tb-lire")?.addEventListener("click", () => dire(faits.map(f => `${t} fois ${f.n}, ${t * f.n}`).join(". "), 0.8, "fr"));
+  corps.querySelector(".tb-trou")?.focus();
+  corps.querySelectorAll(".tb-trou").forEach((inp, k, tous) => inp.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); (tous[k + 1] || corps.querySelector("#tb-action")).focus(); }
+  }));
+  const bouton = corps.querySelector("#tb-action");
+  let verifie = false, parfait = false;
+  bouton.addEventListener("click", () => {
+    if (manche === 0) return apprendreTable(t, 1);
+    if (verifie) {
+      if (!parfait) return apprendreTable(t, manche);
+      return manche < 3 ? apprendreTable(t, manche + 1) : fermerJeuTables();
+    }
+    let bonnes = 0;
+    corps.querySelectorAll(".tb-trou").forEach(inp => {
+      const f = { t, n: Number(inp.dataset.n) };
+      const ok = Number(inp.value.trim()) === t * f.n;
+      if (ok) bonnes += 1;
+      inp.disabled = true;
+      inp.classList.add(ok ? "correct" : "incorrect");
+      if (!ok) inp.insertAdjacentHTML("afterend", `<span class="tb-corr">${t * f.n}</span>`);
+      noterFait(f, ok, { donne: inp.value.trim(), rapideCompte: false });
+    });
+    verifie = true;
+    parfait = bonnes === caches.size;
+    corps.querySelector("#tb-resultat").innerHTML = `<div class="pr-verdict ${parfait ? "ok" : "ko"}">${parfait ? "✅ Parfait !" : `${bonnes} / ${caches.size} — regarde les corrections en vert`}</div>`;
+    bouton.textContent = parfait ? (manche < 3 ? "Manche suivante →" : "🎉 Terminé !") : "🔁 Recommencer cette manche";
+  });
+}
+
+function astuceTable(t) {
+  return {
+    1: "× 1 : le nombre ne change pas.",
+    2: "Table de 2 : ce sont les doubles, et les résultats sont tous pairs.",
+    3: "Table de 3 : on avance de 3 en 3.",
+    4: "Table de 4 : c'est le double de la table de 2.",
+    5: "Table de 5 : les résultats finissent par 0 ou 5, comme les minutes sur une horloge.",
+    6: "Table de 6 : c'est le double de la table de 3. Et 6 × un nombre pair finit par ce même nombre (6 × 4 = 24).",
+    7: "Table de 7 : la plus dure ! Retiens 7 × 7 = 49 et 7 × 8 = 56 (5, 6, 7, 8).",
+    8: "Table de 8 : c'est le double de la table de 4.",
+    9: "Table de 9 : les dizaines montent, les unités descendent (09, 18, 27, 36…) et les deux chiffres font 9.",
+    10: "Table de 10 : on ajoute un 0.",
+  }[t] || "";
+}
+
+// ENTRAÎNEMENT : saisie, rapidité mesurée, raté = 2e essai en fin de série + astuce.
+function jeuTablesEcrire() {
+  const serie = serieTables(eleveInfo()?.niveau === "ce2" ? 10 : 15);
+  const titre = "🎯 Entraînement";
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur"></h3></div><div class="game-body"></div>`);
+  const nbFaits = serie.length, rates = [];
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuTables(corps, titre, bonnes, nbFaits, jeuTablesEcrire, rates);
+    const f = serie[i];
+    const deuxieme = i >= nbFaits;
+    corps.querySelector("#tj-compteur").textContent = deuxieme ? "🔁 Deuxième essai" : `${i + 1} / ${nbFaits}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question">${enonce(f)} = ?</div>${HTML_SAISIE}<div id="tj-resultat"></div>`;
+    const debut = Date.now();
+    const input = champNombre(corps, v => {
+      const ms = Date.now() - debut;
+      const ok = Number(v) === f.t * f.n;
+      input.disabled = true;
+      corps.querySelector("#tj-ok").disabled = true;
+      input.classList.add(ok ? "correct" : "incorrect");
+      noterFait(f, ok, { ms, donne: v });
+      if (ok && !deuxieme) bonnes += 1;
+      if (!ok && !deuxieme) { rates.push(f); serie.push({ ...f, inverse: !f.inverse }); }
+      if (ok) {
+        corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ok">✅ ${ms > delaiRapide() ? "Juste ! Encore un peu plus vite la prochaine fois 🐢" : "Bravo !"}</div>`;
+        tablesMinuteur = setTimeout(() => { i += 1; afficher(); }, ms > delaiRapide() ? 1400 : 700);
+        return;
+      }
+      corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">💡 ${f.t} × ${f.n} = ${f.t * f.n}</div>
+        <div class="tj-astuce">${astuceFait(f)}</div>
+        <button class="btn-primary btn-block" id="tj-suivant">Suivant →</button>`;
+      corps.querySelector("#tj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+      corps.querySelector("#tj-suivant").focus();
+    });
+  };
+  afficher();
+}
+
+// LE BON RÉSULTAT : 3 choix (des pièges voisins), sans faire monter le niveau.
+function choixVoisins(f) {
+  const r = f.t * f.n;
+  const voisins = [f.t * (f.n + 1), f.t * (f.n - 1), (f.t + 1) * f.n, (f.t - 1) * f.n, r + 1, r - 1, r + 10]
+    .filter(x => x > 0 && x !== r);
+  return melanger([r, ...melanger([...new Set(voisins)]).slice(0, 2)]);
+}
+
+function jeuTablesQcm() {
+  const serie = serieTables(10);
+  const titre = "🔍 Le bon résultat";
+  const corps = ouvrirLibre(`<div class="game-head hdr-tqcm"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur"></h3></div><div class="game-body"></div>`);
+  const nbFaits = serie.length, rates = [];
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuTables(corps, titre, bonnes, nbFaits, jeuTablesQcm, rates);
+    const f = serie[i];
+    const deuxieme = i >= nbFaits;
+    const choix = choixVoisins(f);
+    corps.querySelector("#tj-compteur").textContent = deuxieme ? "🔁 Deuxième essai" : `${i + 1} / ${nbFaits}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question">${enonce(f)} = ?</div>
+      <div class="bonmot-choix tj-choix">${choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
+      <div id="tj-resultat"></div>`;
+    corps.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      const ok = choix[Number(b.dataset.k)] === f.t * f.n;
+      corps.querySelectorAll("[data-k]").forEach(x => {
+        x.disabled = true;
+        if (choix[Number(x.dataset.k)] === f.t * f.n) x.classList.add("correct");
+        else if (x === b) x.classList.add("incorrect");
+      });
+      noterFait(f, ok, { donne: b.textContent, rapideCompte: false });
+      if (ok && !deuxieme) bonnes += 1;
+      if (!ok && !deuxieme) { rates.push(f); serie.push(f); }
+      corps.querySelector("#tj-resultat").innerHTML = `${ok ? `<div class="pr-verdict ok">✅ Bien vu !</div>` : `<div class="pr-verdict ko">💡 ${f.t} × ${f.n} = ${f.t * f.n}</div><div class="tj-astuce">${astuceFait(f)}</div>`}
+        <button class="btn-primary btn-block" id="tj-suivant">Suivant →</button>`;
+      corps.querySelector("#tj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    }));
+  };
+  afficher();
+}
+
+// DÉFI 1 MINUTE : le plus de bonnes réponses possible ; record gardé.
+function jeuTablesDefi() {
+  const titre = "⏱️ Défi 1 minute";
+  const corps = ouvrirLibre(`<div class="game-head hdr-tdefi"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur">Prête ?</h3></div>
+    <div class="game-body"><p class="ap-legende">60 secondes pour réussir le plus de calculs des tables ${listeTables(tablesEtat.actives)}.${tablesEtat.record ? ` Ton record : ${tablesEtat.record}.` : ""}</p>
+    <button class="btn-primary btn-block" id="tj-go">C'est parti !</button></div>`);
+  corps.querySelector("#tj-go").addEventListener("click", () => {
+    let bonnes = 0, total = 0, reste = 60;
+    const rates = [];
+    const fin = Date.now() + 60000;
+    const pool = faitsActifs();
+    const terminer = () => {
+      clearInterval(tablesMinuteur);
+      const nouveau = bonnes > tablesEtat.record;
+      if (nouveau && !estParent()) { tablesEtat.record = bonnes; enregistrerTables({ record: bonnes }); }
+      finJeuTables(corps, nouveau && bonnes ? "🏆 Nouveau record" : titre, bonnes, total, jeuTablesDefi, rates);
+    };
+    tablesMinuteur = setInterval(() => {
+      if (document.getElementById("modal-libre").hidden) return clearInterval(tablesMinuteur);
+      reste = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
+      const c = corps.querySelector("#tj-compteur");
+      if (c) c.textContent = `⏱️ ${reste} s · ${bonnes} ✅`;
+      if (reste <= 0) terminer();
+    }, 250);
+    const question = () => {
+      if (Date.now() >= fin || document.getElementById("modal-libre").hidden) return;
+      const f = { ...pool[Math.floor(Math.random() * pool.length)], inverse: Math.random() < 0.5 };
+      corps.querySelector(".game-body").innerHTML = `<div class="tj-question">${enonce(f)} = ?</div>${HTML_SAISIE}<div id="tj-resultat"></div>`;
+      const debut = Date.now();
+      const input = champNombre(corps, v => {
+        const ok = Number(v) === f.t * f.n;
+        total += 1;
+        if (ok) bonnes += 1; else if (!rates.some(x => x.t === f.t && x.n === f.n)) rates.push(f);
+        noterFait(f, ok, { ms: Date.now() - debut, donne: v });
+        if (ok) return question();
+        input.disabled = true;
+        input.classList.add("incorrect");
+        corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">${f.t} × ${f.n} = ${f.t * f.n}</div>`;
+        setTimeout(question, 1200);
+      });
+    };
+    question();
+  });
 }
 
 // RÉCAP PARENT (aperçu)
