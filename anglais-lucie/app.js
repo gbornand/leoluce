@@ -144,6 +144,7 @@ sur("btn-mdp", "click", () => {
 const MATIERES_UI = {
   anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
+  dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "🧮", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   svt: { nom: "SVT", emoji: "🌿", savoir: "🌿 Notions & définitions", regle: "🔬 À comprendre", savoirCourt: "notions", regleCourt: "à comprendre" },
@@ -191,7 +192,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -199,6 +200,8 @@ function reinitialiserEcran() {
   document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== "tab-today"; });
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "today"));
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
+  dicteeChoisie = null;
   notionsById = {};
   coursById = {};
   figuresById = {};
@@ -207,9 +210,18 @@ function reinitialiserEcran() {
 function appliquerMatiere() {
   const parent = estParent();
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = !parent;
-  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent;
-  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent;
+  const dictee = matiereCourante === "dictee";
+  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent || dictee;
+  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent || dictee;
+  document.querySelector('.tab-btn[data-tab="notions"]').hidden = dictee;
+  document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
+  document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
+  const titreAjout = document.querySelector("#tab-add h2");
+  if (titreAjout) titreAjout.textContent = dictee ? "Ajoute ta nouvelle liste de mots" : "Ajoute un cours";
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
+  const actif = document.querySelector(".tab-btn.active");
+  if (dictee && actif && ["today", "notions", "entrainer"].includes(actif.dataset.tab)) document.querySelector('.tab-btn[data-tab="dictee"]').click();
+  if (!dictee && actif?.dataset.tab === "dictee") document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : "today"}"]`).click();
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
   tabChansons.hidden = !anglais;
@@ -219,7 +231,9 @@ function appliquerMatiere() {
   document.getElementById("recap-parent").hidden = profil.role !== "parent";
   document.getElementById("titre-bloc-savoir").textContent = ui().savoir;
   document.getElementById("titre-bloc-regle").textContent = ui().regle;
-  document.getElementById("add-matiere-badge").textContent = `📥 Ce cours sera rangé dans : ${ui().emoji} ${MATIERES_UI[matiereCourante].nom} — vérifie l'onglet en haut si ce n'est pas ça`;
+  document.getElementById("add-matiere-badge").textContent = dictee
+    ? "🎧 Nouvelle dictée : elle devient la dictée de la semaine, l'ancienne passe dans les archives"
+    : `📥 Ce cours sera rangé dans : ${ui().emoji} ${MATIERES_UI[matiereCourante].nom} — vérifie l'onglet en haut si ce n'est pas ça`;
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -250,6 +264,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-panel").forEach(p => p.hidden = true);
     document.getElementById(`tab-${btn.dataset.tab}`).hidden = false;
     if (btn.dataset.tab === "notions") loadNotions();
+    if (btn.dataset.tab === "dictee") loadDictee();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
@@ -272,7 +287,7 @@ async function genererSeance(regenerer) {
 }
 
 async function loadToday() {
-  if (estParent()) return;
+  if (estParent() || matiereCourante === "dictee") return;
   document.getElementById("today-loading").hidden = false;
   document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
   document.getElementById("today-empty").hidden = true;
@@ -723,7 +738,10 @@ sur("btn-envoyer-cours", "click", async () => {
     const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
     const nbFigures = (result.figures || []).length;
-    statusEl.textContent = `✅ Cours ajouté dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom} : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
+    if (matiereCourante === "dictee") dicteeChoisie = null;
+    statusEl.textContent = matiereCourante === "dictee"
+      ? `✅ Nouvelle dictée « ${result.titre} » : ${(result.vocabulaire || []).length} mots, dont ${(result.vocabulaire || []).filter(v => v.prioritaire).length} surlignés. Va dans 🎧 Ma dictée !`
+      : `✅ Cours ajouté dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom} : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
     const sources = photosEnAttente;
     photosEnAttente = [];
     document.getElementById("photo-preview").innerHTML = "";
@@ -793,6 +811,7 @@ function barreNiveau(niveau) {
 }
 
 async function loadNotions() {
+  if (matiereCourante === "dictee") return loadDictee();
   const el = document.getElementById("notions-list");
   const [progSnap, coursSnap, seancesSnap, reponsesSnap] = await Promise.all([
     getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleveCourant))),
@@ -941,6 +960,12 @@ async function supprimerCours(coursId, btn) {
   try {
     for (const n of notions) {
       try { await deleteDoc(doc(db, "progressionAnglais", n.id)); } catch (err) { console.error("Échec suppression notion", n.id, n, err); echecs++; }
+    }
+    for (const col of ["pagesCours", "figuresRevisions"]) {
+      const snap = await getDocs(query(collection(db, col), where("eleve", "==", eleveCourant), where("coursId", "==", coursId)));
+      for (const d of snap.docs) {
+        try { col === "figuresRevisions" ? await supprimerFigure(d.id) : await deleteDoc(d.ref); } catch (err) { console.error("Échec suppression", col, d.id, err); echecs++; }
+      }
     }
     await deleteDoc(doc(db, "coursAnglais", coursId));
     loadNotions();
@@ -1668,6 +1693,481 @@ async function lancerControle(coursId) {
     console.error(err);
     corps.querySelector(".game-body").innerHTML = `<div class="panel-info">❌ Impossible de préparer le contrôle. Réessaie dans un instant.</div>`;
   }
+}
+
+// ------------------------------------------------------------
+// DICTÉE — la dernière liste importée = dictée de la semaine, les précédentes en archives
+// ------------------------------------------------------------
+let dicteeChoisie = null;
+let dicteeEtat = null;
+let dicteeMinuteur = null;
+
+const ARTICLE_DEBUT = /^(l['’]|le |la |les |un |une |des |du |de |d['’])/i;
+function sansArticle(m) { return String(m).replace(ARTICLE_DEBUT, "").trim(); }
+function bonneEcriture(attendu, saisie) {
+  const s = normaliser(saisie);
+  return s === normaliser(attendu) || s === normaliser(sansArticle(attendu));
+}
+function estArticle(m, s, i) {
+  return i === 0 && m.syllabes.length > 1 && (/['’]$/.test(s) || m.mot.startsWith(s + " "));
+}
+
+function htmlSyllabes(m) {
+  if (!m.syllabes) return `<span class="syl syl-0">${esc(m.mot)}</span>`;
+  let k = 0;
+  return m.syllabes.map((s, i) => estArticle(m, s, i)
+    ? `<span class="syl syl-art">${esc(s)}</span>${/['’]$/.test(s) ? "" : " "}`
+    : `<span class="syl syl-${k++ % 2}">${esc(s)}</span>`).join("");
+}
+
+function htmlPieges(m) {
+  if (!m.pieges) return esc(m.mot);
+  return esc(m.pieges).replace(/\[([^\]]+)\]/g, `<b class="piege">$1</b>`);
+}
+
+function dateCourte(iso) {
+  return iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+}
+
+async function loadDictee() {
+  const el = document.getElementById("dictee-contenu");
+  const eleve = eleveCourant;
+  const encore = () => eleve === eleveCourant && matiereCourante === "dictee";
+  let coursSnap, progSnap;
+  try {
+    [coursSnap, progSnap] = await Promise.all([
+      getDocs(query(collection(db, "coursAnglais"), where("eleve", "==", eleve))),
+      getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleve))),
+    ]);
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger la dictée. Recharge la page.</div>`;
+    return;
+  }
+  if (!encore()) return;
+  const dictees = coursSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.matiere === "dictee")
+    .sort((a, b) => (b.dateAjout || "").localeCompare(a.dateAjout || ""));
+  notionsById = {};
+  progSnap.forEach(d => { const x = d.data(); if (x.matiere === "dictee") notionsById[d.id] = { id: d.id, ...x }; });
+  coursById = Object.fromEntries(dictees.map(c => [c.id, c]));
+  if (!dictees.length) {
+    el.innerHTML = `<div class="panel-info">Pas encore de dictée — va dans <strong>+ Une dictée</strong> et prends ta liste de mots en photo 📸</div>`;
+    return;
+  }
+  const cours = dictees.find(c => c.id === dicteeChoisie) || dictees[0];
+  if (!cours.prepa) {
+    el.innerHTML = `<div class="panel-info">✨ Je prépare tes mots (syllabes, pièges, jeux)… environ 30 secondes.</div>`;
+    try {
+      const preparerDictee = httpsCallable(functions, "preparerDictee", { timeout: 180000 });
+      cours.prepa = (await preparerDictee({ eleve, coursId: cours.id })).data.prepa || {};
+    } catch (err) {
+      console.error(err);
+      cours.prepa = {};
+    }
+    if (!encore()) return;
+  }
+  const tous = (cours.vocabulaire || []).map((v, index) => {
+    const p = cours.prepa?.[v.mot] || {};
+    const n = Object.values(notionsById).find(x => x.coursId === cours.id && x.label === v.mot);
+    return {
+      index, mot: v.mot, sens: p.sens || v.traduction || "", syllabes: p.syllabes || null, pieges: p.pieges || null,
+      erreurs: p.erreurs || [], phrase: p.phrase || "", prioritaire: !!v.prioritaire,
+      notionId: n?.id || null, niveau: n?.niveau || 0, dernierResultat: n?.dernierResultat ?? null,
+    };
+  });
+  const nbFluo = tous.filter(m => m.prioritaire).length;
+  const fluoSeul = nbFluo > 0 && cours.listeComplete !== true;
+  const mots = fluoSeul ? tous.filter(m => m.prioritaire) : tous;
+  dicteeEtat = { cours, tous, mots };
+  const archive = cours.id !== dictees[0].id;
+  const sus = mots.filter(m => m.niveau >= 3).length;
+  const archives = dictees.filter(c => c.id !== cours.id);
+
+  el.innerHTML = `
+    <div class="dic-hero${archive ? " dic-hero-archive" : ""}">
+      <div class="dic-kicker">${archive ? "📦 Ancienne dictée" : "📝 Dictée de la semaine"}</div>
+      <h2>${esc(cours.titre)}</h2>
+      <div class="dic-sub">${esc(dateCourte(cours.dateAjout))} · ${mots.length} mot${mots.length > 1 ? "s" : ""} à apprendre${fluoSeul ? " (les mots surlignés)" : ""}</div>
+      <div class="dic-jauge"><span style="width:${mots.length ? Math.round(sus / mots.length * 100) : 0}%"></span></div>
+      <div class="dic-jauge-txt">${sus} / ${mots.length} mots bien sus</div>
+      ${nbFluo ? `<div class="dic-toggle">
+        <button data-liste="fluo" class="${fluoSeul ? "on" : ""}">⭐ Mots surlignés (${nbFluo})</button>
+        <button data-liste="tout" class="${fluoSeul ? "" : "on"}">📋 Toute la liste (${tous.length})</button></div>`
+        : `<div class="dic-astuce">Aucun mot surligné repéré : touche ⭐ à côté d'un mot pour le marquer.</div>`}
+      ${archive ? `<button class="dic-retour" id="dic-retour">← Revenir à la dictée de la semaine</button>` : ""}
+    </div>
+    <div class="dic-jeux">
+      <button class="dic-jeu dj-apprendre" data-jeu="apprendre"><span class="tc-emoji">📖</span><span class="tc-title">Apprendre mes mots</span><span class="tc-sub">Syllabes, pièges, puis j'écris</span></button>
+      <button class="dic-jeu dj-ecoute" data-jeu="ecoute"><span class="tc-emoji">🎧</span><span class="tc-title">J'écoute, j'écris</span><span class="tc-sub">Le mot est lu, je l'écris</span></button>
+      <button class="dic-jeu dj-bonmot" data-jeu="bonmot"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon mot</span><span class="tc-sub">Trouve la bonne écriture</span></button>
+      <button class="dic-jeu dj-lettres" data-jeu="lettres"><span class="tc-emoji">🧩</span><span class="tc-title">Mot en morceaux</span><span class="tc-sub">Remets les morceaux dans l'ordre</span></button>
+      <button class="dic-jeu dj-flash" data-jeu="flash"><span class="tc-emoji">⚡</span><span class="tc-title">Mot flash</span><span class="tc-sub">Je regarde, il disparaît, je l'écris</span></button>
+      <button class="dic-jeu dj-phrases" data-jeu="phrases"><span class="tc-emoji">✍️</span><span class="tc-title">Petites phrases</span><span class="tc-sub">Comme le jour de la dictée</span></button>
+    </div>
+    <h3 class="section-title">📋 Mes mots <span>${tous.length}</span></h3>
+    <div class="dic-mots">${tous.map(m => {
+      const hors = fluoSeul && !m.prioritaire;
+      const st = statutNiveau(m.niveau);
+      return `<div class="dic-mot${hors ? " hors" : ""}">
+        <button class="dic-mot-main" data-voir="${m.index}"><span class="dic-mot-syl">${htmlSyllabes(m)}</span>${m.sens ? `<span class="dic-mot-sens">${esc(m.sens)}</span>` : ""}</button>
+        ${hors ? "" : `<span class="pill ${st.cls}">${m.niveau >= 3 ? "Su" : m.dernierResultat === null ? "Nouveau" : "En cours"}</span>`}
+        <button class="dic-icone" data-dire="${m.index}" title="Écouter">🔊</button>
+        <button class="dic-icone dic-star${m.prioritaire ? " on" : ""}" data-star="${m.index}" title="${m.prioritaire ? "Retirer des mots surlignés" : "Marquer comme surligné"}">⭐</button>
+      </div>`;
+    }).join("")}</div>
+    <div id="dic-erreur" class="dic-astuce" hidden></div>
+    ${archives.length ? `<h3 class="section-title">📦 Dictées précédentes <span>${archives.length}</span></h3>
+      ${archives.map(c => `<details class="dic-archive"><summary><b>${esc(c.titre)}</b> <span class="muted">· ${esc(dateCourte(c.dateAjout))} · ${(c.vocabulaire || []).length} mots</span></summary>
+        <div class="dic-archive-mots">${(c.vocabulaire || []).map(v => `<span class="${v.prioritaire ? "fluo" : ""}">${esc(v.mot)}</span>`).join("")}</div>
+        <button class="btn-ghost-small" data-retravailler="${esc(c.id)}">🔁 Retravailler cette dictée</button></details>`).join("")}` : ""}`;
+
+  el.querySelectorAll("[data-jeu]").forEach(b => b.addEventListener("click", () => lancerJeuDictee(b.dataset.jeu)));
+  el.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
+    const m = tous[Number(b.dataset.voir)];
+    const i = mots.indexOf(m);
+    apprendreMots(i >= 0 ? mots : [m], Math.max(i, 0));
+  }));
+  el.querySelectorAll("[data-dire]").forEach(b => b.addEventListener("click", () => dire(tous[Number(b.dataset.dire)].mot, 0.8, "fr")));
+  el.querySelectorAll("[data-star]").forEach(b => b.addEventListener("click", () => basculerFluo(tous[Number(b.dataset.star)], b)));
+  el.querySelectorAll("[data-liste]").forEach(b => b.addEventListener("click", () => choisirListe(b.dataset.liste === "tout")));
+  el.querySelectorAll("[data-retravailler]").forEach(b => b.addEventListener("click", () => { dicteeChoisie = b.dataset.retravailler; loadDictee(); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+  el.querySelector("#dic-retour")?.addEventListener("click", () => { dicteeChoisie = null; loadDictee(); });
+}
+
+function erreurDictee(err) {
+  console.error(err);
+  const el = document.getElementById("dic-erreur");
+  if (el) { el.hidden = false; el.textContent = `❌ Modification non enregistrée (${err.code || err.message}). Réessaie.`; }
+}
+
+async function basculerFluo(m, btn) {
+  const { cours } = dicteeEtat;
+  btn.disabled = true;
+  const vocabulaire = (cours.vocabulaire || []).map((v, i) => {
+    if (i !== m.index) return v;
+    const copie = { ...v };
+    if (m.prioritaire) delete copie.prioritaire; else copie.prioritaire = true;
+    return copie;
+  });
+  try {
+    await updateDoc(doc(db, "coursAnglais", cours.id), { vocabulaire });
+    if (m.notionId) await updateDoc(doc(db, "progressionAnglais", m.notionId), { prioritaire: !m.prioritaire });
+    loadDictee();
+  } catch (err) {
+    btn.disabled = false;
+    erreurDictee(err);
+  }
+}
+
+async function choisirListe(complete) {
+  try {
+    await updateDoc(doc(db, "coursAnglais", dicteeEtat.cours.id), { listeComplete: complete });
+    loadDictee();
+  } catch (err) {
+    erreurDictee(err);
+  }
+}
+
+// Mots les moins sus d'abord (ratés la dernière fois en tête), mélangés à niveau égal.
+function serieDictee(filtre = () => true, n = 10) {
+  const rang = m => (m.dernierResultat === false ? -1 : m.niveau);
+  return melanger(dicteeEtat.mots.filter(filtre)).sort((a, b) => rang(a) - rang(b)).slice(0, n);
+}
+
+function noterMot(m, correct, { pas = 1, source, question = "", reponse = "" }) {
+  if (m.notionId) enregistrerReponse(m.notionId, correct, { pas, source, question: question || m.mot, reponse });
+}
+
+function lancerJeuDictee(jeu) {
+  if (!dicteeEtat?.mots.length) return;
+  if (jeu === "apprendre") return apprendreMots(dicteeEtat.mots, 0);
+  if (jeu === "ecoute") return jeuEcrire("ecoute");
+  if (jeu === "flash") return jeuEcrire("flash");
+  if (jeu === "bonmot") return jeuBonMot();
+  if (jeu === "lettres") return jeuMorceaux();
+  if (jeu === "phrases") return jeuPhrases();
+}
+
+function finJeuDictee(corps, titre, bonnes, total, relancer) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="dj-encore">🔁 Encore une série</button>
+    <button class="btn-ghost-small dj-autre" id="dj-autre">🎮 Choisir un autre jeu</button>`;
+  corps.querySelector("#dj-encore").addEventListener("click", relancer);
+  corps.querySelector("#dj-autre").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+}
+
+// APPRENDRE : syllabes en couleurs → pièges en rouge → mot normal → carte blanche → je l'écris (facultatif).
+const ETAPES_APPRENDRE = [
+  "Lis les syllabes une par une. Touche la carte pour continuer.",
+  "Les pièges sont en rouge : regarde-les bien.",
+  "Voici le mot. Prends-le en photo dans ta tête 📸",
+  "Carte blanche : arrives-tu à voir le mot dans ta tête ?",
+  "À toi ! Écris le mot… ou passe au suivant si tu es fatiguée.",
+];
+
+function apprendreMots(liste, depart = 0) {
+  let i = depart, etape = 0;
+  const corps = ouvrirLibre(`<div class="game-head hdr-apprendre"><div class="modal-kicker">📖 Apprendre mes mots</div><h3 id="ap-compteur"></h3></div><div class="game-body"></div>`);
+  const afficher = () => {
+    if (i >= liste.length) {
+      corps.querySelector(".game-body").innerHTML = `<div class="today-score">🎉 Tu as vu tes ${liste.length} mot${liste.length > 1 ? "s" : ""} !</div>
+        <button class="btn-primary btn-block" id="ap-encore">🔁 Recommencer</button>
+        <button class="btn-ghost-small dj-autre" id="dj-autre">🎮 Choisir un autre jeu</button>`;
+      corps.querySelector("#ap-encore").addEventListener("click", () => { i = 0; etape = 0; afficher(); });
+      corps.querySelector("#dj-autre").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+      return;
+    }
+    const m = liste[i];
+    corps.querySelector("#ap-compteur").textContent = `Mot ${i + 1} / ${liste.length}`;
+    const contenu = [
+      `<div class="ap-mot">${htmlSyllabes(m)}</div>`,
+      `<div class="ap-mot">${htmlPieges(m)}</div>`,
+      `<div class="ap-mot ap-normal">${esc(m.mot)}</div>`,
+      `<div class="ap-mot ap-blanc">&nbsp;</div>`,
+      `<div class="ap-ecrire"><input type="text" class="exo-input" id="ap-saisie" placeholder="Écris le mot…" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="btn-primary btn-small" id="ap-valider">Valider</button></div><div id="ap-resultat"></div>`,
+    ][etape];
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="ap-points">${ETAPES_APPRENDRE.map((_, k) => `<span class="${k <= etape ? "on" : ""}"></span>`).join("")}</div>
+      <${etape < 4 ? "button" : "div"} class="ap-carte ap-etape-${etape}" id="ap-carte">${contenu}</${etape < 4 ? "button" : "div"}>
+      <div class="ap-legende">${ETAPES_APPRENDRE[etape]}</div>
+      ${etape < 3 && m.sens ? `<div class="ap-sens">💡 ${esc(m.sens)}</div>` : ""}
+      <div class="ap-nav">
+        <button class="btn-ghost-small" id="ap-prec" ${i === 0 && etape === 0 ? "disabled" : ""}>← Retour</button>
+        <button class="pr-micro di-play ap-son" id="ap-son" title="Écouter">🔊</button>
+        <button class="btn-ghost-small" id="ap-suivant">Mot suivant →</button>
+      </div>`;
+    if (etape === 0) dire(m.mot, 0.8, "fr");
+    corps.querySelector("#ap-son").addEventListener("click", () => dire(m.mot, 0.8, "fr"));
+    corps.querySelector("#ap-suivant").addEventListener("click", () => { i += 1; etape = 0; afficher(); });
+    corps.querySelector("#ap-prec").addEventListener("click", () => {
+      if (etape > 0) etape -= 1; else if (i > 0) { i -= 1; etape = 0; }
+      afficher();
+    });
+    if (etape < 4) {
+      corps.querySelector("#ap-carte").addEventListener("click", () => { etape += 1; afficher(); });
+      return;
+    }
+    const input = corps.querySelector("#ap-saisie");
+    input.focus();
+    const valider = () => {
+      if (!input.value.trim() || input.disabled) return;
+      const ok = bonneEcriture(m.mot, input.value);
+      input.disabled = true;
+      corps.querySelector("#ap-valider").disabled = true;
+      input.classList.add(ok ? "correct" : "incorrect");
+      noterMot(m, ok, { source: "dictee-apprendre", reponse: input.value.trim() });
+      corps.querySelector("#ap-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo, c'est juste !" : "💡 Presque ! Regarde bien les pièges :"}</div>
+        <div class="ap-mot ap-petit">${htmlPieges(m)}</div>`;
+    };
+    corps.querySelector("#ap-valider").addEventListener("click", valider);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+  };
+  afficher();
+}
+
+// J'ÉCOUTE J'ÉCRIS / MOT FLASH : même saisie, seule la présentation du mot change.
+function jeuEcrire(mode) {
+  const serie = serieDictee();
+  const flash = mode === "flash";
+  const titre = flash ? "⚡ Mot flash" : "🎧 J'écoute, j'écris";
+  const corps = ouvrirLibre(`<div class="game-head ${flash ? "hdr-flash" : "hdr-dictee"}"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
+  let i = 0, bonnes = 0, revu = false;
+  const afficher = () => {
+    clearTimeout(dicteeMinuteur);
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, serie.length, () => jeuEcrire(mode));
+    const m = serie[i];
+    revu = false;
+    corps.querySelector("#dj-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      ${flash ? `<div class="flash-zone" id="flash-zone"><div class="ap-mot">${htmlSyllabes(m)}</div><div class="flash-barre"><span></span></div></div>`
+        : `<div class="pr-actions"><button class="pr-micro di-play" id="dj-play">🔊</button><button class="btn-ghost-small" id="dj-lent">🐢 Plus lentement</button></div>`}
+      <div class="ap-ecrire" id="dj-ecrire" ${flash ? "hidden" : ""}><input type="text" class="exo-input" id="dj-saisie" placeholder="Écris le mot…" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="btn-primary btn-small" id="dj-valider">Valider</button></div>
+      ${flash ? `<button class="btn-ghost-small" id="dj-revoir" hidden>👀 Revoir le mot (une fois)</button>` : ""}
+      <div id="dj-resultat"></div>`;
+    const input = corps.querySelector("#dj-saisie");
+    const cacher = () => {
+      const zone = corps.querySelector("#flash-zone");
+      if (!zone) return;
+      zone.classList.add("cache");
+      corps.querySelector("#dj-ecrire").hidden = false;
+      const rv = corps.querySelector("#dj-revoir");
+      if (rv) rv.hidden = revu;
+      input.focus();
+    };
+    if (flash) {
+      dicteeMinuteur = setTimeout(cacher, 3000);
+      corps.querySelector("#dj-revoir").addEventListener("click", (e) => {
+        revu = true;
+        e.currentTarget.hidden = true;
+        const zone = corps.querySelector("#flash-zone");
+        zone.classList.remove("cache");
+        zone.querySelector(".flash-barre").innerHTML = "<span></span>";
+        dicteeMinuteur = setTimeout(cacher, 3000);
+      });
+    } else {
+      corps.querySelector("#dj-play").addEventListener("click", () => dire(m.mot, 0.85, "fr"));
+      corps.querySelector("#dj-lent").addEventListener("click", () => dire(m.mot, 0.6, "fr"));
+      setTimeout(() => dire(m.mot, 0.85, "fr"), 300);
+      input.focus();
+    }
+    const valider = () => {
+      if (!input.value.trim() || input.disabled) return;
+      clearTimeout(dicteeMinuteur);
+      const ok = bonneEcriture(m.mot, input.value);
+      if (ok) bonnes += 1;
+      input.disabled = true;
+      corps.querySelector("#dj-valider").disabled = true;
+      corps.querySelector("#dj-revoir")?.remove();
+      input.classList.add(ok ? "correct" : "incorrect");
+      noterMot(m, ok, { source: `dictee-${mode}`, reponse: input.value.trim() });
+      corps.querySelector("#dj-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo !" : "💡 Le mot s'écrit :"}</div>
+        <div class="ap-mot ap-petit">${htmlPieges(m)}</div>
+        <button class="btn-primary btn-block" id="dj-suivant">Mot suivant →</button>`;
+      corps.querySelector("#dj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    };
+    corps.querySelector("#dj-valider").addEventListener("click", valider);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+  };
+  afficher();
+}
+
+// LE BON MOT : 3 écritures, une seule juste.
+function jeuBonMot() {
+  const serie = serieDictee(m => m.erreurs.length > 0);
+  const titre = "🔍 Le bon mot";
+  const corps = ouvrirLibre(`<div class="game-head hdr-bonmot"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
+  if (!serie.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ce jeu n'est pas encore prêt pour cette dictée.</div>`; return; }
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, serie.length, jeuBonMot);
+    const m = serie[i];
+    const choix = melanger([m.mot, ...m.erreurs]);
+    corps.querySelector("#dj-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="pr-actions"><button class="pr-micro di-play" id="dj-play">🔊</button></div>
+      <p class="ap-legende">Quel mot est bien écrit ?</p>
+      <div class="bonmot-choix">${choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${esc(c)}</button>`).join("")}</div>
+      <div id="dj-resultat"></div>`;
+    corps.querySelector("#dj-play").addEventListener("click", () => dire(m.mot, 0.85, "fr"));
+    setTimeout(() => dire(m.mot, 0.85, "fr"), 300);
+    corps.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      const ok = choix[Number(b.dataset.k)] === m.mot;
+      if (ok) bonnes += 1;
+      corps.querySelectorAll("[data-k]").forEach(x => {
+        x.disabled = true;
+        if (choix[Number(x.dataset.k)] === m.mot) x.classList.add("correct");
+        else if (x === b) x.classList.add("incorrect");
+      });
+      noterMot(m, ok, { pas: 0, source: "dictee-bonmot", reponse: b.textContent });
+      corps.querySelector("#dj-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bien vu !" : "💡 Regarde bien les pièges :"}</div>
+        <div class="ap-mot ap-petit">${htmlPieges(m)}</div>
+        <button class="btn-primary btn-block" id="dj-suivant">Mot suivant →</button>`;
+      corps.querySelector("#dj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    }));
+  };
+  afficher();
+}
+
+// MOT EN MORCEAUX : syllabes mélangées (ou lettres pour un mot d'une syllabe).
+function morceauxDe(m) {
+  const syl = m.syllabes || [];
+  const debut = syl.length > 1 && estArticle(m, syl[0], 0) ? syl[0] : "";
+  const corpsSyl = debut ? syl.slice(1) : syl;
+  const base = sansArticle(m.mot);
+  const morceaux = corpsSyl.length >= 2 ? corpsSyl : [...base];
+  return { debut, morceaux, cible: corpsSyl.length >= 2 ? corpsSyl.join("") : base };
+}
+
+function jeuMorceaux() {
+  const serie = serieDictee();
+  const titre = "🧩 Mot en morceaux";
+  const corps = ouvrirLibre(`<div class="game-head hdr-lettres"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, serie.length, jeuMorceaux);
+    const m = serie[i];
+    const { debut, morceaux, cible } = morceauxDe(m);
+    let tirage = melanger(morceaux);
+    for (let essai = 0; essai < 5 && tirage.join("") === morceaux.join("") && morceaux.length > 1; essai++) tirage = melanger(morceaux);
+    const choisis = [];
+    corps.querySelector("#dj-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="pr-actions"><button class="pr-micro di-play" id="dj-play">🔊</button></div>
+      <div class="ordre-cible morceaux-cible" id="mc-cible"></div>
+      <div class="ordre-reserve morceaux-reserve">${tirage.map((t, k) => `<button class="mot-chip morceau" data-k="${k}">${esc(t)}</button>`).join("")}</div>
+      <div class="exo-input-row"><button class="btn-ghost-small" id="mc-effacer">↺ Recommencer</button><button class="btn-primary btn-small" id="mc-valider">Valider</button></div>
+      <div id="dj-resultat"></div>`;
+    const cibleEl = corps.querySelector("#mc-cible");
+    const majCible = () => { cibleEl.innerHTML = `${debut ? `<span class="syl syl-art">${esc(debut)}</span> ` : ""}${choisis.length ? choisis.map(c => `<b>${esc(c.t)}</b>`).join("") : `<span class="muted">Touche les morceaux dans l'ordre…</span>`}`; };
+    majCible();
+    corps.querySelector("#dj-play").addEventListener("click", () => dire(m.mot, 0.8, "fr"));
+    setTimeout(() => dire(m.mot, 0.8, "fr"), 300);
+    let fini = false;
+    corps.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      if (fini || b.disabled) return;
+      b.disabled = true;
+      choisis.push({ t: tirage[Number(b.dataset.k)], b });
+      majCible();
+    }));
+    corps.querySelector("#mc-effacer").addEventListener("click", () => {
+      if (fini) return;
+      choisis.splice(0).forEach(c => { c.b.disabled = false; });
+      majCible();
+    });
+    corps.querySelector("#mc-valider").addEventListener("click", () => {
+      if (fini || choisis.length < morceaux.length) return;
+      fini = true;
+      const ok = choisis.map(c => c.t).join("") === cible;
+      if (ok) bonnes += 1;
+      cibleEl.classList.add(ok ? "correct" : "incorrect");
+      noterMot(m, ok, { pas: 0, source: "dictee-morceaux", reponse: choisis.map(c => c.t).join("") });
+      corps.querySelector("#dj-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo !" : "💡 Dans l'ordre, ça donne :"}</div>
+        <div class="ap-mot ap-petit">${htmlSyllabes(m)}</div>
+        <button class="btn-primary btn-block" id="dj-suivant">Mot suivant →</button>`;
+      corps.querySelector("#dj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    });
+  };
+  afficher();
+}
+
+// PETITES PHRASES : une phrase courte par mot, comme le jour de la dictée.
+function jeuPhrases() {
+  const serie = serieDictee(m => m.phrase, 5);
+  const titre = "✍️ Petites phrases";
+  const corps = ouvrirLibre(`<div class="game-head hdr-phrases"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
+  if (!serie.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ce jeu n'est pas encore prêt pour cette dictée.</div>`; return; }
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, serie.length, jeuPhrases);
+    const m = serie[i];
+    corps.querySelector("#dj-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `
+      <div class="pr-actions"><button class="pr-micro di-play" id="dj-play">🔊</button><button class="btn-ghost-small" id="dj-lent">🐢 Plus lentement</button></div>
+      <textarea id="dj-saisie" class="di-saisie" rows="2" placeholder="Écris la phrase…" autocapitalize="off" spellcheck="false"></textarea>
+      <button class="btn-primary btn-block" id="dj-valider">Valider</button>
+      <div id="dj-resultat"></div>`;
+    corps.querySelector("#dj-play").addEventListener("click", () => dire(m.phrase, 0.8, "fr"));
+    corps.querySelector("#dj-lent").addEventListener("click", () => dire(m.phrase, 0.55, "fr"));
+    setTimeout(() => dire(m.phrase, 0.8, "fr"), 300);
+    corps.querySelector("#dj-valider").addEventListener("click", (e) => {
+      const saisie = corps.querySelector("#dj-saisie").value.trim();
+      if (!saisie) return;
+      const { resultat, taux } = comparerMots(m.phrase, saisie);
+      const ecrits = motsDe(saisie);
+      const motOk = ` ${normaliser(saisie)} `.includes(normaliser(sansArticle(m.mot)));
+      const ok = taux === 1 && ecrits.length === motsDe(m.phrase).length;
+      if (ok) bonnes += 1;
+      noterMot(m, motOk, { source: "dictee-phrase", question: m.phrase, reponse: saisie });
+      e.currentTarget.remove();
+      corps.querySelector("#dj-saisie").disabled = true;
+      corps.querySelector("#dj-resultat").innerHTML = `
+        <div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Phrase parfaite !" : motOk ? "👍 Le mot de la liste est juste !" : "💡 Regarde les mots en rouge :"}</div>
+        <div class="di-correction">${resultat.map(x => `<span class="${x.ok ? "pm-ok" : "pm-ko"}">${esc(x.m)}</span>`).join(" ")}</div>
+        <button class="btn-primary btn-block" id="dj-suivant">Phrase suivante →</button>`;
+      corps.querySelector("#dj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    });
+  };
+  afficher();
 }
 
 // RÉCAP PARENT (aperçu)

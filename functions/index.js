@@ -289,9 +289,9 @@ const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
 const RECAP_DESTINATAIRE = "gbornand@gmail.com";
 const ELEVES = {
   [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "maths", "physique", "svt", "histoire", "francais"] },
-  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "maths", "anglais", "histoire"] },
+  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "dictee", "maths", "anglais", "histoire"] },
 };
-const NOMS_MATIERES = { anglais: "anglais", francais: "français", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
+const NOMS_MATIERES = { anglais: "anglais", francais: "français", dictee: "dictée", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
 const SCIENCES = ["maths", "physique"];
 const MATIERES_DOCUMENTS = ["svt", "histoire"];
 
@@ -344,7 +344,7 @@ Tableau vide s'il n'y en a aucune. Recopie les légendes telles qu'écrites sur 
 }
 
 function profDe(matiere) {
-  return { anglais: "prof d'anglais", francais: "maîtresse de CE2", maths: "prof de maths", physique: "prof de physique-chimie", svt: "prof de SVT", histoire: "prof d'histoire-géographie" }[matiere];
+  return { anglais: "prof d'anglais", francais: "maîtresse de CE2", dictee: "maîtresse de CE2", maths: "prof de maths", physique: "prof de physique-chimie", svt: "prof de SVT", histoire: "prof d'histoire-géographie" }[matiere];
 }
 
 const NOTATION_SCIENCES = "Écris les maths en texte simple avec les symboles Unicode (×, ÷, ², ³, √, π, ≤, ≥, ½, °), jamais de LaTeX. Vérifie chaque calcul deux fois : une réponse fausse dans la correction est inacceptable.";
@@ -366,11 +366,16 @@ ${schema(`{ "mot": "mot ou expression en anglais", "traduction": "traduction en 
 VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page et relève ABSOLUMENT TOUS les mots et expressions (listes, tableaux, encadrés, lexiques, mots illustrés), sans omettre ni résumer. Plusieurs pages = plusieurs centaines d'entrées, c'est normal. Regroupe par "theme" (titre de rubrique du cours s'il existe). Exemples courts.
 ${commun}`;
   }
+  if (matiere === "dictee") {
+    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Le document est une liste de mots à apprendre pour la dictée (ou une dictée corrigée). La photo peut être de travers, pâle ou tournée : lis-la attentivement dans tous les sens.
+${schema(`{ "mot": "le mot EXACTEMENT comme écrit sur la liste, avec son déterminant s'il y en a un (ex: 'une bibliothèque', 'l'Afrique', 'menacer'), OU pour une dictée corrigée le mot correctement écrit d'une faute commise", "traduction": "sens très simple en quelques mots (ex: 'endroit où on emprunte des livres')", "theme": "titre court de CETTE liste (ex: 'Le Mali', 'Dictée du 14/11')", "exemple": "", "prioritaire": "true si ce mot est SURLIGNÉ (feutre fluo jaune, vert, rose… : un fond de couleur derrière le mot) ; sinon ne mets pas ce champ" }`, ``)}
+Relève TOUS les mots de la liste, sans en omettre, dans l'ordre. Le surlignage fluo est ESSENTIEL : l'élève ne travaille que les mots surlignés. Regarde chaque mot un par un : a-t-il un fond coloré ? Une parenthèse d'aide (ex: '(+ singulier)') n'est pas un mot. "titre" = titre court de la liste, "recap" = "", "grammaire" = []. ${commun}`;
+  }
   if (matiere === "francais" && profil.niveau === "ce2") {
-    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de français fourni (leçon, mots à apprendre, dictée préparée ou corrigée…).
-${schema(`{ "mot": "mot à savoir écrire (orthographe) ou mot de vocabulaire, OU si c'est une dictée corrigée, le mot CORRECTEMENT écrit d'une faute qu'elle a commise", "traduction": "sens très simple ou indice (ex: nom féminin, ce qu'on met sur la tête), OU pour une faute corrigée : 'Piège : elle a écrit « ... » au lieu de « ... »'", "theme": "identifiant COURT et UNIQUE de CE document précis (ex: 'Dictée du 14/11', ou le titre écrit en haut de la copie) — jamais un thème générique style 'Mots de dictée' qui mélangerait plusieurs dictées entre elles", "exemple": "courte phrase d'exemple simple, ou la phrase exacte de la dictée où était la faute", "prioritaire": "true UNIQUEMENT si ce mot est surligné au feutre fluo/surligneur sur le document (couleur de surlignage, pas une simple correction au stylo rouge) ; sinon ne mets pas ce champ" }`,
+    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse la leçon de français fournie (grammaire, conjugaison, orthographe, vocabulaire).
+${schema(`{ "mot": "mot de vocabulaire ou terme de la leçon à connaître (ex: 'le sujet', 'l'infinitif')", "traduction": "sens très simple pour une enfant de 8 ans", "theme": "titre court de la leçon", "exemple": "courte phrase d'exemple simple" }`,
   `{ "titre": "nom court de la règle (grammaire, conjugaison, orthographe)", "explication": "explication très simple pour une enfant de 8 ans", "exemples": ["phrase d'exemple"] }`)}
-Relève TOUS les mots à apprendre ou toutes les fautes visibles (ratures, corrections en rouge), sans en omettre. Chaque dictée/document garde SON PROPRE thème distinct des autres (pour pouvoir les retravailler séparément). Repère bien les mots surlignés au fluo (une couleur de surlignage, pas le stylo de correction) : ce sont ceux à travailler en priorité, marque-les "prioritaire": true. ${commun}`;
+Une règle = une entrée de "grammaire" (sois complète : toutes les règles de la leçon). IMPORTANT : les LISTES DE MOTS DE DICTÉE (mots à apprendre à écrire pour la dictée de la semaine) ne vont PAS ici, elles ont leur propre onglet Dictée : ignore-les totalement. ${commun}`;
   }
   if (matiere === "francais") {
     return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une DICTÉE corrigée (fautes d'orthographe/accord sur des mots), OU une ÉVALUATION corrigée (erreurs de compréhension/d'analyse, pas seulement orthographiques), OU un sujet de rédaction.
@@ -483,6 +488,55 @@ async function appelIA(prompt, maxTokens = 8000, effort = "low") {
   return extractJsonAnglais(textBlock.text);
 }
 
+// Pour chaque mot d'une dictée : syllabes (couleurs dys), pièges d'orthographe, fausses écritures, sens, phrase.
+async function preparerMotsDictee(vocabulaire) {
+  const mots = (vocabulaire || []).map(v => v.mot).filter(Boolean);
+  if (!mots.length) return {};
+  const prompt = `Tu es une maîtresse de CE2 spécialisée dans l'aide aux enfants dyslexiques. Pour chacun de ces mots à apprendre pour la dictée, prépare le matériel d'apprentissage.
+Mots (avec leur déterminant éventuel) :
+${mots.map(m => `- ${m}`).join("\n")}
+
+Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
+{ "mots": [ {
+  "mot": "le mot EXACTEMENT tel que donné ci-dessus",
+  "syllabes": ["découpage en syllabes ÉCRITES, tel qu'on l'apprend à l'école pour lire", "..."],
+  "pieges": "le mot exactement tel que donné, avec chaque difficulté d'orthographe entre crochets",
+  "erreurs": ["une écriture fausse mais plausible à l'oreille", "une autre écriture fausse plausible"],
+  "sens": "sens en 3 à 8 mots, pour une enfant de 8 ans",
+  "phrase": "phrase de dictée très courte (4 à 7 mots), simple, qui contient le mot tel quel"
+} ] }
+
+Règles :
+- "syllabes" : le déterminant (le, la, l', un, une…) est un élément à part, en premier. Les syllabes collées doivent redonner exactement le mot (même lettres, mêmes accents, même apostrophe ; les espaces ne comptent pas). Ex : "une bibliothèque" → ["une", "bi", "blio", "thèque"] ; "l'Afrique" → ["l'", "A", "fri", "que"].
+- "pieges" : entoure de crochets les lettres où un enfant se trompe : lettres muettes (le t de « désert »), doubles consonnes, ç, s/ss, c/qu/k, g/ge/gu, accents, h muet, ph/th, an/en, ain/ein, terminaisons pièges (-tion, -ée, -eau…). Seulement les vraies difficultés (1 à 3 par mot). Sans les crochets, le texte doit être EXACTEMENT le mot. Ex : "une biblio[th]è[qu]e", "un ma[ç]on", "une a[nn][ée]", "le déser[t]".
+- "erreurs" : deux fautes que fait vraiment un enfant (qui se prononcent pareil), jamais identiques au mot, avec le même déterminant. Ex : "un maçon" → ["un masson", "un maçont"].`;
+  const parsed = await appelIA(prompt, 12000, "low");
+  const sansEspaces = s => String(s || "").replace(/\s+/g, "");
+  const prepa = {};
+  for (const p of parsed.mots || []) {
+    if (!mots.includes(p.mot)) continue;
+    const syllabes = Array.isArray(p.syllabes) && sansEspaces(p.syllabes.join("")) === sansEspaces(p.mot) ? p.syllabes.map(String) : null;
+    const pieges = String(p.pieges || "").replace(/[[\]]/g, "") === p.mot ? String(p.pieges) : null;
+    const erreurs = (Array.isArray(p.erreurs) ? p.erreurs : []).map(String).filter(e => e && e !== p.mot).slice(0, 2);
+    prepa[p.mot] = { syllabes, pieges, erreurs, sens: String(p.sens || ""), phrase: String(p.phrase || "") };
+  }
+  return prepa;
+}
+
+exports.preparerDictee = onCall(
+  { region: "europe-west1", secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 180, invoker: "public" },
+  async (request) => {
+    const { eleve } = contexteAppel(request, { matiereRequise: false });
+    const ref = db.collection("coursAnglais").doc(String(request.data?.coursId || ""));
+    const snap = await ref.get();
+    verifierEleve(snap.data(), eleve);
+    if (snap.data().matiere !== "dictee") throw new HttpsError("invalid-argument", "Ce n'est pas une dictée.");
+    const prepa = await preparerMotsDictee(snap.data().vocabulaire);
+    await ref.update({ prepa });
+    return { prepa };
+  }
+);
+
 async function vocabAnglaisConnu(eleve) {
   const snap = await db.collection("coursAnglais").where("eleve", "==", eleve).get();
   return [...new Set(snap.docs.filter(d => d.data().matiere === "anglais").flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
@@ -543,9 +597,15 @@ exports.extraireCoursAnglais = onCall(
     const textBlock = response.content.find(b => b.type === "text");
     if (!textBlock) throw new HttpsError("internal", "Réponse IA vide.");
     const parsed = extractJsonAnglais(textBlock.text);
+    let prepa = null;
+    if (matiere === "dictee") {
+      parsed.grammaire = [];
+      try { prepa = await preparerMotsDictee(parsed.vocabulaire); } catch (err) { console.error("Préparation dictée", err); }
+    }
 
     const docRef = await db.collection("coursAnglais").add({
       eleve, matiere,
+      ...(prepa ? { prepa } : {}),
       titre: parsed.titre || `Cours de ${NOMS_MATIERES[matiere]}`,
       recap: parsed.recap || "",
       vocabulaire: parsed.vocabulaire || [],
