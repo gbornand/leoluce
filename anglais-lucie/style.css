@@ -661,3 +661,7 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .morceaux-reserve { justify-content: center; }
 .morceau { font-size: 22px; padding: 10px 16px; }
 .dj-autre { display: block; margin: 10px auto 0; }
+.dic-a-revoir { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 12px; }
+.dic-a-revoir span { background: #fff; border: 2px solid #f6b3b6; border-radius: 12px; padding: 6px 12px; font-size: 20px; font-weight: 800; }
+.dic-repris-info { margin: -4px 0 10px; font-size: 13px; }
+.dic-mot-repris { border-left: 4px solid #f0a020; }
