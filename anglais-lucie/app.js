@@ -153,6 +153,8 @@ const MATIERES_UI = {
 };
 
 let profil = null;
+// Compte parent utilisé par un enfant sur l'ordi de la maison : ses réponses sont enregistrées comme les siennes.
+let modeEleve = false;
 let eleveCourant = null;
 let matiereCourante = null;
 
@@ -182,12 +184,29 @@ function renderContexte() {
   const enfants = profil.role === "parent"
     ? `<div class="ctx-enfants">${profil.eleves.map(e => `<button class="ctx-enfant${e.uid === eleveCourant ? " active" : ""}" data-eleve="${esc(e.uid)}">${esc(e.prenom)}</button>`).join("")}</div>`
     : "";
-  bar.innerHTML = `${enfants}<div class="ctx-matieres">${eleveInfo().matieres.map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
+  const prenom = esc(eleveInfo().prenom);
+  const apercu = profil.role !== "parent" ? ""
+    : modeEleve
+      ? `<div class="ctx-apercu ctx-eleve">✏️ C'est <b>${prenom}</b> qui travaille : ses réponses comptent. <button class="ctx-bascule" data-bascule="parent">↩️ Mode parent</button></div>`
+      : `<div class="ctx-apercu">👁️ Aperçu de l'écran de ${prenom} (rien n'est enregistré). <button class="ctx-bascule ctx-bascule-go" data-bascule="eleve">▶️ Faire travailler ${prenom}</button></div>`;
+  bar.innerHTML = `${enfants}${apercu}<div class="ctx-matieres">${eleveInfo().matieres.map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
   bar.querySelectorAll("[data-eleve]").forEach(b => b.addEventListener("click", () => choisirContexte(b.dataset.eleve, null)));
   bar.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => choisirContexte(eleveCourant, b.dataset.matiere)));
+  bar.querySelectorAll("[data-bascule]").forEach(b => b.addEventListener("click", () => basculerModeEleve(b.dataset.bascule === "eleve")));
 }
 
-function estParent() { return profil?.role === "parent"; }
+function basculerModeEleve(actif) {
+  modeEleve = actif;
+  ecrireLocal("mode-eleve", actif ? "1" : "");
+  const eleve = eleveCourant, matiere = matiereCourante;
+  reinitialiserEcran();
+  choisirContexte(eleve, matiere);
+  const cible = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`);
+  if (!cible.hidden) cible.click();
+  window.scrollTo(0, 0);
+}
+
+function estParent() { return profil?.role === "parent" && !modeEleve; }
 
 // À chaque changement de compte : rien de la session précédente ne doit rester affiché.
 function reinitialiserEcran() {
@@ -218,8 +237,9 @@ function appliquerMatiere() {
   const dictee = matiereCourante === "dictee";
   const tables = matiereCourante === "tables";
   const special = dictee || tables;
-  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent || special;
-  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent || special;
+  document.querySelector('.tab-btn[data-tab="today"]').hidden = special;
+  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = special;
+  document.getElementById("btn-autre-seance").style.display = parent ? "none" : "";
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
   document.querySelector('.tab-btn[data-tab="add"]').hidden = tables;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
@@ -239,7 +259,7 @@ function appliquerMatiere() {
   if (!anglais && !document.getElementById("tab-chansons").hidden) document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : "today"}"]`).click();
   document.getElementById("btn-pron").hidden = !anglais;
   document.getElementById("btn-dictee").hidden = !["anglais", "francais"].includes(matiereCourante);
-  document.getElementById("recap-parent").hidden = profil.role !== "parent";
+  document.getElementById("recap-parent").hidden = !estParent();
   document.getElementById("titre-bloc-savoir").textContent = ui().savoir;
   document.getElementById("titre-bloc-regle").textContent = ui().regle;
   document.getElementById("add-matiere-badge").textContent = dictee
@@ -251,7 +271,7 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById("screen-login").hidden = !!user;
   document.getElementById("screen-app").hidden = !user;
   reinitialiserEcran();
-  if (!user) { profil = null; eleveCourant = null; matiereCourante = null; return; }
+  if (!user) { profil = null; eleveCourant = null; matiereCourante = null; modeEleve = false; return; }
   try {
     const initialiserRevisions = httpsCallable(functions, "initialiserRevisions", { timeout: 300000 });
     profil = await initialiserRevisions({}).then(r => r.data);
@@ -261,8 +281,10 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   const memo = lireLocal("eleve-courant");
+  modeEleve = profil.role === "parent" && lireLocal("mode-eleve") === "1";
   choisirContexte(profil.eleves.some(e => e.uid === memo) ? memo : profil.eleves[0].uid, null);
-  document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`).click();
+  const accueil = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`);
+  if (!accueil.hidden) accueil.click();
 });
 
 // ------------------------------------------------------------
@@ -300,7 +322,7 @@ async function genererSeance(regenerer) {
 }
 
 async function loadToday() {
-  if (estParent() || matiereCourante === "dictee" || matiereCourante === "tables") return;
+  if (matiereCourante === "dictee" || matiereCourante === "tables") return;
   afficherBandeauControle();
   document.getElementById("today-loading").hidden = false;
   document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
@@ -473,7 +495,7 @@ function afficherBilan(resultat) {
         const n = notionsById[e.notionId];
         return `<button class="bilan-erreur" data-revoir="${esc(e.notionId)}"><span>${esc(n?.label || e.phrase || e.question)}</span><span class="bilan-go">💡 Revoir et s'entraîner</span></button>`;
       }).join("")}</div>` : ""}
-    <div class="bilan-actions">
+    <div class="bilan-actions"${estParent() ? " style=\"display:none\"" : ""}>
       <button class="btn-primary" id="btn-nouvelle-seance">🔁 Nouvelle séance${resultat.erreurs.length ? " (on reprend tes erreurs)" : ""}</button>
     </div>`;
   s.querySelectorAll("[data-revoir]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.revoir)));

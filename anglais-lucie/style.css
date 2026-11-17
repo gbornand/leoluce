@@ -742,3 +742,8 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .ct-go { margin-top: 0; }
 .dash-ct { display: flex; flex-direction: column; gap: 6px; }
 .dash-ct-ligne { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 700; background: #faf9ff; border-radius: 10px; padding: 6px 10px; }
+.ctx-apercu { font-size: 12px; color: #6a6690; background: #fff6d6; border-radius: 10px; padding: 5px 10px; margin: 2px 0 6px; }
+.ctx-apercu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ctx-eleve { background: #e3f7ea; color: #2b6b43; }
+.ctx-bascule { border: none; border-radius: 999px; padding: 5px 12px; font-weight: 800; font-size: 12px; cursor: pointer; background: #fff; color: #4a4670; box-shadow: 0 0 0 1px #e0dcf5; }
+.ctx-bascule-go { background: #5b6ee8; color: #fff; box-shadow: none; }
