@@ -144,6 +144,7 @@ sur("btn-mdp", "click", () => {
 const MATIERES_UI = {
   anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
+  tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "🧮", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
@@ -212,20 +213,22 @@ function appliquerMatiere() {
   const parent = estParent();
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = !parent;
   const dictee = matiereCourante === "dictee";
-  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent || dictee;
-  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent || dictee;
-  document.querySelector('.tab-btn[data-tab="notions"]').hidden = dictee;
+  const tables = matiereCourante === "tables";
+  const special = dictee || tables;
+  document.querySelector('.tab-btn[data-tab="today"]').hidden = parent || special;
+  document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = parent || special;
+  document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
+  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
-  document.querySelector('.tab-btn[data-tab="tables"]').hidden = matiereCourante !== "maths";
-  if (matiereCourante !== "maths" && !document.getElementById("tab-tables").hidden) document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : dictee ? "dictee" : "today"}"]`).click();
-  if (matiereCourante === "maths" && !document.getElementById("tab-tables").hidden) loadTables();
+  document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
   if (titreAjout) titreAjout.textContent = dictee ? "Ajoute ta nouvelle liste de mots" : "Ajoute un cours";
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
-  if (dictee && actif && ["today", "notions", "entrainer"].includes(actif.dataset.tab)) document.querySelector('.tab-btn[data-tab="dictee"]').click();
-  if (!dictee && actif?.dataset.tab === "dictee") document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : "today"}"]`).click();
+  if (!actif || actif.hidden || (special && actif.dataset.tab !== "add" && actif.dataset.tab !== "dashboard")) {
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : parent ? "dashboard" : "today"}"]`).click();
+  }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
   tabChansons.hidden = !anglais;
@@ -292,7 +295,7 @@ async function genererSeance(regenerer) {
 }
 
 async function loadToday() {
-  if (estParent() || matiereCourante === "dictee") return;
+  if (estParent() || matiereCourante === "dictee" || matiereCourante === "tables") return;
   document.getElementById("today-loading").hidden = false;
   document.getElementById("today-loading").textContent = "Chargement de la séance du jour…";
   document.getElementById("today-empty").hidden = true;
@@ -660,14 +663,17 @@ async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance
     const snap = await getDoc(ref);
     if (!snap.exists()) { console.warn("Notion introuvable pour la réponse", notionId); return; }
     const data = snap.data();
+    // Une seule montée de niveau par jour : répéter un mot 5 fois dans la journée ne le rend pas « su ».
     let niveau = data.niveau || 0;
-    niveau = correct ? Math.min(niveau + pas, 5) : Math.max(niveau - 1, 0);
+    const monte = correct && pas > 0 && data.monteLe !== todayISO();
+    niveau = correct ? Math.min(niveau + (monte ? pas : 0), 5) : Math.max(niveau - 1, 0);
     const d = new Date();
     d.setDate(d.getDate() + NIVEAUX_JOURS[niveau]);
     await updateDoc(ref, {
       niveau, dernierResultat: correct,
       prochaineDate: d.toISOString().slice(0, 10),
       dernierVu: todayISO(),
+      ...(monte ? { monteLe: todayISO() } : {}),
     });
   } catch (err) {
     console.error("Erreur enregistrement réponse", err);
@@ -817,6 +823,7 @@ function barreNiveau(niveau) {
 
 async function loadNotions() {
   if (matiereCourante === "dictee") return loadDictee();
+  if (matiereCourante === "tables") return loadTables();
   const el = document.getElementById("notions-list");
   const [progSnap, coursSnap, seancesSnap, reponsesSnap] = await Promise.all([
     getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", eleveCourant))),
@@ -2282,8 +2289,9 @@ function noterFait(f, correct, { ms = Infinity, donne = "", rapideCompte = true 
   if (estParent()) return;
   const cle = cleFait(f);
   const x = { niveau: 0, vus: 0, rates: 0, ...(tablesEtat.faits[cle] || {}) };
-  const monte = rapideCompte && ms <= delaiRapide();
+  const monte = correct && rapideCompte && ms <= delaiRapide() && x.monteLe !== todayISO();
   x.niveau = correct ? Math.min(x.niveau + (monte ? 1 : 0), 5) : Math.max(x.niveau - 1, 0);
+  if (monte) x.monteLe = todayISO();
   x.vus += 1;
   if (!correct) x.rates += 1;
   x.dernierResultat = correct;
@@ -2307,7 +2315,7 @@ async function loadTables() {
     el.innerHTML = `<div class="panel-info">❌ Impossible de charger les tables. Recharge la page.</div>`;
     return;
   }
-  if (eleve !== eleveCourant || matiereCourante !== "maths") return;
+  if (eleve !== eleveCourant || matiereCourante !== "tables") return;
   tablesEtat = {
     actives: (data?.actives?.length ? data.actives : TABLES_DEFAUT[eleveInfo()?.niveau] || TABLES_DEFAUT.college).slice().sort((a, b) => a - b),
     faits: data?.faits || {},
