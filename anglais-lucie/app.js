@@ -2619,37 +2619,93 @@ function serieDe(reponses) {
   return { serie, aujourdhui: jours.has(todayISO()) };
 }
 
+// Temps de travail estimé à partir de l'heure des réponses : une pause de plus de 10 min = nouvelle session,
+// chaque session compte (dernière − première réponse) + 1 min.
+function minutesTravail(reponses) {
+  const t = reponses.map(r => Date.parse(r.at)).filter(Boolean).sort((a, b) => a - b);
+  if (!t.length) return 0;
+  let total = 0, debut = t[0], prec = t[0];
+  for (const x of t.slice(1)) {
+    if (x - prec > 600000) { total += prec - debut + 60000; debut = x; }
+    prec = x;
+  }
+  total += prec - debut + 60000;
+  return Math.round(total / 60000);
+}
+
+function dureeTexte(min) {
+  if (!min) return "0 min";
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
+}
+
+function tauxReussite(reps) {
+  return reps.length ? Math.round(reps.filter(r => r.correct).length / reps.length * 100) : null;
+}
+
+// Les notions les moins sues d'une matière : ratées la dernière fois, puis vues mais encore faibles.
+function notionsARetravailler(prog, n = 6) {
+  const rang = x => (x.dernierResultat === false ? 0 : 1) * 10 + (x.niveau || 0);
+  return prog.filter(x => x.type !== "figure" && (x.dernierResultat === false || (x.dernierVu && (x.niveau || 0) <= 1)))
+    .sort((a, b) => rang(a) - rang(b)).slice(0, n);
+}
+
 async function carteEnfant(e) {
-  const [progSnap, seanceSnap, repSnap] = await Promise.all([
+  const [progSnap, seanceSnap, repSnap, tablesSnap] = await Promise.all([
     getDocs(query(collection(db, "progressionAnglais"), where("eleve", "==", e.uid))),
     getDocs(query(collection(db, "seancesAnglais"), where("eleve", "==", e.uid))),
     getDocs(query(collection(db, "reponsesAnglais"), where("eleve", "==", e.uid))),
+    getDoc(doc(db, "tablesRevisions", e.uid)).catch(() => null),
   ]);
-  const progression = progSnap.docs.map(d => d.data());
+  const progression = progSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const seances = seanceSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   const reponses = repSnap.docs.map(d => d.data());
+  const tables = tablesSnap?.exists() ? tablesSnap.data() : null;
   const depuis = new Date(Date.now() - 7 * 86400000).toISOString();
+  const depuis14 = new Date(Date.now() - 14 * 86400000).toISOString();
   const semaine = reponses.filter(r => r.at >= depuis);
+  const avant = reponses.filter(r => r.at >= depuis14 && r.at < depuis);
   const joursSemaine = new Set(semaine.map(r => r.date)).size;
-  const reussite = semaine.length ? Math.round(semaine.filter(r => r.correct).length / semaine.length * 100) : null;
+  const reussite = tauxReussite(semaine);
   const { serie, aujourdhui } = serieDe(reponses);
   const derniere = reponses.reduce((m, r) => (r.at > m ? r.at : m), "");
   const mat = m => x => (x.matiere || "anglais") === m;
+  const minutesSemaine = e.matieres.reduce((s, m) => s + minutesTravail(semaine.filter(mat(m))), 0);
 
-  const lignesMatieres = e.matieres.map(m => {
-    const prog = progression.filter(mat(m));
-    const rep = semaine.filter(mat(m));
-    const pct = prog.length ? Math.round(prog.reduce((s, n) => s + (n.niveau || 0), 0) / (prog.length * 5) * 100) : 0;
-    const aReprendre = prog.filter(n => n.dernierResultat === false).length;
-    return `<button class="dash-matiere" data-voir="${esc(e.uid)}|${m}">
-      <span class="dm-nom">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</span>
-      <span class="dm-bar"><span style="width:${pct}%"></span></span>
-      <span class="dm-pct">${prog.length ? `${pct}%` : "—"}</span>
-      <span class="dm-info">${prog.length ? `${rep.length ? `${rep.length} rép. · ${Math.round(rep.filter(r => r.correct).length / rep.length * 100)}%` : "rien cette semaine"}${aReprendre ? ` · <b class="dm-ko">${aReprendre} à reprendre</b>` : ""}` : "aucun cours"}</span>
-    </button>`;
-  }).join("");
+  const blocs = e.matieres.map(m => {
+    const repS = semaine.filter(mat(m));
+    const repA = avant.filter(mat(m));
+    const min = minutesTravail(repS);
+    const taux = tauxReussite(repS), tauxAvant = tauxReussite(repA);
+    const evol = taux !== null && tauxAvant !== null ? taux - tauxAvant : null;
+    let maitrise = null, faibles = "", vide = false;
+    if (m === "tables") {
+      const faits = Object.entries(tables?.faits || {});
+      const actifs = (tables?.actives || []).flatMap(t => Array.from({ length: 10 }, (_, k) => `${t}x${k + 1}`));
+      maitrise = actifs.length ? Math.round(actifs.filter(k => (tables.faits?.[k]?.niveau || 0) >= 3).length / actifs.length * 100) : null;
+      const pires = faits.filter(([, x]) => x.dernierResultat === false || (x.rates > 0 && x.niveau < 3))
+        .sort((a, b) => (b[1].rates - a[1].rates) || (a[1].niveau - b[1].niveau)).slice(0, 8);
+      faibles = pires.map(([k, x]) => `<span class="dash-ko-item">${k.replace("x", " × ")} = ${k.split("x").reduce((p, v) => p * Number(v), 1)}${x.rates > 1 ? ` · raté ${x.rates}×` : ""}</span>`).join("");
+      vide = !faits.length;
+    } else {
+      const prog = progression.filter(mat(m)).filter(x => x.type !== "figure");
+      maitrise = prog.length ? Math.round(prog.reduce((s, n) => s + (n.niveau || 0), 0) / (prog.length * 5) * 100) : null;
+      faibles = notionsARetravailler(prog).map(n => `<button class="dash-ko-item dash-ko-btn" data-notion="${esc(n.id)}">${n.dernierResultat === false ? "✗ " : ""}${esc(n.label)}</button>`).join("");
+      vide = !prog.length;
+    }
+    if (vide && !repS.length) return { vide: true, html: `<span class="dash-vide">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</span>` };
+    return { vide: false, min, html: `<div class="dash-mat">
+      <button class="dash-mat-head" data-voir="${esc(e.uid)}|${m}">
+        <span class="dm-nom">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</span>
+        <span class="dm-chiffre" title="Temps estimé sur 7 jours">⏱️ ${dureeTexte(min)}</span>
+        <span class="dm-chiffre" title="Réussite sur 7 jours">${taux === null ? "—" : `✅ ${taux} %`}${evol ? ` <span class="${evol > 0 ? "dm-up" : "dm-down"}">${evol > 0 ? "▲" : "▼"} ${Math.abs(evol)}</span>` : ""}</span>
+      </button>
+      <div class="dm-maitrise"><span class="dm-bar"><span style="width:${maitrise || 0}%"></span></span><span class="dm-pct">${maitrise === null ? "—" : `${maitrise} % su`}</span></div>
+      ${faibles ? `<div class="dm-faibles"><span class="dm-faibles-titre">À retravailler :</span>${faibles}</div>` : repS.length ? `<div class="dm-faibles dm-ok">👍 Rien de raté récemment</div>` : `<div class="dm-faibles dm-rien">Pas travaillé cette semaine</div>`}
+    </div>` };
+  });
+  const actifs = blocs.filter(b => !b.vide).sort((a, b) => b.min - a.min);
+  const vides = blocs.filter(b => b.vide);
 
-  const aReprendre = progression.filter(n => n.dernierResultat === false).slice(0, 8);
   return `<div class="dash-carte">
     <div class="dash-head">
       <div><div class="dash-nom">${esc(e.prenom)}</div>
@@ -2658,16 +2714,16 @@ async function carteEnfant(e) {
     </div>
     <div class="stats-row dash-stats">
       <div class="stat"><div class="stat-val">${joursSemaine}<span>/7</span></div><div class="stat-lbl">jours actifs</div></div>
+      <div class="stat"><div class="stat-val">${dureeTexte(minutesSemaine)}</div><div class="stat-lbl">de travail (7 j)</div></div>
       <div class="stat"><div class="stat-val">${semaine.length}</div><div class="stat-lbl">réponses (7 j)</div></div>
       <div class="stat"><div class="stat-val">${reussite === null ? "—" : `${reussite}<span>%</span>`}</div><div class="stat-lbl">de réussite</div></div>
-      <div class="stat"><div class="stat-val">${seances.filter(s => (s.finieLe || "") >= depuis && (!s.type || s.type === "jour")).length}</div><div class="stat-lbl">séances (7 j)</div></div>
     </div>
-    <div class="exemples-title">Par matière <span class="astuce">· clique pour voir les notions</span></div>
-    <div class="dash-matieres">${lignesMatieres}</div>
-    ${aReprendre.length ? `<div class="exemples-title">À reprendre</div><div class="dash-ko">${aReprendre.map(n => `<span class="dash-ko-item">${MATIERES_UI[n.matiere || "anglais"].emoji} ${esc(n.label)}</span>`).join("")}</div>` : ""}
+    <div class="exemples-title">Par matière <span class="astuce">· 7 derniers jours, ▲▼ = par rapport à la semaine d'avant · clique sur une notion pour la revoir avec elle</span></div>
+    <div class="dash-mats">${actifs.map(b => b.html).join("")}</div>
+    ${vides.length ? `<div class="dash-vides">Pas encore commencé : ${vides.map(b => b.html).join("")}</div>` : ""}
     ${seances.length ? `<div class="exemples-title">Dernières séances</div><div class="dash-seances">${seances.slice(0, 5).map(s => `<div class="dash-seance">
       <span>${esc(new Date(s.finieLe || s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }))}</span>
-      <span>${MATIERES_UI[s.matiere || "anglais"].emoji} ${s.type === "vitesse" ? "Jeu de vitesse" : "Séance du jour"}</span>
+      <span>${MATIERES_UI[s.matiere || "anglais"]?.emoji || ""} ${s.type === "vitesse" ? "Jeu de vitesse" : "Séance du jour"}</span>
       <span class="dash-score">${s.type === "vitesse" ? `${s.score} pts` : `${s.score}/${s.total}`}</span>
     </div>`).join("")}</div>` : ""}
     ${graphiqueActivite(reponses)}
@@ -2684,8 +2740,10 @@ async function loadDashboard() {
     zone.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
       const [uid, m] = b.dataset.voir.split("|");
       choisirContexte(uid, m);
-      document.querySelector('.tab-btn[data-tab="notions"]').click();
+      const notions = document.querySelector('.tab-btn[data-tab="notions"]');
+      if (!notions.hidden) notions.click();
     }));
+    zone.querySelectorAll("[data-notion]").forEach(b => b.addEventListener("click", () => openNotionModal(b.dataset.notion)));
   } catch (err) {
     console.error(err);
     zone.innerHTML = `<div class="panel-info">❌ Impossible de charger le tableau de bord.</div>`;

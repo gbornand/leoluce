@@ -703,3 +703,21 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tj-ecrire .exo-input { font-size: 30px; }
 .tj-astuce { text-align: center; color: #6a6690; font-size: 14px; margin: 6px 0 4px; }
 .tj-choix .bonmot-btn { font-size: 28px; }
+.dash-mats { display: flex; flex-direction: column; gap: 8px; }
+.dash-mat { background: #faf9ff; border-radius: 14px; padding: 10px 12px; }
+.dash-mat-head { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.dash-mat-head .dm-nom { flex: 1; }
+.dm-chiffre { font-size: 13px; font-weight: 800; color: #4a4670; white-space: nowrap; }
+.dm-up { color: #1f7a4f; font-size: 11px; }
+.dm-down { color: #c03535; font-size: 11px; }
+.dm-maitrise { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 8px; }
+.dm-maitrise .dm-pct { white-space: nowrap; }
+.dm-faibles { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 8px; font-size: 12px; }
+.dm-faibles-titre { font-weight: 800; color: #8a84b5; margin-right: 2px; }
+.dm-ok { color: #1f7a4f; font-weight: 700; }
+.dm-rien { color: #a3a0c4; }
+.dash-ko-btn { border: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.dash-ko-btn:hover { background: #f9d6d6; }
+.dash-vides { font-size: 12px; color: #8a84b5; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dash-vide { background: #f4f0ff; border-radius: 999px; padding: 3px 9px; }
+@media (max-width: 420px) { .dash-mat-head { flex-wrap: wrap; } .dash-mat-head .dm-nom { flex-basis: 100%; } }
