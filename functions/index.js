@@ -284,16 +284,11 @@ exports.monthlyBirthdayDigest = onSchedule(
 // Les collections gardent leur nom historique (*Anglais) ; chaque doc porte `eleve` (uid) et `matiere`.
 // ═══════════════════════════════════════
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
-const PARENT_UID = "GoxalGBKNWcyC6OkdENgz8j1u883";
-const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
-const RECAP_DESTINATAIRE = "gbornand@gmail.com";
-const ELEVES = {
-  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "maths", "tables", "physique", "svt", "histoire", "francais"] },
-  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "dictee", "tables", "maths", "anglais", "histoire"] },
-};
-const NOMS_MATIERES = { anglais: "anglais", francais: "français", dictee: "dictée", tables: "tables de multiplication", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
-const SCIENCES = ["maths", "physique"];
-const MATIERES_DOCUMENTS = ["svt", "histoire"];
+const {
+  PARENT_UID, LUCIE_UID, RECAP_DESTINATAIRE, ELEVES, NOMS_MATIERES, SCIENCES, MATIERES_DOCUMENTS,
+  slugAnglais, todayISOAnglais, publicEleve, profDe, NOTATION_SCIENCES, consigneExtraction,
+  MODELE_LECTURE, MODELE_LEGER, modelePour, enregistrerCoursExtrait,
+} = require("./revisions-commun");
 
 function contexteAppel(request, { matiereRequise = true } = {}) {
   const uid = request.auth?.uid;
@@ -311,10 +306,6 @@ function verifierEleve(data, eleve) {
   if (!data || data.eleve !== eleve) throw new HttpsError("permission-denied", "Accès réservé.");
 }
 
-function slugAnglais(s) {
-  return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-}
 
 function extractJsonAnglais(text) {
   const match = text.match(/\{[\s\S]*\}/);
@@ -326,81 +317,8 @@ function extractJsonAnglais(text) {
   }
 }
 
-function todayISOAnglais() { return new Date().toISOString().slice(0, 10); }
 
-function publicEleve(profil) {
-  return profil.niveau === "ce2" ? "une élève française de CE2 (8 ans)" : "une collégienne française";
-}
 
-const MATIERES_FIGURES = ["svt", "histoire", "physique"];
-
-function consigneFigures(matiere) {
-  if (!MATIERES_FIGURES.includes(matiere)) return "";
-  return `
-
-FIGURES : ajoute aussi au JSON une clé "figures" listant les ${matiere === "histoire" ? "cartes et schémas légendés" : "schémas légendés"} présents dans le document (ceux qui ont des étiquettes/légendes à apprendre) :
-"figures": [ { "titre": "titre court de la figure", "type": "${matiere === "histoire" ? "carte\" ou \"schema" : "schema"}", "page": numéro de la page du PDF ou de la photo (1 = la première), "legendes": ["texte exact de chaque étiquette ou légende, dans l'ordre de lecture"] } ]
-Tableau vide s'il n'y en a aucune. Recopie les légendes telles qu'écrites sur la figure.`;
-}
-
-function profDe(matiere) {
-  return { anglais: "prof d'anglais", francais: "maîtresse de CE2", dictee: "maîtresse de CE2", maths: "prof de maths", physique: "prof de physique-chimie", svt: "prof de SVT", histoire: "prof d'histoire-géographie" }[matiere];
-}
-
-const NOTATION_SCIENCES = "Écris les maths en texte simple avec les symboles Unicode (×, ÷, ², ³, √, π, ≤, ≥, ½, °), jamais de LaTeX. Vérifie chaque calcul deux fois : une réponse fausse dans la correction est inacceptable.";
-
-// Ce que l'IA doit relever dans un cours, selon la matière.
-function consigneExtraction(matiere, profil) {
-  const schema = (vocab, gram) => `Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) au format exact suivant :
-{
-  "titre": "titre court du cours",
-  "recap": "récapitulatif clair et pédagogique du cours, en français, adapté à ${publicEleve(profil)} (3-8 phrases)",
-  "vocabulaire": [ ${vocab} ],
-  "grammaire": [ ${gram} ]
-}`;
-  const commun = `Ne mets que ce qui est réellement présent/déductible dans le document. Si une catégorie est absente, le tableau correspondant peut être vide.`;
-  if (matiere === "anglais") {
-    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours d'anglais fourni.
-${schema(`{ "mot": "mot ou expression en anglais", "traduction": "traduction en français", "theme": "thème court en français", "exemple": "courte phrase d'exemple en anglais" }`,
-  `{ "titre": "nom court de la notion de grammaire", "explication": "explication pédagogique en français", "exemples": ["phrase d'exemple en anglais"] }`)}
-VOCABULAIRE : sois EXHAUSTIF. Parcours chaque page et relève ABSOLUMENT TOUS les mots et expressions (listes, tableaux, encadrés, lexiques, mots illustrés), sans omettre ni résumer. Plusieurs pages = plusieurs centaines d'entrées, c'est normal. Regroupe par "theme" (titre de rubrique du cours s'il existe). Exemples courts.
-${commun}`;
-  }
-  if (matiere === "dictee") {
-    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Le document est une liste de mots à apprendre pour la dictée (ou une dictée corrigée). La photo peut être de travers, pâle ou tournée : lis-la attentivement dans tous les sens.
-${schema(`{ "mot": "le mot EXACTEMENT comme écrit sur la liste, avec son déterminant s'il y en a un (ex: 'une bibliothèque', 'l'Afrique', 'menacer'), OU pour une dictée corrigée le mot correctement écrit d'une faute commise", "traduction": "sens très simple en quelques mots (ex: 'endroit où on emprunte des livres')", "theme": "titre court de CETTE liste (ex: 'Le Mali', 'Dictée du 14/11')", "exemple": "", "prioritaire": "true si ce mot est SURLIGNÉ (feutre fluo jaune, vert, rose… : un fond de couleur derrière le mot) ; sinon ne mets pas ce champ" }`, ``)}
-Relève TOUS les mots de la liste, sans en omettre, dans l'ordre. Le surlignage fluo est ESSENTIEL : l'élève ne travaille que les mots surlignés. Regarde chaque mot un par un : a-t-il un fond coloré ? Une parenthèse d'aide (ex: '(+ singulier)') n'est pas un mot. "titre" = titre court de la liste, "recap" = "", "grammaire" = []. ${commun}`;
-  }
-  if (matiere === "francais" && profil.niveau === "ce2") {
-    return `Tu es une ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse la leçon de français fournie (grammaire, conjugaison, orthographe, vocabulaire).
-${schema(`{ "mot": "mot de vocabulaire ou terme de la leçon à connaître (ex: 'le sujet', 'l'infinitif')", "traduction": "sens très simple pour une enfant de 8 ans", "theme": "titre court de la leçon", "exemple": "courte phrase d'exemple simple" }`,
-  `{ "titre": "nom court de la règle (grammaire, conjugaison, orthographe)", "explication": "explication très simple pour une enfant de 8 ans", "exemples": ["phrase d'exemple"] }`)}
-Une règle = une entrée de "grammaire" (sois complète : toutes les règles de la leçon). IMPORTANT : les LISTES DE MOTS DE DICTÉE (mots à apprendre à écrire pour la dictée de la semaine) ne vont PAS ici, elles ont leur propre onglet Dictée : ignore-les totalement. ${commun}`;
-  }
-  if (matiere === "francais") {
-    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)} (niveau collège). Analyse le document de français fourni : ce peut être une leçon de grammaire/orthographe/conjugaison, OU un bilan de lecture (résumé d'une séance sur un texte/roman étudié, à apprendre par cœur), OU une DICTÉE corrigée (fautes d'orthographe/accord sur des mots), OU une ÉVALUATION corrigée (erreurs de compréhension/d'analyse, pas seulement orthographiques), OU un sujet de rédaction.
-${schema(`{ "mot": "mot-clé/notion de vocabulaire à retenir (terme grammatical, mot de la leçon, mot important souligné dans un bilan), OU, si c'est une DICTÉE corrigée, le mot CORRECTEMENT écrit d'une faute d'orthographe qu'elle a commise", "traduction": "définition/explication courte, OU pour une faute de dictée : 'Piège : elle a écrit « ... » au lieu de « ... » — <la règle d'orthographe à retenir>'", "theme": "thème court (ex: Bilan séance 3, Vocabulaire du roman), OU un identifiant UNIQUE de cette dictée précise (ex: 'Dictée du 14/11' ou le titre écrit sur la copie) si c'est une faute de dictée — jamais un thème générique qui mélangerait plusieurs dictées", "exemple": "exemple/citation, OU la phrase exacte de la dictée où se trouvait la faute" }`,
-  `{ "titre": "nom court de la règle, OU la confusion commise si c'est une erreur d'ÉVALUATION (ex: 'Épithète vs attribut du sujet', 'Adjectif qualificatif vs démonstratif'), OU 'Bilan séance X : <sujet en 3-4 mots>' si c'est un bilan de lecture, OU 'Méthode : la rédaction' si le document donne un sujet de rédaction", "categorie": "une seule valeur EXACTE parmi : Grammaire, Conjugaison, Orthographe, Texte, Méthode", "explication": "l'explication pédagogique de la règle (définition + comment la repérer) — pour une erreur d'évaluation, explique clairement LA DIFFÉRENCE entre ce qu'elle a répondu et la bonne réponse, et la méthode pour ne plus se tromper ; OU le texte intégral du bilan à apprendre par cœur si c'en est un (ne pas le résumer) ; OU les conseils de méthode pour la rédaction", "exemples": ["phrase d'exemple, citation clé, ou courte illustration"] }`)}
-Si le document contient un "Bilan" à recopier/apprendre sur un texte ou roman, reproduis-le intégralement (texte complet, pas de résumé) dans une entrée de "grammaire" avec "categorie": "Texte". Si c'est une leçon de grammaire/orthographe/conjugaison, explique la règle et comment la repérer, avec la "categorie" correspondante (une entrée par règle). Si c'est une DICTÉE corrigée (fautes d'orthographe sur des mots isolés, accords, conjugaison dans un texte dicté), relève CHAQUE faute individuellement dans "vocabulaire" avec un thème propre à CETTE dictée, pour qu'elle s'entraîne dessus à l'oral (elle entendra le mot/la phrase et devra l'écrire). Si c'est une ÉVALUATION corrigée (mauvaise réponse à une question d'analyse, de grammaire, de compréhension — pas juste une faute d'orthographe sur un mot), mets CHAQUE erreur dans "grammaire" (PAS dans "vocabulaire" — ça ne se travaille pas en dictée) avec la categorie Grammaire/Orthographe/Conjugaison adaptée, pour qu'elle révise la règle et s'entraîne par des questions (qcm/trou), pas par une dictée audio. Si c'est un sujet de rédaction, ajoute une entrée "Méthode : la rédaction" (categorie "Méthode") avec les conseils donnés (adjectifs variés, éviter les connecteurs répétitifs, structure du récit...) ET ajoute toujours aussi ce conseil, même s'il n'est pas dans le document : faire des phrases courtes (une idée par phrase, éviter d'enchaîner trop de propositions). ${commun}`;
-  }
-  if (MATIERES_DOCUMENTS.includes(matiere)) {
-    const quoi = matiere === "svt"
-      ? { savoir: "définitions, mots-clés, organes et leurs rôles", comprendre: "processus, mécanismes, expériences et leurs conclusions" }
-      : { savoir: "dates et repères chronologiques, personnages, définitions, lieux et repères géographiques", comprendre: "événements et leurs causes/conséquences, méthodes (lire une carte, analyser un document)" };
-    return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de ${NOMS_MATIERES[matiere]} fourni.
-${schema(`{ "mot": "terme, date ou repère à connaître", "traduction": "définition ou ce qu'il faut savoir en une phrase simple", "theme": "chapitre ou partie du cours", "exemple": "précision ou exemple court" }`,
-  `{ "titre": "nom court de la notion à comprendre", "categorie": "'Méthode' si c'est une méthode/savoir-faire réutilisable toute l'année (ex: lire une carte, analyser un document, démarche scientifique, légender un schéma) ; sinon ne mets pas ce champ (notion propre à ce chapitre)", "explication": "explication simple et structurée", "exemples": ["exemple ou idée clé"] }`)}
-Dans "vocabulaire", mets les ${quoi.savoir}. Dans "grammaire", mets les ${quoi.comprendre} — distingue bien les MÉTHODES réutilisables (categorie "Méthode") des notions propres au chapitre (sans categorie). Sois exhaustif pour "vocabulaire", mais regroupe "grammaire" en GRANDES notions plutôt qu'en miettes : maximum 5 à 6 notions "à comprendre" par document, chacune couvrant un point large (si plusieurs petits sous-points parlent du même mécanisme/de la même idée, fusionne-les en une seule notion avec une explication plus complète plutôt que de créer une fiche par sous-point). Mieux vaut peu de notions bien expliquées que beaucoup de notions redondantes.
-${commun}`;
-  }
-  const lois = matiere === "physique" ? "lois, définitions, grandeurs et unités, formules" : "définitions, formules, propriétés et faits à connaître par cœur (tables, unités…)";
-  return `Tu es un(e) ${profDe(matiere)} qui prépare le travail de ${publicEleve(profil)}. Analyse le cours de ${NOMS_MATIERES[matiere]} fourni.
-${schema(`{ "mot": "terme, formule ou fait à connaître", "traduction": "définition ou signification en une phrase simple", "theme": "chapitre ou partie du cours", "exemple": "exemple concret, éventuellement chiffré" }`,
-  `{ "titre": "nom court de la méthode ou du type d'exercice", "explication": "méthode expliquée pas à pas, simplement", "exemples": ["exemple résolu court"] }`)}
-Dans "vocabulaire", mets les ${lois}. Dans "grammaire", mets les méthodes et savoir-faire (comment résoudre tel type d'exercice). Sois exhaustif.
-${NOTATION_SCIENCES}
-${commun}`;
-}
 
 // Formats d'exercices et règles de langue, selon matière et niveau.
 function formatsExos(matiere, profil) {
@@ -413,6 +331,10 @@ function formatsExos(matiere, profil) {
   if (matiere === "anglais" && !ce2) {
     return `${base}
 LANGUE : tout ce que l'élève lit pour répondre (question, phrase, choix, mots) est EN ANGLAIS simple, niveau collège. Exception : une question peut demander la traduction d'un mot français vers l'anglais. Seule "explication" est en français. Pour "trou", inclus les formes contractées en variantes. Pour "ordre", les éléments sont des mots sans ponctuation finale.`;
+  }
+  if (matiere === "espagnol") {
+    return `${base}
+LANGUE : l'élève DÉBUTE l'espagnol. Les consignes ("question") sont en FRANÇAIS simple ; le contenu espagnol est très court et simple (mots isolés ou phrases de 3 à 6 mots), uniquement avec le vocabulaire du cours. Garde les accents et les signes ¿ ¡ exacts. Pour "trou", mets aussi en variante la réponse écrite sans accents. Pour "ordre", les éléments sont des mots sans ponctuation finale. Seule "explication" est en français.`;
   }
   if (matiere === "anglais" && ce2) {
     return `${base}
@@ -438,6 +360,9 @@ ${NOTATION_SCIENCES}`;
 
 function blocDecouverte(matiere, profil) {
   const ce2 = profil.niveau === "ce2";
+  if (matiere === "espagnol") {
+    return `"comprehensionEcrite": { "mode": "ecoute", "titre": "Escucha", "texte": "3 ou 4 phrases espagnoles très simples (niveau débutant), qui réutilisent le vocabulaire ci-dessus", "questions": [ 3 questions "qcm" en français ] }`;
+  }
   if (matiere === "anglais") {
     return `"comprehensionEcrite": { "mode": "ecoute", "titre": "Écoute & compréhension", "texte": "${ce2 ? "3 ou 4 phrases anglaises très simples" : "court texte en anglais (5-8 phrases), amusant"}, qui réutilise le vocabulaire ci-dessus", "questions": [ 3 questions "qcm" ${ce2 ? "en français" : "in English"} ] }`;
   }
@@ -460,7 +385,7 @@ function ligneNotion(n, cours) {
   }
   const g = (cours?.grammaire || []).find(x => x.titre === n.label);
   const etiquette = n.categorie === "Texte" ? "BILAN À RETENIR" : n.categorie ? n.categorie.toUpperCase()
-    : ["anglais", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
+    : ["anglais", "espagnol", "francais"].includes(n.matiere) ? "RÈGLE" : SCIENCES.includes(n.matiere) ? "MÉTHODE" : "À COMPRENDRE";
   return `- [id:${n.id}] ${etiquette} "${n.label}"${g ? ` : ${g.explication}` : ""}`;
 }
 
@@ -475,10 +400,10 @@ function reparateurIds(notions) {
 // Effort réduit pour aller vite (téléphone) ; un peu plus de réflexion en maths/physique pour la justesse des calculs.
 function effortPour(matiere) { return SCIENCES.includes(matiere) || matiere === "francais" ? "medium" : "low"; }
 
-async function appelIA(prompt, maxTokens = 8000, effort = "low") {
+async function appelIA(prompt, maxTokens = 8000, effort = "low", modele = MODELE_LEGER) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const response = await client.messages.create({
-    model: "claude-opus-5-5",
+    model: modele,
     max_tokens: maxTokens,
     output_config: { effort },
     messages: [{ role: "user", content: prompt }],
@@ -537,9 +462,9 @@ exports.preparerDictee = onCall(
   }
 );
 
-async function vocabAnglaisConnu(eleve) {
+async function vocabAnglaisConnu(eleve, matiere = "anglais") {
   const snap = await db.collection("coursAnglais").where("eleve", "==", eleve).get();
-  return [...new Set(snap.docs.filter(d => d.data().matiere === "anglais").flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
+  return [...new Set(snap.docs.filter(d => d.data().matiere === matiere).flatMap(d => (d.data().vocabulaire || []).map(v => v.mot)))];
 }
 
 // Profil de l'utilisateur connecté + migration unique des données d'avant le multi-élèves (tout = Lucie, anglais).
@@ -583,12 +508,13 @@ exports.extraireCoursAnglais = onCall(
         ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: img.data } }
         : { type: "image", source: { type: "base64", media_type: img.mimeType, data: img.data } });
     if (!content.length) throw new HttpsError("invalid-argument", "Au moins une photo valide est requise.");
-    content.push({ type: "text", text: consigneExtraction(matiere, profil) + consigneFigures(matiere) });
+    content.push({ type: "text", text: consigneExtraction(matiere, profil) });
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.stream({
-      model: "claude-opus-5-5",
+      model: MODELE_LECTURE,
       max_tokens: 64000,
+      output_config: { effort: "medium" },
       messages: [{ role: "user", content }],
     }).finalMessage();
     if (response.stop_reason === "max_tokens") {
@@ -603,32 +529,9 @@ exports.extraireCoursAnglais = onCall(
       try { prepa = await preparerMotsDictee(parsed.vocabulaire); } catch (err) { console.error("Préparation dictée", err); }
     }
 
-    const docRef = await db.collection("coursAnglais").add({
-      eleve, matiere,
-      ...(prepa ? { prepa } : {}),
-      titre: parsed.titre || `Cours de ${NOMS_MATIERES[matiere]}`,
-      recap: parsed.recap || "",
-      vocabulaire: parsed.vocabulaire || [],
-      grammaire: parsed.grammaire || [],
-      figuresProposees: Array.isArray(parsed.figures) ? parsed.figures.slice(0, 20) : [],
-      dateAjout: new Date().toISOString(),
-    });
+    const coursId = await enregistrerCoursExtrait(db, { eleve, matiere, parsed, prepa });
 
-    const today = todayISOAnglais();
-    const base = { eleve, matiere, coursId: docRef.id, niveau: 0, dernierResultat: null, prochaineDate: today, dernierVu: null };
-    const ecritures = [
-      ...(parsed.vocabulaire || []).map(v => [`vocab_${docRef.id}_${slugAnglais(v.mot)}`, { ...base, type: "vocabulaire", label: v.mot, theme: v.theme || "", ...(v.prioritaire ? { prioritaire: true } : {}) }]),
-      ...(parsed.grammaire || []).map(g => [`gram_${docRef.id}_${slugAnglais(g.titre)}`, { ...base, type: "grammaire", label: g.titre, ...(g.categorie ? { categorie: g.categorie } : {}) }]),
-    ];
-    for (let i = 0; i < ecritures.length; i += 400) {
-      const batch = db.batch();
-      for (const [id, data] of ecritures.slice(i, i + 400)) {
-        batch.set(db.collection("progressionAnglais").doc(id), data, { merge: true });
-      }
-      await batch.commit();
-    }
-
-    return { coursId: docRef.id, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [], figures: Array.isArray(parsed.figures) ? parsed.figures.slice(0, 20) : [] };
+    return { coursId, titre: parsed.titre, vocabulaire: parsed.vocabulaire || [], grammaire: parsed.grammaire || [], figures: [] };
   }
 );
 
@@ -654,8 +557,9 @@ Omets une légende qui n'est pas visible.`;
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
-      model: "claude-opus-5-5",
+      model: MODELE_LECTURE,
       max_tokens: 4096,
+      output_config: { effort: "medium" },
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image } },
         { type: "text", text: prompt },
@@ -696,12 +600,12 @@ exports.exercicesNotionAnglais = onCall(
 ${ligneNotion(notion, cours)}${notion.type === "grammaire" ? `\nExemples du cours : ${((cours.grammaire || []).find(x => x.titre === notion.label)?.exemples || []).join(" / ")}` : ""}
 
 Génère 5 exercices progressifs (du plus simple au plus exigeant) uniquement sur cette notion, en mélangant les types.
-${matiere === "anglais" ? `Vocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) et des mots anglais très basiques. Aucun mot nouveau ou rare, y compris dans les mauvaises réponses.` : ""}
+${["anglais", "espagnol"].includes(matiere) ? `Vocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) et des mots ${NOMS_MATIERES[matiere]} très basiques. Aucun mot nouveau ou rare, y compris dans les mauvaises réponses.` : ""}
 
 ${formatsExos(matiere, profil)}
 
 Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) : { "exercices": [ ... ] }`;
-    const parsed = await appelIA(prompt, 4096, effortPour(matiere));
+    const parsed = await appelIA(prompt, 4096, effortPour(matiere), modelePour(matiere));
     return { exercices: parsed.exercices || [] };
   }
 );
@@ -751,7 +655,7 @@ Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdo
 }
 6 à 8 expressions utiles, 4 questions. Si tu ne connais pas cette chanson avec certitude, renvoie { "connue": false } et rien d'autre.`;
     const response = await client.messages.create({
-      model: "claude-opus-5-5",
+      model: MODELE_LEGER,
       max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });
@@ -788,7 +692,7 @@ exports.traduireMotAnglais = onCall(
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
-      model: "claude-opus-5-5",
+      model: MODELE_LEGER,
       max_tokens: 1024,
       output_config: { effort: "low" },
       messages: [{ role: "user", content: `Mot anglais : « ${mot} »${contexte ? `, rencontré dans : « ${contexte} »` : ""}.
@@ -819,7 +723,7 @@ N'écris PAS de traduction des lignes entières : seulement le sens de l'express
 Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/après, pas de markdown) :
 { "annotations": [ { "ligne": 0, "expression": "...", "sens": "sens en français de l'expression", "explication": "phrase courte en français : grammaire, usage ou truc à retenir" } ] }`;
   const response = await client.messages.create({
-    model: "claude-opus-5-5",
+    model: MODELE_LEGER,
     max_tokens: 4096,
     messages: [{ role: "user", content: prompt }],
   });
@@ -855,13 +759,13 @@ exports.controleCoursAnglais = onCall(
 
     const prompt = `Tu es un(e) ${profDe(matiere)} qui prépare un CONTRÔLE BLANC pour ${publicEleve(profil)}, sur le cours de ${NOMS_MATIERES[matiere]} « ${cours.titre} ». Notions à évaluer :
 ${notions.map(n => ligneNotion(n, cours)).join("\n")}
-${matiere === "anglais" ? `\nVocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) + mots anglais très basiques.` : ""}
+${["anglais", "espagnol"].includes(matiere) ? `\nVocabulaire autorisé : celui du cours (${(cours.vocabulaire || []).map(v => v.mot).join(", ")}) + mots ${NOMS_MATIERES[matiere]} très basiques.` : ""}
 Génère exactement un exercice par notion ci-dessus, du plus simple au plus difficile, au niveau d'une vraie interro.
 
 ${formatsExos(matiere, profil)}
 
 Chaque exercice a en plus "notionId" = l'id exact donné ci-dessus. Réponds UNIQUEMENT avec un objet JSON : { "exercices": [ ... ] }`;
-    const { exercices = [] } = await appelIA(prompt, 8000, effortPour(matiere));
+    const { exercices = [] } = await appelIA(prompt, 8000, effortPour(matiere), modelePour(matiere));
     const reparer = reparateurIds(notions);
     return { titre: cours.titre, exercices: exercices.map(e => ({ ...e, notionId: reparer(e.notionId) })) };
   }
@@ -989,8 +893,8 @@ exports.genererExercicesDuJour = onCall(
     const coursById = Object.fromEntries(coursDocs.filter(d => d.exists).map(d => [d.id, d.data()]));
 
     let cadre = "";
-    if (matiere === "anglais") {
-      cadre = `\n\nVOCABULAIRE DÉJÀ APPRIS EN CLASSE (le seul autorisé en plus des mots anglais très basiques) :\n${(await vocabAnglaisConnu(eleve)).join(", ")}\nRÈGLE STRICTE : aucun mot nouveau ou rare, y compris dans le texte et dans les mauvaises réponses.`;
+    if (["anglais", "espagnol"].includes(matiere)) {
+      cadre = `\n\nVOCABULAIRE DÉJÀ APPRIS EN CLASSE (le seul autorisé en plus des mots ${NOMS_MATIERES[matiere]} très basiques) :\n${(await vocabAnglaisConnu(eleve, matiere)).join(", ")}\nRÈGLE STRICTE : aucun mot nouveau ou rare, y compris dans le texte et dans les mauvaises réponses.`;
     }
 
     const prompt = `Tu es un(e) ${profDe(matiere)} ludique qui prépare une séance quotidienne de ${profil.niveau === "ce2" ? "8 à 10" : "10 à 15"} minutes en ${NOMS_MATIERES[matiere]} pour ${publicEleve(profil)}. Notions à travailler aujourd'hui (certaines jamais testées, d'autres déjà ratées une fois) :
@@ -1005,7 +909,7 @@ Génère la séance. Réponds UNIQUEMENT avec un objet JSON (pas de texte avant/
 "vocabulaire" = un exercice par notion « À SAVOIR » ; "grammaire" = un exercice par notion « RÈGLE », « MÉTHODE » ou « À COMPRENDRE ». Pas plus d'un exercice par notion. Ton enjoué, jamais scolaire-ennuyeux.
 
 ${formatsExos(matiere, profil)}`;
-    const parsed = await appelIA(prompt, 8000, effortPour(matiere));
+    const parsed = await appelIA(prompt, 8000, effortPour(matiere), modelePour(matiere));
     const reparer = reparateurIds(notions);
     const avecIds = items => (items || []).map(it => ({ ...it, notionId: reparer(it.notionId) }));
 

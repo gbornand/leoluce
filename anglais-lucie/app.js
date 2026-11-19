@@ -143,6 +143,7 @@ sur("btn-mdp", "click", () => {
 // ------------------------------------------------------------
 const MATIERES_UI = {
   anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
+  espagnol: { nom: "Espagnol", emoji: "💃", savoir: "💃 Vocabulario", regle: "📐 Gramática", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
@@ -189,7 +190,7 @@ function renderContexte() {
     : modeEleve
       ? `<div class="ctx-apercu ctx-eleve">✏️ C'est <b>${prenom}</b> qui travaille : ses réponses comptent. <button class="ctx-bascule" data-bascule="parent">↩️ Mode parent</button></div>`
       : `<div class="ctx-apercu">👁️ Aperçu de l'écran de ${prenom} (rien n'est enregistré). <button class="ctx-bascule ctx-bascule-go" data-bascule="eleve">▶️ Faire travailler ${prenom}</button></div>`;
-  bar.innerHTML = `${enfants}${apercu}<div class="ctx-matieres">${eleveInfo().matieres.map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
+  bar.innerHTML = `${enfants}${apercu}<div class="ctx-matieres">${eleveInfo().matieres.filter(m => MATIERES_UI[m]).map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
   bar.querySelectorAll("[data-eleve]").forEach(b => b.addEventListener("click", () => choisirContexte(b.dataset.eleve, null)));
   bar.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => choisirContexte(eleveCourant, b.dataset.matiere)));
   bar.querySelectorAll("[data-bascule]").forEach(b => b.addEventListener("click", () => basculerModeEleve(b.dataset.bascule === "eleve")));
@@ -258,7 +259,7 @@ function appliquerMatiere() {
   tabChansons.hidden = !anglais;
   if (!anglais && !document.getElementById("tab-chansons").hidden) document.querySelector(`.tab-btn[data-tab="${parent ? "dashboard" : "today"}"]`).click();
   document.getElementById("btn-pron").hidden = !anglais;
-  document.getElementById("btn-dictee").hidden = !["anglais", "francais"].includes(matiereCourante);
+  document.getElementById("btn-dictee").hidden = !["anglais", "espagnol", "francais"].includes(matiereCourante);
   document.getElementById("recap-parent").hidden = !estParent();
   document.getElementById("titre-bloc-savoir").textContent = ui().savoir;
   document.getElementById("titre-bloc-regle").textContent = ui().regle;
@@ -321,6 +322,15 @@ async function genererSeance(regenerer) {
   return genererExercicesDuJour({ eleve: eleveCourant, matiere: matiereCourante, regenerer }).then(r => r.data);
 }
 
+// Une seule génération à la fois par séance (élève + matière + jour), même si l'écran se recharge plusieurs fois.
+const generationsEnCours = {};
+function genererSeanceUnique(contexte) {
+  if (!generationsEnCours[contexte]) {
+    generationsEnCours[contexte] = genererSeance(false).finally(() => { delete generationsEnCours[contexte]; });
+  }
+  return generationsEnCours[contexte];
+}
+
 async function loadToday() {
   if (matiereCourante === "dictee" || matiereCourante === "tables") return;
   afficherBandeauControle();
@@ -336,7 +346,7 @@ async function loadToday() {
       const snap = await getDoc(doc(db, "exercicesAnglais", contexte));
       if (snap.exists()) data = snap.data();
     } catch {}
-    if (!data) data = await genererSeance(false);
+    if (!data) data = await genererSeanceUnique(contexte);
     if (contexte !== idSeanceDuJour()) return;
     renderToday(data);
   } catch (err) {
@@ -372,7 +382,7 @@ function renderToday(data) {
     const mode = ce.mode || "ecoute";
     const ecoute = mode === "ecoute";
     texteEcoute = ce.texte;
-    langueEcoute = matiereCourante === "anglais" ? "en" : "fr";
+    langueEcoute = langueMatiere(matiereCourante);
     const icone = { ecoute: "🎧", lecture: "📖", probleme: "🧩" }[mode] || "📖";
     document.getElementById("ce-titre").textContent = `${icone} ${ce.titre || (ecoute ? "Écoute & compréhension" : "Lecture")}`;
     document.getElementById("ce-consigne").textContent = ecoute
@@ -396,9 +406,12 @@ let texteEcoute = "";
 let langueEcoute = "en";
 let vitesseEcoute = 0.95;
 
+const CODES_LANGUE = { fr: "fr-FR", en: "en-GB", es: "es-ES" };
+function langueMatiere(m) { return m === "anglais" ? "en" : m === "espagnol" ? "es" : "fr"; }
+
 function voixPour(langue) {
   const voix = speechSynthesis.getVoices();
-  const code = langue === "fr" ? "fr-FR" : "en-GB";
+  const code = CODES_LANGUE[langue] || "fr-FR";
   return voix.find(v => v.lang === code && /google|natural|online/i.test(v.name))
     || voix.find(v => v.lang === code)
     || voix.find(v => v.lang.toLowerCase().startsWith(langue));
@@ -424,7 +437,7 @@ sur("btn-play", "click", () => {
   const u = new SpeechSynthesisUtterance(texteEcoute);
   const v = voixPour(langueEcoute);
   if (v) u.voice = v;
-  u.lang = v?.lang || (langueEcoute === "fr" ? "fr-FR" : "en-GB");
+  u.lang = v?.lang || CODES_LANGUE[langueEcoute] || "fr-FR";
   u.rate = vitesseEcoute;
   u.onend = () => majBoutonEcoute(false);
   u.onerror = () => majBoutonEcoute(false);
@@ -731,7 +744,46 @@ sur("photo-input", "change", async (e) => {
     img.src = `data:${resized.mimeType};base64,${resized.data}`;
     document.getElementById("photo-preview").appendChild(img);
   }
-  document.getElementById("btn-envoyer-cours").disabled = photosEnAttente.length === 0;
+  majBoutonsEnvoi();
+});
+
+function majBoutonsEnvoi() {
+  for (const id of ["btn-envoyer-cours", "btn-envoyer-attente"]) document.getElementById(id).disabled = photosEnAttente.length === 0;
+}
+
+function viderImport() {
+  photosEnAttente = [];
+  document.getElementById("photo-preview").innerHTML = "";
+  document.getElementById("photo-input").value = "";
+}
+
+// « Je peux attendre » : le cours et ses pages sont gardés, le cours est préparé plus tard (sans IA payante).
+sur("btn-envoyer-attente", "click", async () => {
+  const statusEl = document.getElementById("add-status");
+  document.getElementById("btn-envoyer-cours").disabled = true;
+  document.getElementById("btn-envoyer-attente").disabled = true;
+  statusEl.hidden = false;
+  statusEl.textContent = "Je range ton cours… 📦";
+  const dictee = matiereCourante === "dictee";
+  try {
+    const pages = await pagesDepuisSources(photosEnAttente);
+    if (!pages.length) throw new Error("Aucune page lisible");
+    const dateCourte = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+    const ref = await addDoc(collection(db, "coursAnglais"), {
+      eleve: eleveCourant, matiere: matiereCourante, statut: "attente",
+      titre: `${dictee ? "Dictée" : "Cours"} du ${dateCourte}`,
+      recap: "", vocabulaire: [], grammaire: [], dateAjout: new Date().toISOString(),
+    });
+    await enregistrerPagesCours(ref.id, pages);
+    statusEl.textContent = `🕓 C'est noté ! ${dictee ? "Ta dictée" : "Ton cours"} (${pages.length} page${pages.length > 1 ? "s" : ""}) est en préparation : tu ${dictee ? "la" : "le"} retrouveras bientôt dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom}.`;
+    viderImport();
+    loadNotions();
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Oups, je n'ai pas réussi à garder ce cours. Réessaie.";
+  } finally {
+    majBoutonsEnvoi();
+  }
 });
 
 function fileToBase64(file) {
@@ -769,32 +821,28 @@ function resizeImage(file, maxDim, quality) {
 
 sur("btn-envoyer-cours", "click", async () => {
   const statusEl = document.getElementById("add-status");
-  const btn = document.getElementById("btn-envoyer-cours");
-  btn.disabled = true;
+  document.getElementById("btn-envoyer-cours").disabled = true;
+  document.getElementById("btn-envoyer-attente").disabled = true;
   statusEl.hidden = false;
   statusEl.textContent = "La prof IA regarde ton cours… 🧐";
   try {
     const extraireCoursAnglais = httpsCallable(functions, "extraireCoursAnglais", { timeout: 900000 });
     const result = await extraireCoursAnglais({ images: photosEnAttente, eleve: eleveCourant, matiere: matiereCourante }).then(r => r.data);
-    const nbFigures = (result.figures || []).length;
     if (matiereCourante === "dictee") dicteeChoisie = null;
     statusEl.textContent = matiereCourante === "dictee"
       ? `✅ Nouvelle dictée « ${result.titre} » : ${(result.vocabulaire || []).length} mots, dont ${(result.vocabulaire || []).filter(v => v.prioritaire).length} surlignés. Va dans 🎧 Ma dictée !`
-      : `✅ Cours ajouté dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom} : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}${nbFigures ? `, ${nbFigures} schéma${nbFigures > 1 ? "s" : ""} ou carte${nbFigures > 1 ? "s" : ""}` : ""}).`;
+      : `✅ Cours ajouté dans ${MATIERES_UI[matiereCourante].emoji} ${MATIERES_UI[matiereCourante].nom} : ${result.titre} (${(result.vocabulaire || []).length} ${ui().savoirCourt}, ${(result.grammaire || []).length} ${ui().regleCourt}).`;
     const sources = photosEnAttente;
-    photosEnAttente = [];
-    document.getElementById("photo-preview").innerHTML = "";
-    document.getElementById("photo-input").value = "";
+    viderImport();
     loadNotions();
     loadToday();
     const pagesCours = pagesDepuisSources(sources).catch(err => { console.error("Lecture des pages", err); return []; });
     pagesCours.then(pages => enregistrerPagesCours(result.coursId, pages)).catch(err => console.error("Sauvegarde des pages", err));
-    if (nbFigures && MATIERES_FIGURES.includes(matiereCourante)) proposerFigures(result.coursId, result.figures, pagesCours);
   } catch (err) {
     statusEl.textContent = "❌ Oups, la prof IA n'a pas réussi à lire ce cours. Réessaie avec une photo plus nette.";
     console.error(err);
   } finally {
-    btn.disabled = photosEnAttente.length === 0;
+    majBoutonsEnvoi();
   }
 });
 
@@ -872,8 +920,11 @@ async function loadNotions() {
   const rows = Object.values(notionsById).sort((a, b) => (a.niveau || 0) - (b.niveau || 0) || a.label.localeCompare(b.label));
   const motivation = calculerMotivation({ reponses: toutesReponses, seances: toutesSeances, rows: Object.values(notionsById) });
 
+  const enPreparation = Object.values(coursById).filter(c => c.statut === "attente").length;
   if (!rows.length) {
-    el.innerHTML = `<div class="panel-info">Pas encore de cours de ${esc(ui().nom.toLowerCase())} — ajoute-en un pour commencer 📸</div>${htmlBadges(motivation)}`;
+    el.innerHTML = `${enPreparation
+      ? `<div class="panel-info">⏳ ${enPreparation} cours en préparation — tu le retrouveras ici bientôt.</div>`
+      : `<div class="panel-info">Pas encore de cours de ${esc(ui().nom.toLowerCase())} — ajoute-en un pour commencer 📸</div>`}${htmlBadges(motivation)}`;
     await ajouterSectionFigures(el);
     return;
   }
@@ -910,7 +961,7 @@ async function loadNotions() {
     <h3 class="section-title">Cours importés <span>${Object.keys(coursById).length}</span></h3>
     <div class="cours-manage-list">${Object.entries(coursById).map(([id, c]) => `
       <div class="cours-manage-item">
-        <span class="cours-manage-titre">${esc(c.titre || "Cours")}</span>
+        <span class="cours-manage-titre">${esc(c.titre || "Cours")}${c.statut === "attente" ? ` <span class="pill pill-attente">⏳ en préparation</span>` : ""}</span>
         <button class="btn-ghost-small" data-suppr-cours="${esc(id)}">🗑️ Supprimer</button>
       </div>`).join("")}</div>
     ${categoriesGram(grammaire).map(([cat, items], gi, arr) => {
@@ -1562,13 +1613,13 @@ function comparerMots(attendu, donne) {
   return { resultat, taux: resultat.length ? resultat.filter(x => x.ok).length / resultat.length : 0 };
 }
 
-function dire(texte, rate = 0.95, langue = matiereCourante === "anglais" ? "en" : "fr") {
+function dire(texte, rate = 0.95, langue = langueMatiere(matiereCourante)) {
   if (!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(texte);
   const v = voixPour(langue);
   if (v) u.voice = v;
-  u.lang = v?.lang || (langue === "fr" ? "fr-FR" : "en-GB");
+  u.lang = v?.lang || CODES_LANGUE[langue] || "fr-FR";
   u.rate = rate;
   speechSynthesis.speak(u);
 }
@@ -1791,13 +1842,16 @@ async function loadDictee() {
     return;
   }
   if (!encore()) return;
-  const dictees = coursSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.matiere === "dictee")
+  const dicteesEnAttente = coursSnap.docs.filter(d => d.data().matiere === "dictee" && d.data().statut === "attente").length;
+  const dictees = coursSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.matiere === "dictee" && c.statut !== "attente")
     .sort((a, b) => (b.dateAjout || "").localeCompare(a.dateAjout || ""));
   notionsById = {};
   progSnap.forEach(d => { const x = d.data(); if (x.matiere === "dictee") notionsById[d.id] = { id: d.id, ...x }; });
   coursById = Object.fromEntries(dictees.map(c => [c.id, c]));
   if (!dictees.length) {
-    el.innerHTML = `<div class="panel-info">Pas encore de dictée — va dans <strong>+ Une dictée</strong> et prends ta liste de mots en photo 📸</div>`;
+    el.innerHTML = dicteesEnAttente
+      ? `<div class="panel-info">⏳ Ta dictée est en préparation — tu la retrouveras ici bientôt.</div>`
+      : `<div class="panel-info">Pas encore de dictée — va dans <strong>+ Une dictée</strong> et prends ta liste de mots en photo 📸</div>`;
     return;
   }
   const cours = dictees.find(c => c.id === dicteeChoisie) || dictees[0];
@@ -1836,7 +1890,7 @@ async function loadDictee() {
   const sus = mots.filter(m => m.niveau >= 3).length;
   const archives = dictees.filter(c => c.id !== cours.id);
 
-  el.innerHTML = `
+  el.innerHTML = `${dicteesEnAttente ? `<div class="panel-info">⏳ Une nouvelle dictée est en préparation. En attendant, tu travailles celle-ci.</div>` : ""}
     <div class="dic-hero${archive ? " dic-hero-archive" : ""}">
       <div class="dic-kicker">${archive ? "📦 Ancienne dictée" : "📝 Dictée de la semaine"}</div>
       <h2>${esc(cours.titre)}</h2>
@@ -2624,6 +2678,7 @@ function jeuTablesDefi() {
 const echeancesCache = {};
 
 async function echeancesDe(eleve) {
+  if (!eleve) return [];
   if (echeancesCache[eleve]) return echeancesCache[eleve];
   try {
     const snap = await getDoc(doc(db, "echeancesRevisions", eleve));
@@ -2783,8 +2838,8 @@ async function carteEnfant(e) {
     echeancesDe(e.uid),
   ]);
   const prochains = echeances.filter(x => x.fin >= todayISO()).sort((a, b) => a.debut.localeCompare(b.debut)).slice(0, 3);
-  const coursParMatiere = new Set(progression.map(n => n.matiere));
   const progression = progSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const coursParMatiere = new Set(progression.map(n => n.matiere));
   const seances = seanceSnap.docs.map(d => d.data()).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
   const reponses = repSnap.docs.map(d => d.data());
   const tables = tablesSnap?.exists() ? tablesSnap.data() : null;
@@ -3323,31 +3378,6 @@ function assistantFigure({ coursId, figure = {}, pages = [], rang = "", manuel =
   });
 }
 
-// Après l'import : chaque figure repérée est préparée automatiquement (schéma vierge), puis aperçu.
-async function proposerFigures(coursId, figures, pagesCours) {
-  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Préparation de ${figures.length} figure${figures.length > 1 ? "s" : ""}…</h3></div>
-    <div class="game-body"><div class="loading-exos" id="fig-progres">Lecture des pages du cours…</div></div>`);
-  const progres = corps.querySelector("#fig-progres");
-  let pages = [];
-  try { pages = await pagesCours; } catch (err) { console.error(err); }
-  const resultats = [];
-  for (let i = 0; i < figures.length; i++) {
-    const f = figures[i];
-    progres.textContent = `✂️ Préparation du schéma vierge ${i + 1}/${figures.length} : ${f.titre}…`;
-    const page = pages[(Number(f.page) || 1) - 1] || (pages.length === 1 ? pages[0] : null);
-    try {
-      if (!page) throw new Error("Page introuvable");
-      const prete = await preparerFigureAuto(page, f);
-      const id = await enregistrerFigure({ coursId, ...prete });
-      resultats.push({ ok: true, id, figure: f, page, prete });
-    } catch (err) {
-      console.error("Figure auto", f.titre, err);
-      resultats.push({ ok: false, figure: f, page });
-    }
-  }
-  afficherBilanFigures(coursId, resultats, pages);
-}
-
 function afficherBilanFigures(coursId, resultats, pages) {
   const ok = resultats.filter(r => r.ok).length;
   const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>${ok} schéma${ok > 1 ? "s" : ""} vierge${ok > 1 ? "s" : ""} prêt${ok > 1 ? "s" : ""}</h3></div>
@@ -3388,57 +3418,122 @@ function afficherBilanFigures(coursId, resultats, pages) {
   zone.appendChild(fin);
 }
 
-async function ajouterFigurePlusTard() {
-  const dejaFaites = new Set(Object.values(figuresById).map(f => normaliser(f.titre)));
-  const parCours = Object.entries(coursById)
-    .map(([id, c]) => ({ coursId: id, titre: c.titre, figures: (c.figuresProposees || []).filter(f => !dejaFaites.has(normaliser(f.titre))) }))
-    .filter(c => c.figures.length);
-  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas & cartes</div><h3>Ajouter une figure</h3></div>
-    <div class="game-body" id="fig-ajout-corps"><div class="loading-exos">Recherche des pages des cours…</div></div>`);
+// Un schéma ou une carte à apprendre, à la demande : cours → page → nom → tout de suite (IA) ou plus tard (préparé hors appli).
+function demanderFigure() {
+  const histoire = matiereCourante === "histoire";
+  const coursListe = Object.entries(coursById).filter(([, c]) => c.statut !== "attente")
+    .sort(([, a], [, b]) => (b.dateAjout || "").localeCompare(a.dateAjout || ""))
+    .map(([id, c]) => ({ coursId: id, titre: c.titre || "Cours" }));
+  const corps = ouvrirLibre(`<div class="game-head hdr-figure"><div class="modal-kicker">🗺️ Schémas${histoire ? " & cartes" : ""}</div><h3>Apprendre un schéma${histoire ? " ou une carte" : ""}</h3></div>
+    <div class="game-body" id="fig-ajout-corps"></div>`);
   const zone = corps.querySelector("#fig-ajout-corps");
-  await Promise.all(parCours.map(async c => {
-    try { c.pages = await chargerPagesCours(c.coursId); } catch (err) { console.error(err); c.pages = []; }
-  }));
-  zone.innerHTML = `${parCours.map((c, i) => `<div class="fig-bilan-item">
-      <div class="gram-card-title">${esc(c.titre)}</div>
-      <p class="muted">${c.figures.map(f => esc(f.titre)).join(" · ")}</p>
-      ${c.pages.length
-        ? `<button class="btn-primary btn-block" data-auto="${i}">✨ Préparer automatiquement (${c.figures.length})</button>`
-        : `<button class="btn-primary btn-block" data-pages="${i}">📎 Donner les pages de ce cours (photo ou PDF)</button>
-           <p class="muted">Une seule fois : elles sont gardées pour la suite.</p>`}
-      <div class="fig-nav">${c.figures.map((f, j) => `<button class="btn-ghost-small" data-main="${i}_${j}">✋ ${esc(f.titre)} à la main</button>`).join("")}</div>
-    </div>`).join("")}
-    <button class="cours-choix" id="fig-libre"><span>📷 Une autre figure (photo)</span><span class="muted">tu tapes les légendes toi-même</span></button>`;
-  zone.querySelectorAll("[data-auto]").forEach(b => b.addEventListener("click", () => {
-    const c = parCours[Number(b.dataset.auto)];
-    proposerFigures(c.coursId, c.figures, Promise.resolve(c.pages));
-  }));
-  zone.querySelectorAll("[data-pages]").forEach(b => b.addEventListener("click", async () => {
-    const c = parCours[Number(b.dataset.pages)];
-    const sources = await choisirFichiersCours();
-    if (!sources.length) return;
-    b.disabled = true;
-    b.textContent = "Lecture et sauvegarde des pages…";
-    try {
-      const pages = await pagesDepuisSources(sources);
-      await enregistrerPagesCours(c.coursId, pages);
-      proposerFigures(c.coursId, c.figures, Promise.resolve(pages));
-    } catch (err) {
-      console.error(err);
-      b.disabled = false;
-      b.textContent = "❌ Échec, réessayer";
+  const fermer = () => document.getElementById("modal-libre-close").click();
+
+  const etapeCours = () => {
+    zone.innerHTML = `<p class="muted">Dans quel cours ?</p>
+      ${coursListe.map((c, i) => `<button class="cours-choix" data-c="${i}"><span>${esc(c.titre)}</span><span>→</span></button>`).join("")}
+      <button class="cours-choix" id="fig-libre"><span>📷 Une autre figure (photo)</span><span class="muted">tu tapes les légendes toi-même</span></button>`;
+    zone.querySelectorAll("[data-c]").forEach(b => b.addEventListener("click", () => etapePage(coursListe[Number(b.dataset.c)])));
+    zone.querySelector("#fig-libre").addEventListener("click", async () => {
+      await assistantFigure({ coursId: null, figure: {}, pages: [] });
+      fermer();
+      loadNotions();
+    });
+  };
+
+  const etapePage = async c => {
+    zone.innerHTML = `<div class="loading-exos">Chargement des pages du cours…</div>`;
+    let pages = [];
+    try { pages = await chargerPagesCours(c.coursId); } catch (err) { console.error(err); }
+    if (!pages.length) {
+      zone.innerHTML = `<p class="muted">Les pages de ce cours n'ont pas été gardées.</p>
+        <button class="btn-primary btn-block" id="fig-donner">📎 Donner les pages de ce cours (photo ou PDF)</button>
+        <p class="muted">Une seule fois : elles sont gardées pour la suite.</p>
+        <button class="btn-ghost-small" id="fig-retour">← Retour</button>`;
+      zone.querySelector("#fig-retour").addEventListener("click", etapeCours);
+      zone.querySelector("#fig-donner").addEventListener("click", async e => {
+        const b = e.currentTarget;
+        const sources = await choisirFichiersCours();
+        if (!sources.length) return;
+        b.disabled = true;
+        b.textContent = "Lecture et sauvegarde des pages…";
+        try {
+          await enregistrerPagesCours(c.coursId, await pagesDepuisSources(sources));
+          etapePage(c);
+        } catch (err) {
+          console.error(err);
+          b.disabled = false;
+          b.textContent = "❌ Échec, réessayer";
+        }
+      });
+      return;
     }
-  }));
-  zone.querySelectorAll("[data-main]").forEach(b => b.addEventListener("click", async () => {
-    const [i, j] = b.dataset.main.split("_").map(Number);
-    const c = parCours[i];
-    await assistantFigure({ coursId: c.coursId, figure: { ...c.figures[j] }, pages: c.pages, manuel: true });
-    document.getElementById("modal-libre-close").click();
-  }));
-  zone.querySelector("#fig-libre").addEventListener("click", async () => {
-    await assistantFigure({ coursId: null, figure: {}, pages: [] });
-    document.getElementById("modal-libre-close").click();
-  });
+    zone.innerHTML = `<p class="muted">Sur quelle page est ${histoire ? "le schéma ou la carte" : "le schéma"} ?</p>
+      <div class="fig-pages">${pages.map((p, i) => `<button class="fig-page" data-p="${i}"><img src="${p}" alt=""><span>Page ${i + 1}</span></button>`).join("")}</div>
+      <button class="btn-ghost-small" id="fig-retour">← Retour</button>`;
+    zone.querySelector("#fig-retour").addEventListener("click", etapeCours);
+    zone.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => etapeNom(c, pages, Number(b.dataset.p))));
+  };
+
+  const etapeNom = (c, pages, i) => {
+    zone.innerHTML = `<img src="${pages[i]}" class="fig-page-choisie" alt="">
+      <label class="fig-label">Son nom<input type="text" id="fig-nom" maxlength="80" placeholder="${histoire ? "ex : L'empire de Charlemagne" : "ex : Le cœur"}"></label>
+      ${histoire ? `<div class="fig-nav"><label><input type="radio" name="fig-type" value="schema" checked> Schéma</label><label><input type="radio" name="fig-type" value="carte"> Carte</label></div>` : ""}
+      <div class="envoi-modes">
+        <button class="btn-primary envoi-mode" id="fig-vite"><b>⚡ Tout de suite</b><span>prêt dans 1 minute</span></button>
+        <button class="btn-primary envoi-mode envoi-attente" id="fig-attente"><b>🕓 Je peux attendre</b><span>prêt un peu plus tard</span></button>
+      </div>
+      <div class="fig-nav"><button class="btn-ghost-small" id="fig-retour">← Autre page</button><button class="btn-ghost-small" id="fig-main">✋ Le faire à la main</button></div>
+      <div class="panel-info" id="fig-statut" hidden></div>`;
+    const lire = () => ({
+      titre: zone.querySelector("#fig-nom").value.trim() || (histoire ? "Carte ou schéma" : "Schéma"),
+      type: zone.querySelector("input[name=fig-type]:checked")?.value || "schema",
+      page: i + 1,
+    });
+    const statut = zone.querySelector("#fig-statut");
+    const vite = zone.querySelector("#fig-vite"), attente = zone.querySelector("#fig-attente");
+    zone.querySelector("#fig-retour").addEventListener("click", () => etapePage(c));
+    vite.addEventListener("click", async () => {
+      const f = lire();
+      vite.disabled = attente.disabled = true;
+      statut.hidden = false;
+      statut.textContent = "✂️ Je prépare le schéma vierge…";
+      try {
+        const prete = await preparerFigureAuto(pages[i], f);
+        const id = await enregistrerFigure({ coursId: c.coursId, ...prete });
+        afficherBilanFigures(c.coursId, [{ ok: true, id, figure: f, page: pages[i], prete }], pages);
+      } catch (err) {
+        console.error(err);
+        afficherBilanFigures(c.coursId, [{ ok: false, figure: f, page: pages[i] }], pages);
+      }
+      loadNotions();
+    });
+    attente.addEventListener("click", async () => {
+      const f = lire();
+      vite.disabled = attente.disabled = true;
+      statut.hidden = false;
+      try {
+        await addDoc(collection(db, "figuresRevisions"), {
+          eleve: eleveCourant, matiere: matiereCourante, coursId: c.coursId,
+          titre: f.titre, type: f.type, page: f.page, statut: "attente",
+          image: "", legendes: [], dateAjout: new Date().toISOString(),
+        });
+        statut.textContent = `🕓 C'est noté ! « ${f.titre} » est en préparation.`;
+        loadNotions();
+      } catch (err) {
+        console.error(err);
+        statut.textContent = "❌ Oups, la demande n'a pas été enregistrée. Réessaie.";
+        vite.disabled = attente.disabled = false;
+      }
+    });
+    zone.querySelector("#fig-main").addEventListener("click", async () => {
+      await assistantFigure({ coursId: c.coursId, figure: lire(), pages, manuel: true });
+      fermer();
+      loadNotions();
+    });
+  };
+
+  etapeCours();
 }
 
 // Exercice : replacer chaque étiquette sur sa case numérotée.
@@ -3524,8 +3619,23 @@ function ouvrirFigure(fig) {
         enregistrerReponse(`fig_${fig.id}`, ok, { source: "schema", question: fig.titre, reponse: `${bonnes}/${total}` });
         const actions = document.createElement("div");
         actions.className = "fig-nav";
-        actions.innerHTML = `<button class="btn-primary btn-small">🔁 Recommencer</button><button class="btn-ghost-small fig-suppr">🗑️ Supprimer cette figure</button>`;
+        actions.innerHTML = `<button class="btn-primary btn-small">🔁 Recommencer</button>${fig.statut === "a_refaire"
+          ? `<span class="pill pill-attente">🕓 Confié : il sera refait bientôt</span>`
+          : `<button class="btn-ghost-small fig-confier">🕓 Cases mal placées ? Me le confier</button>`}<button class="btn-ghost-small fig-suppr">🗑️ Supprimer cette figure</button>`;
         actions.querySelector(".btn-primary").addEventListener("click", lancer);
+        actions.querySelector(".fig-confier")?.addEventListener("click", async e => {
+          const b = e.currentTarget;
+          b.disabled = true;
+          try {
+            await updateDoc(doc(db, "figuresRevisions", fig.id), { statut: "a_refaire", demandeLe: new Date().toISOString() });
+            fig.statut = "a_refaire";
+            b.textContent = "✅ Confié : il sera refait bientôt";
+          } catch (err) {
+            console.error(err);
+            b.disabled = false;
+            b.textContent = "❌ Échec, réessayer";
+          }
+        });
         const suppr = actions.querySelector(".fig-suppr");
         suppr.addEventListener("click", async () => {
           if (!suppr.dataset.confirme) { suppr.dataset.confirme = "1"; suppr.textContent = "Confirmer la suppression ?"; return; }
@@ -3550,23 +3660,22 @@ async function ajouterSectionFigures(el) {
   const snap = await getDocs(query(collection(db, "figuresRevisions"), where("eleve", "==", eleveCourant)));
   const figs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => f.matiere === matiereCourante);
   figuresById = Object.fromEntries(figs.map(f => [f.id, f]));
-  const faites = new Set(figs.map(f => normaliser(f.titre)));
-  const aConfigurer = Object.values(coursById).flatMap(c => (c.figuresProposees || []).filter(f => !faites.has(normaliser(f.titre))));
-  const bandeau = aConfigurer.length
-    ? `<button class="fig-bandeau" id="fig-bandeau">🗺️ <b>${aConfigurer.length} schéma${aConfigurer.length > 1 ? "s" : ""} repéré${aConfigurer.length > 1 ? "s" : ""} dans les cours, à configurer</b><span>${aConfigurer.slice(0, 3).map(f => esc(f.titre)).join(" · ")}${aConfigurer.length > 3 ? "…" : ""} — clique pour les préparer</span></button>`
-    : "";
-  el.insertAdjacentHTML("beforeend", `<h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>${bandeau}
+  el.querySelector("#fig-section")?.remove();
+  el.insertAdjacentHTML("beforeend", `<div id="fig-section"><h3 class="section-title">🗺️ Schémas${matiereCourante === "histoire" ? " & cartes" : ""} <span>${figs.length}</span></h3>
     <div class="fig-grid">${figs.map(f => {
+      if (f.statut === "attente") {
+        return `<div class="fig-carte fig-carte-attente"><div class="fig-attente-visuel">⏳</div>
+          <div class="fig-carte-info"><span class="pill pill-attente">en préparation</span><div class="gram-card-title">${esc(f.titre)}</div></div></div>`;
+      }
       const n = notionsById[`fig_${f.id}`];
       const st = statutNiveau(n?.niveau || 0);
       return `<button class="fig-carte ${st.cls}" data-fig="${esc(f.id)}"><img src="${f.image}" alt="">
         <div class="fig-carte-info"><span class="pill ${st.cls}">${st.label}</span>${n ? marqueDerniere(n) : ""}
-        <div class="gram-card-title">${esc(f.titre)}</div><div class="gram-card-cours">${(f.legendes || []).length} légendes</div>${barreNiveau(n?.niveau || 0)}</div></button>`;
+        ${f.statut === "a_refaire" ? `<span class="pill pill-attente">🕓 à refaire</span>` : ""}<div class="gram-card-title">${esc(f.titre)}</div><div class="gram-card-cours">${(f.legendes || []).length} légendes</div>${barreNiveau(n?.niveau || 0)}</div></button>`;
     }).join("")}
-    <button class="fig-ajout" id="fig-ajout">➕ Ajouter un schéma${matiereCourante === "histoire" ? " ou une carte" : ""}</button></div>`);
+    <button class="fig-ajout" id="fig-ajout">➕ Apprendre un schéma${matiereCourante === "histoire" ? " ou une carte" : ""}</button></div></div>`);
   el.querySelectorAll("[data-fig]").forEach(b => b.addEventListener("click", () => ouvrirFigure(figuresById[b.dataset.fig])));
-  el.querySelector("#fig-ajout").addEventListener("click", ajouterFigurePlusTard);
-  el.querySelector("#fig-bandeau")?.addEventListener("click", ajouterFigurePlusTard);
+  el.querySelector("#fig-ajout").addEventListener("click", demanderFigure);
 }
 
 async function afficherFigureDuJour() {

@@ -145,7 +145,10 @@
       <p class="muted">Une ou plusieurs photos du même cours, ou un PDF (vocabulaire, règle de grammaire…).</p>
       <input type="file" id="photo-input" accept="image/*,application/pdf" multiple>
       <div id="photo-preview" class="photo-preview"></div>
-      <button id="btn-envoyer-cours" class="btn-primary" disabled>Envoyer à la prof IA</button>
+      <div class="envoi-modes">
+        <button id="btn-envoyer-cours" class="btn-primary envoi-mode" disabled><b>⚡ J'en ai besoin tout de suite</b><span>prêt dans 1 à 2 minutes</span></button>
+        <button id="btn-envoyer-attente" class="btn-primary envoi-mode envoi-attente" disabled><b>🕓 Je peux attendre</b><span>prêt un peu plus tard</span></button>
+      </div>
       <div id="add-status" class="panel-info" hidden></div>
       <div id="add-result" hidden></div>
     </section>
