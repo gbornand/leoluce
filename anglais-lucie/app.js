@@ -2420,6 +2420,7 @@ async function loadTables() {
     actives: (data?.actives?.length ? data.actives : TABLES_DEFAUT[eleveInfo()?.niveau] || TABLES_DEFAUT.college).slice().sort((a, b) => a - b),
     faits: data?.faits || {},
     record: data?.record || 0,
+    recordChute: data?.recordChute || 0,
   };
   const faits = faitsActifs();
   const sus = faits.filter(estSu).length;
@@ -2443,6 +2444,7 @@ async function loadTables() {
       <button class="dic-jeu tj-entrainement" data-tjeu="entrainement"><span class="tc-emoji">🎯</span><span class="tc-title">Entraînement</span><span class="tc-sub">Mes erreurs reviennent en premier</span></button>
       <button class="dic-jeu tj-qcm" data-tjeu="qcm"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon résultat</span><span class="tc-sub">Trouve la bonne réponse</span></button>
       <button class="dic-jeu tj-defi" data-tjeu="defi"><span class="tc-emoji">⏱️</span><span class="tc-title">Défi 1 minute</span><span class="tc-sub">${tablesEtat.record ? `Bats ton record : ${tablesEtat.record}` : "Le plus de calculs possible"}</span></button>
+      <button class="dic-jeu tj-chute" data-tjeu="chute"><span class="tc-emoji">🪂</span><span class="tc-title">Calcul qui tombe</span><span class="tc-sub">${tablesEtat.recordChute ? `Bats ton record : ${tablesEtat.recordChute}` : "Réponds avant qu'il touche la ligne !"}</span></button>
     </div>
     <h3 class="section-title">🗺️ Ma carte des tables</h3>
     <div class="tb-legende"><span class="tb-case tb-su">su</span><span class="tb-case tb-encours">en cours</span><span class="tb-case tb-rate">raté</span><span class="tb-case tb-neuf">pas vu</span></div>
@@ -2456,6 +2458,7 @@ async function loadTables() {
     if (jeu === "entrainement") jeuTablesEcrire();
     if (jeu === "qcm") jeuTablesQcm();
     if (jeu === "defi") jeuTablesDefi();
+    if (jeu === "chute") jeuTablesChute();
   }));
 }
 
@@ -2683,6 +2686,76 @@ function jeuTablesDefi() {
         input.classList.add("incorrect");
         corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">${f.t} × ${f.n} = ${f.t * f.n}</div>`;
         setTimeout(question, 1200);
+      });
+    };
+    question();
+  });
+}
+
+// CALCUL QUI TOMBE : le calcul descend vers la ligne, il faut répondre avant qu'il la touche.
+// Une bonne réponse accélère un peu la chute suivante ; raté = la réponse correcte s'affiche puis on enchaîne.
+function jeuTablesChute() {
+  const titre = "🪂 Ça tombe !";
+  const corps = ouvrirLibre(`<div class="game-head hdr-tchute"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur">Prête ?</h3></div>
+    <div class="game-body"><p class="ap-legende">60 secondes : réponds avant que le calcul touche la ligne !</p>
+    <button class="btn-primary btn-block" id="tj-go">C'est parti !</button></div>`);
+  corps.querySelector("#tj-go").addEventListener("click", () => {
+    let bonnes = 0, total = 0, fallMs = 6000, arrete = false;
+    const rates = [];
+    const fin = Date.now() + 60000;
+    const terminer = () => {
+      arrete = true;
+      clearInterval(tablesMinuteur);
+      const nouveau = bonnes > (tablesEtat.recordChute || 0);
+      if (nouveau && !estParent()) { tablesEtat.recordChute = bonnes; enregistrerTables({ recordChute: bonnes }); }
+      finJeuTables(corps, nouveau && bonnes ? "🏆 Nouveau record" : titre, bonnes, total, jeuTablesChute, rates);
+    };
+    tablesMinuteur = setInterval(() => {
+      if (arrete || document.getElementById("modal-libre").hidden) return clearInterval(tablesMinuteur);
+      const reste = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
+      const c = corps.querySelector("#tj-compteur");
+      if (c) c.textContent = `⏱️ ${reste} s · ${bonnes} ✅`;
+      if (reste <= 0) terminer();
+    }, 250);
+    const question = () => {
+      if (arrete || Date.now() >= fin || document.getElementById("modal-libre").hidden) return;
+      const f = serieTables(1)[0];
+      let reglee = false;
+      corps.querySelector(".game-body").innerHTML = `
+        <div class="chute-zone"><div class="chute-ligne"></div>
+          <div class="chute-item" id="chute-item" style="animation-duration:${fallMs}ms">${enonce(f)} = ?</div>
+        </div>${HTML_SAISIE}<div id="tj-resultat"></div>`;
+      const item = corps.querySelector("#chute-item");
+      const debut = Date.now();
+      item.addEventListener("animationend", () => {
+        if (reglee || arrete) return;
+        reglee = true;
+        total += 1;
+        if (!rates.some(x => x.t === f.t && x.n === f.n)) rates.push(f);
+        noterFait(f, false, { ms: fallMs, donne: "" });
+        item.classList.add("ko");
+        corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">⌛ ${f.t} × ${f.n} = ${f.t * f.n}</div>`;
+        corps.querySelector("#tj-saisie").disabled = true;
+        corps.querySelector("#tj-ok").disabled = true;
+        setTimeout(question, 900);
+      });
+      champNombre(corps, v => {
+        if (reglee || arrete) return;
+        reglee = true;
+        const ms = Date.now() - debut;
+        const ok = Number(v) === f.t * f.n;
+        total += 1;
+        if (ok) { bonnes += 1; fallMs = Math.max(2500, fallMs - 120); }
+        else if (!rates.some(x => x.t === f.t && x.n === f.n)) rates.push(f);
+        noterFait(f, ok, { ms, donne: v });
+        corps.querySelector("#tj-saisie").disabled = true;
+        corps.querySelector("#tj-ok").disabled = true;
+        corps.querySelector("#tj-saisie").classList.add(ok ? "correct" : "incorrect");
+        item.classList.add(ok ? "ok" : "ko");
+        corps.querySelector("#tj-resultat").innerHTML = ok
+          ? `<div class="pr-verdict ok">✅ Bravo !</div>`
+          : `<div class="pr-verdict ko">${f.t} × ${f.n} = ${f.t * f.n}</div>`;
+        setTimeout(question, ok ? 500 : 1100);
       });
     };
     question();

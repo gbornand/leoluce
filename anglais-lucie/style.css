@@ -681,6 +681,20 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tj-entrainement, .hdr-tentrainement { background: linear-gradient(135deg, #5b6ee8, #a152d6); }
 .tj-qcm, .hdr-tqcm { background: linear-gradient(135deg, #1fa2a0, #3f7fe0); }
 .tj-defi, .hdr-tdefi { background: linear-gradient(135deg, #f06a3c, #e5484d); }
+.tj-chute, .hdr-tchute { background: linear-gradient(135deg, #a152d6, #5b6ee8); }
+.chute-zone { position: relative; height: 220px; overflow: hidden; background: linear-gradient(180deg, #f1eefb, #fff); border-radius: 16px; margin: 10px 0 14px; }
+.chute-ligne { position: absolute; bottom: 46px; left: 0; right: 0; height: 2px; background: rgba(240,106,60,.45); }
+.chute-ligne::after { content: "⬇️ réponds avant la ligne"; position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 10px; font-weight: 700; color: #a3710c; white-space: nowrap; }
+.chute-item {
+  position: absolute; left: 50%; top: -40px; transform: translateX(-50%);
+  background: #fff; border: 2px solid #5b6ee8; border-radius: 14px; padding: 10px 18px;
+  font-size: clamp(22px, 7vw, 30px); font-weight: 900; color: #2d2a4a; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,.1);
+  animation-name: chuteTombe; animation-timing-function: linear; animation-fill-mode: forwards;
+}
+.chute-item.ok { border-color: #4caf50; background: #e9f7ec; animation-play-state: paused; }
+.chute-item.ko { border-color: #d14b4b; background: #fbe9e9; animation-play-state: paused; }
+@keyframes chuteTombe { from { top: -40px; } to { top: calc(100% - 40px); } }
 .tb-legende { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .tb-ligne { background: #fff; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(91,110,232,.07); }
 .tb-ligne-titre { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
