@@ -124,6 +124,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Signalement d'un problème sur une question par l'élève — traité plus tard par le script admin.
+    match /signalementsRevisions/{id} {
+      allow read: if accesRev(resource.data);
+      allow create: if accesRev(request.resource.data);
+      allow update, delete: if false;
+    }
+
     // Contrôles / DST à venir : un document par élève (id = uid), liste des échéances.
     match /echeancesRevisions/{id} {
       allow read: if estParentRev() || (estEleveRev() && id == request.auth.uid);

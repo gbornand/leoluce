@@ -126,6 +126,8 @@ body {
 .question-card:first-child { border-top: none; }
 .question-label { font-weight: 700; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .btn-revoir { font-size: 12px; background: #fff4df; color: #a3710c; border: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.btn-signaler { display: block; margin-top: 6px; font-size: 11px; background: none; color: #a09cc2; border: none; padding: 4px 2px; cursor: pointer; text-decoration: underline; }
+.btn-signaler:disabled { color: #6a9c7a; text-decoration: none; cursor: default; }
 .choix-list { display: flex; flex-direction: column; gap: 8px; }
 .choix-btn {
   text-align: left; padding: 10px 14px; border-radius: 12px; border: 2px solid #e6e1fb;

@@ -7,6 +7,8 @@
 //   node revisions-attente.cjs recadrer <image> <x> <y> <w> <h> <rotation> <sortie.jpg>   (x..h en fraction 0-1, rotation 0/90/180/270)
 //   node revisions-attente.cjs apercu <image> <legendes.json> <sortie.png>                cases numérotées dessinées, pour vérifier
 //   node revisions-attente.cjs figure <figureId> <image.jpg> <legendes.json>              enregistre un schéma prêt
+//   node revisions-attente.cjs signalements                                               liste les problèmes signalés par les élèves
+//   node revisions-attente.cjs traiter <signalementId>                                    marque un signalement comme traité
 const path = require("path");
 const fs = require("fs");
 const sharp = require("sharp");
@@ -147,10 +149,29 @@ async function figure(figureId, image, fichierLegendes) {
   console.log(`OK « ${verif.titre} » : ${verif.legendes.length} légendes, statut ${verif.statut || "prêt"}`);
 }
 
+async function signalements() {
+  const snap = await base().collection("signalementsRevisions").where("statut", "==", "nouveau").get();
+  if (!snap.size) return console.log("Aucun signalement en attente.");
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.at || "").localeCompare(b.at || ""));
+  docs.forEach(s => {
+    const profil = ELEVES[s.eleve] || { prenom: "(inconnu)" };
+    console.log(`\n${s.id} · ${profil.prenom} · ${NOMS_MATIERES[s.matiere] || s.matiere} · ${s.correct ? "marquée JUSTE par l'appli" : "marquée FAUSSE par l'appli"} · ${s.at}
+  Question : ${s.question}
+  Attendu  : ${s.attendu}
+  Réponse donnée : ${s.donne}`);
+  });
+  console.log(`\nPour marquer comme traité : node revisions-attente.cjs traiter <id>`);
+}
+
+async function traiter(id) {
+  await base().collection("signalementsRevisions").doc(id).update({ statut: "traite" });
+  console.log(`OK, ${id} marqué traité.`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-const actions = { liste, cours, nouveau, recadrer, apercu, figure };
+const actions = { liste, cours, nouveau, recadrer, apercu, figure, signalements, traiter };
 if (!actions[cmd]) {
-  console.log("Commandes : liste | cours | recadrer | apercu | figure (voir l'en-tête du fichier)");
+  console.log("Commandes : liste | cours | recadrer | apercu | figure | signalements | traiter (voir l'en-tête du fichier)");
   process.exit(1);
 }
 actions[cmd](...args).then(() => process.exit(0)).catch(e => { console.error("ERREUR :", e.message); process.exit(1); });

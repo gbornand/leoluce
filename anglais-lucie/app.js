@@ -584,6 +584,17 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     const solution = !correct && bonneReponseTexte ? `Réponse : « ${bonneReponseTexte} ». ` : "";
     expl.textContent = `${correct ? "✅ Bravo ! " : "💡 "}${solution}${ex.explication || ""}`;
     card.appendChild(expl);
+    if (!estParent()) {
+      const rapport = document.createElement("button");
+      rapport.className = "btn-signaler";
+      rapport.textContent = "🚩 Signaler un problème";
+      rapport.addEventListener("click", () => {
+        rapport.disabled = true;
+        rapport.textContent = "✅ Signalé, merci !";
+        signalerProbleme({ type, question: ex.question, attendu: bonneReponseTexte, donne: donnee, correct });
+      });
+      card.appendChild(rapport);
+    }
     onAnswered?.(correct, donnee);
   };
 
@@ -688,6 +699,16 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     card.appendChild(list);
   }
   return card;
+}
+
+// Signalement d'un problème sur une question par l'élève — écriture seule, traité plus tard côté script.
+function signalerProbleme({ type, question, attendu, donne, correct }) {
+  if (estParent()) return;
+  addDoc(collection(db, "signalementsRevisions"), {
+    at: new Date().toISOString(), date: todayISO(), eleve: eleveCourant, matiere: matiereCourante, statut: "nouveau",
+    type: type || "", question: String(question || "").slice(0, 300), attendu: String(attendu || "").slice(0, 300),
+    donne: String(donne ?? "").slice(0, 200), correct: !!correct,
+  }).catch(err => console.error("Signalement", err));
 }
 
 // Journal de toutes les réponses (historique) — écriture seule, jamais modifiée.
