@@ -694,10 +694,16 @@ div.ap-carte { cursor: default; flex-direction: column; }
 /* MUSIQUE */
 .dj-musique-config { background: linear-gradient(135deg, #6a6690, #4a4670); }
 .dj-musique-jouer { background: linear-gradient(135deg, #1a1a2e, #a152d6); }
-.mus-notes-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
-.mus-note-case { border: 2px solid #e6e1fb; background: #fff; border-radius: 12px; padding: 10px 4px; font-weight: 800; font-size: 14px; color: #6a6690; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mus-clefs-grille, .mus-vitesses-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.mus-choix-btn { border: 2px solid #e6e1fb; background: #fff; border-radius: 14px; padding: 12px 6px; font-weight: 800; font-size: 14px; color: #6a6690; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; text-align: center; }
+.mus-choix-btn.on { border-color: #5b6ee8; background: linear-gradient(135deg, #5b6ee8, #1fa2a0); color: #fff; }
+.mus-clef-symb { font-size: 24px; }
+.mus-notes-groupe { margin-bottom: 10px; }
+.mus-notes-soustitre { font-size: 12px; font-weight: 800; color: #6a6690; margin-bottom: 6px; }
+.mus-notes-grille { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.mus-note-case { border: 2px solid #e6e1fb; background: #fff; border-radius: 10px; padding: 7px 2px; font-weight: 800; font-size: 13px; color: #6a6690; cursor: pointer; display: flex; align-items: baseline; justify-content: center; gap: 1px; }
 .mus-note-case.on { border-color: #a152d6; background: rgba(161,82,214,.12); color: #a152d6; }
-.mus-note-petit { font-size: 16px; opacity: .6; }
+.mus-note-octave { font-size: 9px; opacity: .55; }
 #mus-portees { display: flex; flex-direction: column; gap: 18px; margin-bottom: 14px; }
 .mus-portee { position: relative; height: 64px; margin: 20px 10px 0; }
 .mus-cle { position: absolute; left: -26px; bottom: -14px; font-size: 44px; color: #2d2a4a; }

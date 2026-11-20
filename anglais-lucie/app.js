@@ -3075,22 +3075,28 @@ function ouvrirConfigMusique() {
   const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎼 Configuration</div><h3>Choisis ta clé</h3></div>
     <div class="game-body">
       <div class="tb-choix-titre">Clé</div>
-      <div class="tb-choix tb-choix-grand" id="mus-clefs">
-        <button data-clef="sol" class="${clefChoisie === "sol" ? "on" : ""}">𝄞 Sol</button>
-        <button data-clef="fa" class="${clefChoisie === "fa" ? "on" : ""}">𝄢 Fa</button>
-        <button data-clef="les-deux" class="${clefChoisie === "les-deux" ? "on" : ""}">Les deux</button>
+      <div class="mus-clefs-grille" id="mus-clefs">
+        <button data-clef="sol" class="mus-choix-btn ${clefChoisie === "sol" ? "on" : ""}"><span class="mus-clef-symb">𝄞</span>Sol</button>
+        <button data-clef="fa" class="mus-choix-btn ${clefChoisie === "fa" ? "on" : ""}"><span class="mus-clef-symb">𝄢</span>Fa</button>
+        <button data-clef="les-deux" class="mus-choix-btn ${clefChoisie === "les-deux" ? "on" : ""}"><span class="mus-clef-symb">𝄞𝄢</span>Les deux</button>
       </div>
       <div class="tb-choix-titre">Notes à travailler (au moins 2)</div>
-      <div id="mus-notes" class="mus-notes-grille"></div>
+      <div id="mus-notes"></div>
       <div class="tb-choix-titre">Vitesse de départ</div>
-      <div class="tb-choix tb-choix-grand" id="mus-vitesses">
-        ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
+      <div class="mus-vitesses-grille" id="mus-vitesses">
+        ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="mus-choix-btn ${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
       </div>
       <button class="btn-primary btn-block" id="mus-valider">Enregistrer</button>
     </div>`);
   const majNotes = () => {
     const zone = corps.querySelector("#mus-notes");
-    zone.innerHTML = toutesNotesClef(clefChoisie).map(n => `<button data-id="${n.id}" class="mus-note-case ${notesCochees.has(n.id) ? "on" : ""}">${n.solfege}<span class="mus-note-petit">${n.clef === "sol" ? "𝄞" : "𝄢"}</span></button>`).join("");
+    const parClef = clefChoisie === "les-deux" ? ["sol", "fa"] : [clefChoisie];
+    const carte = n => `<button data-id="${n.id}" class="mus-note-case ${notesCochees.has(n.id) ? "on" : ""}">${n.solfege}<span class="mus-note-octave">${n.octave}</span></button>`;
+    zone.innerHTML = parClef.map(c => `
+      <div class="mus-notes-groupe">
+        <div class="mus-notes-soustitre">${c === "sol" ? "𝄞 Clé de sol" : "𝄢 Clé de fa"}</div>
+        <div class="mus-notes-grille">${toutesNotesClef(c).map(carte).join("")}</div>
+      </div>`).join("");
     zone.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
       if (notesCochees.has(b.dataset.id)) notesCochees.delete(b.dataset.id); else notesCochees.add(b.dataset.id);
       b.classList.toggle("on", notesCochees.has(b.dataset.id));
