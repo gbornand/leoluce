@@ -704,8 +704,15 @@ div.ap-carte { cursor: default; flex-direction: column; }
 /* ACCUEIL */
 #accueil-contenu { animation: accFade .4s ease; }
 @keyframes accFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.acc-salut { font-size: 26px; font-weight: 900; margin-bottom: 10px;
+.acc-entete { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.acc-salut { font-size: 26px; font-weight: 900;
   background: linear-gradient(135deg, #5b6ee8, #a152d6, #f06a3c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.acc-perso-btn { flex-shrink: 0; border: none; background: #f0ecff; color: #5b6ee8; width: 38px; height: 38px; border-radius: 50%; font-size: 17px; cursor: pointer; }
+.acc-retirer { position: absolute; top: 6px; right: 8px; z-index: 2; font-size: 11px; font-weight: 900; color: rgba(255,255,255,.75); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,0,0,.15); cursor: pointer; }
+.acc-bientot .acc-retirer { color: rgba(0,0,0,.4); background: rgba(0,0,0,.06); }
+.acc-perso-liste { display: flex; flex-direction: column; gap: 10px; }
+.acc-perso-item { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: #2d2a4a; padding: 8px 4px; }
+.acc-perso-item input { width: 20px; height: 20px; }
 .acc-objectif { background: linear-gradient(120deg, #f06a3c, #e5484d); color: #fff; border-radius: 20px; padding: 18px 20px; font-size: 16px; font-weight: 900; margin-bottom: 18px; box-shadow: 0 8px 22px rgba(240,106,60,.35); }
 .acc-series { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
 .acc-serie-item { background: linear-gradient(135deg, #ffb347, #f06a3c); border-radius: 999px; padding: 12px 20px; font-size: 16px; font-weight: 900; color: #fff; box-shadow: 0 6px 16px rgba(240,106,60,.35); }

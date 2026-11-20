@@ -393,26 +393,45 @@ const COULEURS_MATIERE = {
   physique: ["#C77DFF", "#5b6ee8", "rgba(199,125,255,.4)"],
 };
 
+// Cartes masquées par l'élève (préférence locale, par enfant) : elle peut retirer ce qui ne
+// l'intéresse pas et le remettre plus tard via le bouton ⚙️, sans toucher à ce que voit sa sœur.
+function clesMasquees() { try { return new Set(JSON.parse(localStorage.getItem(`masque-${eleveCourant}`) || "[]")); } catch { return new Set(); } }
+function sauverMasquees(set) { ecrireLocal(`masque-${eleveCourant}`, JSON.stringify([...set])); }
+
+function toutesLesCartes() {
+  const mesMatieres = new Set(eleveInfo().matieres);
+  const items = [];
+  VOLETS.forEach(v => {
+    v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]).forEach(m => items.push({ cle: m, nom: MATIERES_UI[m].nom, emoji: MATIERES_UI[m].emoji }));
+    v.aVenir.forEach(a => items.push({ cle: a.theme, nom: a.nom, emoji: a.emoji }));
+  });
+  MATIERES_A_PART.filter(m => mesMatieres.has(m) && MATIERES_UI[m]).forEach(m => items.push({ cle: m, nom: MATIERES_UI[m].nom, emoji: MATIERES_UI[m].emoji }));
+  return items;
+}
+
 function renderAccueil() {
   if (estParent()) return;
   const el = document.getElementById("accueil-contenu");
   const info = eleveInfo();
   const mesMatieres = new Set(info.matieres);
+  const masquees = clesMasquees();
+  const retirer = cle => `<span class="acc-retirer" data-retirer="${cle}" title="Retirer de l'accueil">✕</span>`;
   const carteMatiere = m => {
     const [c1, c2, ombre] = COULEURS_MATIERE[m] || ["#5b6ee8", "#1fa2a0", "rgba(91,110,232,.35)"];
-    return `<button class="acc-carte" style="--carte-c1:${c1};--carte-c2:${c2};--carte-ombre:${ombre}" data-matiere="${m}"><span class="acc-emoji">${MATIERES_UI[m].emoji}</span><span class="acc-nom">${MATIERES_UI[m].nom}</span></button>`;
+    return `<button class="acc-carte" style="--carte-c1:${c1};--carte-c2:${c2};--carte-ombre:${ombre}" data-matiere="${m}">${retirer(m)}<span class="acc-emoji">${MATIERES_UI[m].emoji}</span><span class="acc-nom">${MATIERES_UI[m].nom}</span></button>`;
   };
   const voletsHtml = VOLETS.map(v => {
-    const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]);
-    if (!presentes.length && !v.aVenir.length) return "";
+    const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m] && !masquees.has(m));
+    const aVenir = v.aVenir.filter(a => !masquees.has(a.theme));
+    if (!presentes.length && !aVenir.length) return "";
     return `<div class="acc-volet-cartes">
         ${presentes.map(carteMatiere).join("")}
-        ${v.aVenir.map(a => `<div class="acc-carte acc-bientot acc-theme-${a.theme}">${a.theme === "musique" ? `<span class="acc-note-deco n1">🎵</span><span class="acc-note-deco n2">🎶</span><span class="acc-note-deco n3">🎵</span>` : ""}<span class="acc-emoji">${a.emoji}</span><span class="acc-nom">${a.nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
+        ${aVenir.map(a => `<div class="acc-carte acc-bientot acc-theme-${a.theme}" data-bientot="${a.theme}">${retirer(a.theme)}${a.theme === "musique" ? `<span class="acc-note-deco n1">🎵</span><span class="acc-note-deco n2">🎶</span><span class="acc-note-deco n3">🎵</span>` : ""}<span class="acc-emoji">${a.emoji}</span><span class="acc-nom">${a.nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
       </div>`;
   }).join("");
-  const apartHtml = MATIERES_A_PART.filter(m => mesMatieres.has(m) && MATIERES_UI[m]).map(carteMatiere).join("");
+  const apartHtml = MATIERES_A_PART.filter(m => mesMatieres.has(m) && MATIERES_UI[m] && !masquees.has(m)).map(carteMatiere).join("");
   el.innerHTML = `
-    <div class="acc-salut">Salut ${esc(info.prenom)} 👋</div>
+    <div class="acc-entete"><div class="acc-salut">Salut ${esc(info.prenom)} 👋</div><button class="acc-perso-btn" id="btn-perso-accueil" title="Personnaliser l'accueil">⚙️</button></div>
     <div class="acc-objectif">🎯 Objectif du jour : prends 10 minutes, choisis une matière ci-dessous.</div>
     <div class="acc-series">
       <div class="acc-serie-item"><span class="acc-flame">🔥</span> <b>${serieCourante}</b> jour${serieCourante > 1 ? "s" : ""} d'affilée</div>
@@ -420,10 +439,33 @@ function renderAccueil() {
     </div>
     ${voletsHtml}
     ${apartHtml ? `<div class="acc-volet-cartes">${apartHtml}</div>` : ""}`;
-  el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
+  el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", (e) => {
+    if (e.target.closest(".acc-retirer")) { e.stopPropagation(); masquerCarte(b.dataset.matiere); return; }
     const m = b.dataset.matiere;
     choisirContexte(eleveCourant, m);
     document.querySelector(`.tab-btn[data-tab="${CIBLE_MATIERE[m] || "today"}"]`).click();
+  }));
+  el.querySelectorAll("[data-bientot]").forEach(div => div.querySelector(".acc-retirer").addEventListener("click", () => masquerCarte(div.dataset.bientot)));
+  el.querySelector("#btn-perso-accueil").addEventListener("click", ouvrirPersoAccueil);
+}
+
+function masquerCarte(cle) {
+  const c = clesMasquees();
+  c.add(cle);
+  sauverMasquees(c);
+  renderAccueil();
+}
+
+function ouvrirPersoAccueil() {
+  const cles = clesMasquees();
+  const items = toutesLesCartes();
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">⚙️ Personnaliser</div><h3>Qu'est-ce qui apparaît sur ton accueil ?</h3></div>
+    <div class="game-body"><div class="acc-perso-liste">${items.map(it => `<label class="acc-perso-item"><input type="checkbox" data-cle="${esc(it.cle)}" ${cles.has(it.cle) ? "" : "checked"}><span>${it.emoji} ${it.nom}</span></label>`).join("")}</div></div>`);
+  corps.querySelectorAll("[data-cle]").forEach(cb => cb.addEventListener("change", () => {
+    const c = clesMasquees();
+    if (cb.checked) c.delete(cb.dataset.cle); else c.add(cb.dataset.cle);
+    sauverMasquees(c);
+    renderAccueil();
   }));
 }
 
