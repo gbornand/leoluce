@@ -272,6 +272,7 @@ function appliquerMatiere() {
   document.getElementById("add-matiere-badge").textContent = dictee
     ? "🎧 Nouvelle dictée : elle devient la dictée de la semaine, l'ancienne passe dans les archives"
     : `📥 Ce cours sera rangé dans : ${ui().emoji} ${MATIERES_UI[matiereCourante].nom} — vérifie l'onglet en haut si ce n'est pas ça`;
+  majEnteteMatiere();
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -312,7 +313,31 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
     if (btn.dataset.tab === "accueil") renderAccueil();
+    majEnteteMatiere();
   });
+});
+
+// Montre/cache la rangée des sections de la matière + le bouton de la matière actuelle
+// selon qu'on est sur un écran "maison" (accueil/tableau de bord) ou dans une matière.
+function majEnteteMatiere() {
+  const tabActif = document.querySelector(".tab-btn.active")?.dataset.tab;
+  const surAccueil = tabActif === "accueil" || tabActif === "dashboard";
+  document.getElementById("tabs-matiere").hidden = surAccueil;
+  const btnM = document.getElementById("btn-matiere-actuelle");
+  btnM.hidden = surAccueil;
+  if (!surAccueil) btnM.textContent = `${ui().emoji} ${MATIERES_UI[matiereCourante]?.nom || ""} ▾`;
+}
+
+// Bouton "matière actuelle" dans la barre du haut : ouvre le même choix que le badge photo,
+// mais avec toutes les matières (y compris Tables), pour changer sans repasser par l'accueil.
+sur("btn-matiere-actuelle", "click", () => {
+  const options = eleveInfo().matieres.filter(m => MATIERES_UI[m]);
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">Changer de matière</div><h3>Laquelle ?</h3></div>
+    <div class="game-body"><div class="tb-choix tb-choix-grand">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
+  corps.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("modal-libre-close").click();
+    choisirContexte(eleveCourant, b.dataset.m);
+  }));
 });
 
 // Badge flottant "Ajouter un cours" : propose la matière avant d'ouvrir l'écran d'import.
@@ -335,6 +360,7 @@ sur("fab-import", "click", () => {
     if (Math.abs(y - dernierY) < 6) return;
     const descend = y > dernierY && y > 80;
     document.querySelector(".topbar").classList.toggle("topbar-cachee", descend);
+    document.getElementById("tabs-matiere").classList.toggle("tabs-matiere-cachee", descend);
     document.getElementById("contexte-bar").classList.toggle("ctx-remontee", descend);
     dernierY = y;
   }, { passive: true });

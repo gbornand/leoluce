@@ -47,19 +47,22 @@
     <nav class="tabs">
       <button class="tab-btn" data-tab="dashboard" hidden>📊 Tableau de bord</button>
       <button class="tab-btn active" data-tab="accueil">🏠 Accueil</button>
-      <button class="tab-btn" data-tab="today">Aujourd'hui</button>
-      <button class="tab-btn" data-tab="dictee" hidden>🎧 Ma dictée</button>
-      <button class="tab-btn" data-tab="tables" hidden>✖️ Tables</button>
-      <button class="tab-btn" data-tab="add">+ Un cours</button>
-      <button class="tab-btn" data-tab="notions">Mes notions</button>
-      <button class="tab-btn" data-tab="entrainer">🎯 S'entraîner</button>
-      <button class="tab-btn" data-tab="controles" hidden>📅 Contrôles</button>
-      <button class="tab-btn" data-tab="chansons">🎵 Chansons</button>
+      <button id="btn-matiere-actuelle" class="btn-matiere-actuelle" hidden></button>
     </nav>
     <div id="streak" class="streak" title="Jours d'affilée" hidden></div>
     <button id="btn-mdp" class="btn-ghost" title="Changer mon mot de passe">🔑</button>
     <button id="btn-logout" class="btn-ghost" title="Se déconnecter">↪</button>
   </header>
+  <nav class="tabs tabs-matiere" id="tabs-matiere" hidden>
+    <button class="tab-btn" data-tab="today">Aujourd'hui</button>
+    <button class="tab-btn" data-tab="dictee" hidden>🎧 Ma dictée</button>
+    <button class="tab-btn" data-tab="tables" hidden>✖️ Tables</button>
+    <button class="tab-btn" data-tab="add">+ Un cours</button>
+    <button class="tab-btn" data-tab="notions">Mes notions</button>
+    <button class="tab-btn" data-tab="entrainer">🎯 S'entraîner</button>
+    <button class="tab-btn" data-tab="controles" hidden>📅 Contrôles</button>
+    <button class="tab-btn" data-tab="chansons">🎵 Chansons</button>
+  </nav>
 
   <div id="contexte-bar" class="contexte-bar"></div>
   <main class="content">

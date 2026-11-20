@@ -86,6 +86,10 @@ body {
 }
 .tab-btn.active { background: #5b6ee8; color: #fff; }
 .btn-ghost { border: none; background: transparent; cursor: pointer; font-size: 16px; color: #6a6690; }
+.btn-matiere-actuelle { border: none; background: #f0ecff; color: #5b6ee8; font-weight: 800; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.tabs-matiere { position: sticky; top: 61px; z-index: 4; background: #fff; border-bottom: 1px solid #e6e1fb; padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; transition: top .25s ease, opacity .2s ease; }
+.tabs-matiere[hidden] { display: none; }
+.tabs-matiere.tabs-matiere-cachee { top: -100px; opacity: 0; pointer-events: none; }
 
 .content { max-width: 720px; margin: 0 auto; padding: 18px 16px 60px; }
 .tab-panel[hidden] { display: none; }
