@@ -223,7 +223,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "fractions-contenu", "verbes-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "fractions-contenu", "verbes-contenu", "jeuxfr-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -237,6 +237,7 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="fractions"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="verbes"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="jeuxfr"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
   document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
@@ -267,6 +268,7 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = !japonais;
   document.querySelector('.tab-btn[data-tab="fractions"]').hidden = !fractions;
   document.querySelector('.tab-btn[data-tab="verbes"]').hidden = !verbes;
+  document.querySelector('.tab-btn[data-tab="jeuxfr"]').hidden = matiereCourante !== "francais";
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
@@ -327,6 +329,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "japonais") loadJaponais();
     if (btn.dataset.tab === "fractions") loadFractions();
     if (btn.dataset.tab === "verbes") loadVerbes();
+    if (btn.dataset.tab === "jeuxfr") loadJeuxFrancais();
     if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
@@ -3626,6 +3629,310 @@ function finJeuVerbes(corps, titre, bonnes, total, relancer) {
     <button class="btn-ghost-small" id="vb-fermer">Fermer</button>`;
   corps.querySelector("#vb-encore").addEventListener("click", relancer);
   corps.querySelector("#vb-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+}
+
+// ------------------------------------------------------------
+// JEUX DE FRANÇAIS (fixes) — homophones, nature des mots, adjectifs, conjugaison, fonctions.
+// Accessible depuis l'onglet Français → "🎮 Jeux", pour les deux élèves. Contenu relu et repris
+// de leoluce (homophones.html, natures.html, adjectifs.html, conjugaison.html, fonctions.html).
+// ------------------------------------------------------------
+const HOMOPHONES = [
+  { pair: "a / à", choices: ["a", "à"], qs: [
+    { p: "Le chat {_} faim.", c: "a", e: "« a » = il a → verbe avoir au présent" },
+    { p: "Elle va {_} l'école.", c: "à", e: "« à » = préposition de lieu" },
+    { p: "Mon père {_} une voiture rouge.", c: "a", e: "« a » = verbe avoir → on peut remplacer par « avait »" },
+    { p: "Il pense {_} toi.", c: "à", e: "« à » = préposition → on ne peut pas remplacer par « avait »" },
+    { p: "Le soleil {_} brillé toute la journée.", c: "a", e: "« a » brillé = passé composé avec avoir" },
+    { p: "Elle est bonne {_} la course.", c: "à", e: "« à » = préposition → « bonne à la course »" },
+  ] },
+  { pair: "on / ont", choices: ["on", "ont"], qs: [
+    { p: "Les enfants {_} faim.", c: "ont", e: "« ont » = ils ont → verbe avoir. Remplace par « ils » → ça marche !" },
+    { p: "{_} joue dans le jardin.", c: "on", e: "« on » = pronom. Remplace par « ils » → « ils joue » ne marche pas" },
+    { p: "Ils {_} mangé la tarte.", c: "ont", e: "« ont » mangé = passé composé → ils ont" },
+    { p: "{_} part demain.", c: "on", e: "« on » = pronom sujet" },
+    { p: "Les oiseaux {_} froid.", c: "ont", e: "« ont » = verbe avoir → les oiseaux ont froid" },
+    { p: "{_} dirait que c'est vrai.", c: "on", e: "« on » = pronom indéfini" },
+  ] },
+  { pair: "ou / où", choices: ["ou", "où"], qs: [
+    { p: "Tu veux du pain {_} du gâteau ?", c: "ou", e: "« ou » = choix entre deux choses" },
+    { p: "La ville {_} j'habite est belle.", c: "où", e: "« où » = lieu relatif. On peut remplacer par « dans laquelle »" },
+    { p: "{_} est mon sac ?", c: "où", e: "« où » = question de lieu" },
+    { p: "Il viendra lundi {_} mardi.", c: "ou", e: "« ou » = choix → on peut remplacer par « ou bien »" },
+    { p: "Le parc {_} nous jouons est grand.", c: "où", e: "« où » = lieu → « dans lequel nous jouons »" },
+    { p: "Tu préfères le bleu {_} le rouge ?", c: "ou", e: "« ou » = choix entre deux options" },
+  ] },
+  { pair: "est / et", choices: ["est", "et"], qs: [
+    { p: "Le ciel {_} bleu.", c: "est", e: "« est » = il est → verbe être au présent" },
+    { p: "J'aime le chocolat {_} la vanille.", c: "et", e: "« et » = liaison. On peut remplacer par « ainsi que »" },
+    { p: "Elle {_} partie tôt ce matin.", c: "est", e: "« est » partie = passé composé avec être" },
+    { p: "Il mange une pomme {_} une poire.", c: "et", e: "« et » = liaison entre deux éléments" },
+    { p: "Ce film {_} passionnant.", c: "est", e: "« est » = verbe être → on peut remplacer par « était »" },
+  ] },
+  { pair: "son / sont", choices: ["son", "sont"], qs: [
+    { p: "Les élèves {_} fatigués.", c: "sont", e: "« sont » = ils sont → remplace par « étaient » → ça marche !" },
+    { p: "Elle a perdu {_} cahier.", c: "son", e: "« son » = déterminant possessif → son/sa/ses" },
+    { p: "Les fleurs {_} belles.", c: "sont", e: "« sont » = verbe être au pluriel" },
+    { p: "Il a rangé {_} manteau.", c: "son", e: "« son » = possessif → on ne peut pas remplacer par « étaient »" },
+    { p: "Mes amis {_} gentils.", c: "sont", e: "« sont » = ils sont → « étaient » fonctionne à l'imparfait" },
+    { p: "Le chien mange {_} repas.", c: "son", e: "« son » = déterminant possessif masculin" },
+  ] },
+  { pair: "c'est / ces / ses", choices: ["c'est", "ces", "ses"], qs: [
+    { p: "Elle range {_} affaires.", c: "ses", e: "« ses » = possessif pluriel → ses affaires à elle" },
+    { p: "{_} une belle journée.", c: "c'est", e: "« c'est » = présentation → on peut remplacer par « cela est »" },
+    { p: "Je regarde {_} étoiles.", c: "ces", e: "« ces » = démonstratif → ces étoiles-là" },
+    { p: "{_} magnifique !", c: "c'est", e: "« c'est » = cela est magnifique" },
+    { p: "Il a pris {_} livres.", c: "ses", e: "« ses » = possessif → les livres qui lui appartiennent" },
+  ] },
+  { pair: "leur / leurs", choices: ["leur", "leurs"], qs: [
+    { p: "Je {_} ai dit bonjour.", c: "leur", e: "« leur » = pronom COI → je dis à eux → singulier" },
+    { p: "Ils rangent {_} affaires.", c: "leurs", e: "« leurs » = possessif pluriel → plusieurs affaires" },
+    { p: "Elle {_} a offert un cadeau.", c: "leur", e: "« leur » = pronom → à eux/elles" },
+    { p: "Les enfants ont fini {_} devoirs.", c: "leurs", e: "« leurs » = possessif → plusieurs devoirs" },
+    { p: "Je {_} explique la leçon.", c: "leur", e: "« leur » = à eux → pronom COI" },
+    { p: "Ils adorent {_} parents.", c: "leurs", e: "« leurs » = possessif pluriel → leurs parents à eux" },
+  ] },
+  { pair: "mais / mes / met", choices: ["mais", "mes", "met"], qs: [
+    { p: "Je veux venir, {_} je suis fatigué.", c: "mais", e: "« mais » = opposition/contraste" },
+    { p: "Elle {_} la table.", c: "met", e: "« met » = verbe mettre au présent → il/elle met" },
+    { p: "J'ai perdu {_} clés.", c: "mes", e: "« mes » = possessif pluriel de première personne" },
+    { p: "Il pleut, {_} il fait chaud.", c: "mais", e: "« mais » = opposition entre deux idées" },
+    { p: "Elle {_} son manteau.", c: "met", e: "« met » = verbe mettre → on peut remplacer par « mettait »" },
+    { p: "{_} parents sont gentils.", c: "mes", e: "« mes » = possessif pluriel → mes parents à moi" },
+  ] },
+];
+
+const NATURES_NOMS = { nom: "nom", verbe: "verbe", adjectif: "adjectif", determinant: "déterminant", pronom: "pronom", preposition: "préposition", adverbe: "adverbe", conjonction: "conjonction", interjection: "interjection" };
+const NATURE_PHRASES = [
+  { text: [{ w: "Le", n: "determinant" }, { w: "petit", n: "adjectif" }, { w: "chat", n: "nom" }, { w: "mange", n: "verbe" }, { w: "du", n: "determinant" }, { w: "poisson", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "Elle", n: "pronom" }, { w: "court", n: "verbe" }, { w: "très", n: "adverbe" }, { w: "vite", n: "adverbe" }, { w: "dans", n: "preposition" }, { w: "le", n: "determinant" }, { w: "jardin", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "Les", n: "determinant" }, { w: "fleurs", n: "nom" }, { w: "sont", n: "verbe" }, { w: "belles", n: "adjectif" }, { w: "et", n: "conjonction" }, { w: "parfumées", n: "adjectif" }, { w: ".", n: null }] },
+  { text: [{ w: "Mon", n: "determinant" }, { w: "chien", n: "nom" }, { w: "est", n: "verbe" }, { w: "grand", n: "adjectif" }, { w: "et", n: "conjonction" }, { w: "gentil", n: "adjectif" }, { w: ".", n: null }] },
+  { text: [{ w: "Il", n: "pronom" }, { w: "joue", n: "verbe" }, { w: "souvent", n: "adverbe" }, { w: "avec", n: "preposition" }, { w: "ses", n: "determinant" }, { w: "amis", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "La", n: "determinant" }, { w: "belle", n: "adjectif" }, { w: "princesse", n: "nom" }, { w: "chante", n: "verbe" }, { w: "doucement", n: "adverbe" }, { w: ".", n: null }] },
+  { text: [{ w: "Nous", n: "pronom" }, { w: "aimons", n: "verbe" }, { w: "les", n: "determinant" }, { w: "gâteaux", n: "nom" }, { w: "au", n: "determinant" }, { w: "chocolat", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "Oh", n: "interjection" }, { w: "!", n: null }, { w: "Ce", n: "determinant" }, { w: "livre", n: "nom" }, { w: "est", n: "verbe" }, { w: "passionnant", n: "adjectif" }, { w: ".", n: null }] },
+  { text: [{ w: "Le", n: "determinant" }, { w: "soleil", n: "nom" }, { w: "brille", n: "verbe" }, { w: "mais", n: "conjonction" }, { w: "il", n: "pronom" }, { w: "fait", n: "verbe" }, { w: "froid", n: "adjectif" }, { w: ".", n: null }] },
+  { text: [{ w: "Je", n: "pronom" }, { w: "lis", n: "verbe" }, { w: "un", n: "determinant" }, { w: "bon", n: "adjectif" }, { w: "livre", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "Les", n: "determinant" }, { w: "enfants", n: "nom" }, { w: "rient", n: "verbe" }, { w: "joyeusement", n: "adverbe" }, { w: ".", n: null }] },
+  { text: [{ w: "Elle", n: "pronom" }, { w: "met", n: "verbe" }, { w: "sa", n: "determinant" }, { w: "belle", n: "adjectif" }, { w: "robe", n: "nom" }, { w: "rouge", n: "adjectif" }, { w: ".", n: null }] },
+  { text: [{ w: "Le", n: "determinant" }, { w: "cheval", n: "nom" }, { w: "galope", n: "verbe" }, { w: "rapidement", n: "adverbe" }, { w: "sur", n: "preposition" }, { w: "la", n: "determinant" }, { w: "plage", n: "nom" }, { w: ".", n: null }] },
+  { text: [{ w: "Bravo", n: "interjection" }, { w: "!", n: null }, { w: "Tu", n: "pronom" }, { w: "as", n: "verbe" }, { w: "réussi", n: "verbe" }, { w: ".", n: null }] },
+  { text: [{ w: "Il", n: "pronom" }, { w: "mange", n: "verbe" }, { w: "une", n: "determinant" }, { w: "pomme", n: "nom" }, { w: "verte", n: "adjectif" }, { w: ".", n: null }] },
+];
+
+const ADJECTIFS_QS = [
+  { enonce: "Les chiens sont ____.", choices: ["grand", "grande", "grands", "grandes"], correct: "grands", expl: "« les chiens » → masculin pluriel → on ajoute -s → grands" },
+  { enonce: "Des lapins ____ jouent.", choices: ["petit", "petite", "petits", "petites"], correct: "petits", expl: "« des lapins » → masculin pluriel → on ajoute -s → petits" },
+  { enonce: "Les élèves sont ____.", choices: ["impatient", "impatiente", "impatients", "impatientes"], correct: "impatients", expl: "« les élèves » → masculin pluriel → on ajoute -s → impatients" },
+  { enonce: "Les fleurs sont ____.", choices: ["beaux", "beau", "belle", "belles"], correct: "belles", expl: "« les fleurs » → féminin pluriel → belle + s → belles" },
+  { enonce: "Des valises ____ partent.", choices: ["lourd", "lourds", "lourde", "lourdes"], correct: "lourdes", expl: "« des valises » → féminin pluriel → lourde + s → lourdes" },
+  { enonce: "Les filles sont ____.", choices: ["sage", "sages", "sageux", "sageuse"], correct: "sages", expl: "« les filles » → féminin pluriel → sage + s → sages (déjà féminin)" },
+  { enonce: "Ses ____ dessins brillent.", choices: ["beau", "beaux", "belle", "belles"], correct: "beaux", expl: "« beau » se termine par -eau → au pluriel on ajoute -x → beaux" },
+  { enonce: "De ____ oiseaux chantent.", choices: ["nouveau", "nouveaux", "nouvelle", "nouvelles"], correct: "nouveaux", expl: "« nouveau » → -eau → on ajoute -x → nouveaux" },
+  { enonce: "Ces jeux sont ____.", choices: ["génial", "géniaux", "génials", "géniale"], correct: "géniaux", expl: "« génial » se termine par -al → au pluriel → -aux → géniaux" },
+  { enonce: "Des projets ____ commencent.", choices: ["royal", "royaux", "royals", "royale"], correct: "royaux", expl: "« royal » → -al → -aux → royaux" },
+  { enonce: "Les animaux sont ____.", choices: ["amical", "amicals", "amicaux", "amicale"], correct: "amicaux", expl: "« amical » → -al → -aux → amicaux" },
+  { enonce: "Les sacs sont ____.", choices: ["gros", "gross", "groses", "grosse"], correct: "gros", expl: "« gros » se termine déjà par -s → il ne change pas au pluriel" },
+  { enonce: "Des manteaux ____ pendent.", choices: ["doux", "douxs", "douce", "douces"], correct: "doux", expl: "« doux » se termine par -x → il ne change pas au pluriel" },
+  { enonce: "Une ____ maison brille.", choices: ["beau", "beaux", "belle", "belles"], correct: "belle", expl: "« une maison » → féminin singulier → belle" },
+  { enonce: "Quel est le pluriel de « grand » (masc.) ?", choices: ["grands", "grandes", "grandaux", "grand"], correct: "grands", expl: "grand → masculin → on ajoute -s → grands" },
+  { enonce: "Quel est le pluriel de « belle » (fém.) ?", choices: ["beaux", "belle", "belles", "belleux"], correct: "belles", expl: "belle → féminin → on ajoute -s → belles" },
+  { enonce: "Quel est le pluriel de « beau » (masc.) ?", choices: ["beaus", "belles", "beaux", "beauxs"], correct: "beaux", expl: "beau → finit en -eau → on ajoute -x → beaux" },
+  { enonce: "Quel est le pluriel de « nouveau » (masc.) ?", choices: ["nouveaus", "nouvelles", "nouveauxs", "nouveaux"], correct: "nouveaux", expl: "nouveau → finit en -eau → on ajoute -x → nouveaux" },
+  { enonce: "Quel est le pluriel de « génial » (masc.) ?", choices: ["génials", "géniaux", "géniales", "géniaus"], correct: "géniaux", expl: "génial → finit en -al → devient -aux → géniaux" },
+  { enonce: "Quel est le pluriel de « royal » (masc.) ?", choices: ["royals", "royales", "royaux", "royaus"], correct: "royaux", expl: "royal → finit en -al → devient -aux → royaux" },
+  { enonce: "Quel est le pluriel de « gros » (masc.) ?", choices: ["gross", "groses", "gros", "grosses"], correct: "gros", expl: "gros → finit déjà en -s → ne change pas → gros" },
+  { enonce: "Quel est le pluriel de « doux » (masc.) ?", choices: ["douxs", "douces", "doux", "douceux"], correct: "doux", expl: "doux → finit déjà en -x → ne change pas → doux" },
+  { enonce: "Quel est le pluriel de « petit » (masc.) ?", choices: ["petites", "petit", "petits", "petitaux"], correct: "petits", expl: "petit → masculin → on ajoute -s → petits" },
+  { enonce: "Quel est le pluriel de « chaud » (fém.) ?", choices: ["chaudes", "chauds", "chaude", "chaudaux"], correct: "chaudes", expl: "chaud au féminin → chaude → pluriel → chaudes" },
+  { enonce: "Quel est le pluriel de « amical » (masc.) ?", choices: ["amicaux", "amicales", "amicals", "amicalux"], correct: "amicaux", expl: "amical → finit en -al → devient -aux → amicaux" },
+  { enonce: "Quel est le pluriel de « impatient » (masc.) ?", choices: ["impatients", "impatientes", "impatient", "impatiaux"], correct: "impatients", expl: "impatient → masculin → on ajoute -s → impatients" },
+];
+
+const CONJUGAISON_QUESTIONS = [
+  { pronom: "nous", inf: "manger", radical: "mange", correct: "ons", choices: ["ons", "ez", "ent", "ions"], phrase: "Nous {V} une pomme.", expl: "NOUS → présent 1er groupe → -ons → nous mangeons" },
+  { pronom: "ils", inf: "chanter", radical: "chant", correct: "ent", choices: ["ons", "ez", "ent", "es"], phrase: "Ils {V} une chanson.", expl: "ILS → présent 1er groupe → -ent → ils chantent" },
+  { pronom: "vous", inf: "jouer", radical: "jou", correct: "ez", choices: ["ons", "ez", "ent", "ais"], phrase: "Vous {V} au foot.", expl: "VOUS → présent 1er groupe → -ez → vous jouez" },
+  { pronom: "il", inf: "finir", radical: "fin", correct: "it", choices: ["is", "it", "issons", "issez"], phrase: "Il {V} ses devoirs.", expl: "IL → présent 2e groupe → -it → il finit" },
+  { pronom: "nous", inf: "finir", radical: "fin", correct: "issons", choices: ["issons", "issez", "issent", "isons"], phrase: "Nous {V} le travail.", expl: "NOUS → présent 2e groupe → -issons → nous finissons" },
+  { pronom: "tu", inf: "être", radical: "", correct: "es", choices: ["es", "est", "sommes", "êtes"], phrase: "Tu {V} courageux.", expl: "TU ÊTRE → présent irrégulier → tu es" },
+  { pronom: "j'", inf: "avoir", radical: "", correct: "ai", choices: ["ai", "as", "a", "avons"], phrase: "J'{V} faim.", expl: "J' AVOIR → présent → j'ai" },
+  { pronom: "elle", inf: "aller", radical: "", correct: "va", choices: ["va", "vai", "alle", "aille"], phrase: "Elle {V} à l'école.", expl: "ELLE ALLER → présent irrégulier → elle va" },
+  { pronom: "je", inf: "manger", radical: "mange", correct: "ais", choices: ["ais", "ait", "ions", "ez"], phrase: "Je {V} une glace.", expl: "JE → imparfait → -ais → je mangeais" },
+  { pronom: "nous", inf: "jouer", radical: "jou", correct: "ions", choices: ["ions", "iez", "aient", "ais"], phrase: "Nous {V} dehors.", expl: "NOUS → imparfait → -ions → nous jouions" },
+  { pronom: "ils", inf: "finir", radical: "finiss", correct: "aient", choices: ["aient", "ions", "iez", "ais"], phrase: "Ils {V} tard.", expl: "ILS → imparfait → -aient → ils finissaient" },
+  { pronom: "tu", inf: "être", radical: "ét", correct: "ais", choices: ["ais", "ait", "ions", "ez"], phrase: "Tu {V} content.", expl: "TU ÊTRE → imparfait → tu étais" },
+  { pronom: "elle", inf: "avoir", radical: "av", correct: "ait", choices: ["ait", "ais", "ions", "iez"], phrase: "Elle {V} peur.", expl: "ELLE AVOIR → imparfait → elle avait" },
+  { pronom: "nous", inf: "aller", radical: "all", correct: "ions", choices: ["ions", "iez", "aient", "ais"], phrase: "Nous {V} à la mer.", expl: "NOUS ALLER → imparfait → nous allions" },
+  { pronom: "je", inf: "manger", radical: "manger", correct: "ai", choices: ["ai", "as", "a", "ons"], phrase: "Je {V} ce soir.", expl: "JE → futur → -ai → je mangerai" },
+  { pronom: "vous", inf: "chanter", radical: "chanter", correct: "ez", choices: ["ez", "ons", "ont", "as"], phrase: "Vous {V} demain.", expl: "VOUS → futur → -ez → vous chanterez" },
+  { pronom: "il", inf: "finir", radical: "finir", correct: "a", choices: ["a", "as", "ai", "ont"], phrase: "Il {V} bientôt.", expl: "IL → futur → -a → il finira" },
+  { pronom: "tu", inf: "être", radical: "ser", correct: "as", choices: ["as", "a", "ai", "ez"], phrase: "Tu {V} là.", expl: "TU ÊTRE → futur irrégulier → tu seras" },
+  { pronom: "nous", inf: "avoir", radical: "aur", correct: "ons", choices: ["ons", "ez", "ont", "as"], phrase: "Nous {V} le temps.", expl: "NOUS AVOIR → futur irrégulier → nous aurons" },
+  { pronom: "ils", inf: "aller", radical: "ir", correct: "ont", choices: ["ont", "ons", "ez", "as"], phrase: "Ils {V} au cinéma.", expl: "ILS ALLER → futur irrégulier → ils iront" },
+  { pronom: "j'", inf: "manger", radical: "mangé", correct: "ai", choices: ["ai", "as", "a", "avons"], phrase: "J'{V} une pomme.", expl: "Passé composé avec AVOIR → j'ai mangé" },
+  { pronom: "je", inf: "aller", radical: "allé", correct: "suis", choices: ["suis", "ai", "est", "es"], phrase: "Je {V} au marché.", expl: "ALLER → auxiliaire ÊTRE → je suis allé" },
+  { pronom: "nous", inf: "finir", radical: "fini", correct: "avons", choices: ["avons", "sommes", "avez", "ont"], phrase: "Nous {V} le gâteau.", expl: "Passé composé avec AVOIR → nous avons fini" },
+  { pronom: "elle", inf: "partir", radical: "partie", correct: "est", choices: ["est", "a", "sont", "ont"], phrase: "Elle {V} tôt.", expl: "PARTIR → auxiliaire ÊTRE → elle est partie" },
+  { pronom: "je", inf: "manger", radical: "manger", correct: "ais", choices: ["ais", "ait", "ions", "ez"], phrase: "Je {V} bien.", expl: "JE → conditionnel → -ais → je mangerais" },
+  { pronom: "nous", inf: "finir", radical: "finir", correct: "ions", choices: ["ions", "iez", "aient", "ais"], phrase: "Nous {V} plus vite.", expl: "NOUS → conditionnel → -ions → nous finirions" },
+  { pronom: "ce", inf: "être", radical: "ser", correct: "ait", choices: ["ait", "ais", "ions", "ez"], phrase: "Ce {V} super.", expl: "ÊTRE → conditionnel → ce serait" },
+  { pronom: "tu", inf: "avoir", radical: "aur", correct: "ais", choices: ["ais", "ait", "ions", "ez"], phrase: "Tu {V} raison.", expl: "AVOIR → conditionnel → tu aurais" },
+];
+
+const FONCTIONS_NOMS = { sujet: "sujet", verbe: "verbe", cod: "COD", coi: "COI", attribut: "attribut", cc_lieu: "complément de lieu", cc_temps: "complément de temps", cc_maniere: "complément de manière" };
+const FONCTIONS_PHRASES = [
+  { words: [{ w: "Le", f: "sujet" }, { w: "petit", f: "sujet" }, { w: "chat", f: "sujet" }, { w: "mange", f: "verbe" }, { w: "une", f: "cod" }, { w: "souris", f: "cod" }, { w: "dans", f: "cc_lieu" }, { w: "le", f: "cc_lieu" }, { w: "jardin", f: "cc_lieu" }, { w: ".", f: null }] },
+  { words: [{ w: "Marie", f: "sujet" }, { w: "donne", f: "verbe" }, { w: "un", f: "cod" }, { w: "cadeau", f: "cod" }, { w: "à", f: "coi" }, { w: "son", f: "coi" }, { w: "ami", f: "coi" }, { w: "demain", f: "cc_temps" }, { w: ".", f: null }] },
+  { words: [{ w: "Les", f: "sujet" }, { w: "enfants", f: "sujet" }, { w: "courent", f: "verbe" }, { w: "rapidement", f: "cc_maniere" }, { w: "dans", f: "cc_lieu" }, { w: "la", f: "cc_lieu" }, { w: "cour", f: "cc_lieu" }, { w: ".", f: null }] },
+  { words: [{ w: "Mon", f: "sujet" }, { w: "père", f: "sujet" }, { w: "est", f: "verbe" }, { w: "médecin", f: "attribut" }, { w: ".", f: null }] },
+  { words: [{ w: "Elle", f: "sujet" }, { w: "parle", f: "verbe" }, { w: "de", f: "coi" }, { w: "son", f: "coi" }, { w: "voyage", f: "coi" }, { w: "doucement", f: "cc_maniere" }, { w: ".", f: null }] },
+  { words: [{ w: "Le", f: "sujet" }, { w: "chien", f: "sujet" }, { w: "aboie", f: "verbe" }, { w: "bruyamment", f: "cc_maniere" }, { w: "la", f: "cc_temps" }, { w: "nuit", f: "cc_temps" }, { w: ".", f: null }] },
+  { words: [{ w: "Paul", f: "sujet" }, { w: "a", f: "verbe" }, { w: "lu", f: "verbe" }, { w: "ce", f: "cod" }, { w: "livre", f: "cod" }, { w: "hier", f: "cc_temps" }, { w: ".", f: null }] },
+  { words: [{ w: "Les", f: "sujet" }, { w: "élèves", f: "sujet" }, { w: "semblent", f: "verbe" }, { w: "fatigués", f: "attribut" }, { w: "aujourd'hui", f: "cc_temps" }, { w: ".", f: null }] },
+  { words: [{ w: "Le", f: "sujet" }, { w: "professeur", f: "sujet" }, { w: "explique", f: "verbe" }, { w: "la", f: "cod" }, { w: "leçon", f: "cod" }, { w: "clairement", f: "cc_maniere" }, { w: ".", f: null }] },
+  { words: [{ w: "Ils", f: "sujet" }, { w: "pensent", f: "verbe" }, { w: "à", f: "coi" }, { w: "leurs", f: "coi" }, { w: "vacances", f: "coi" }, { w: "souvent", f: "cc_temps" }, { w: ".", f: null }] },
+];
+
+function construireQCM(enonce, choicesOriginal, correctValue, expl) {
+  const choix = melanger([...new Set(choicesOriginal)]);
+  return { enonce, choix, bonneReponse: choix.indexOf(correctValue), expl };
+}
+function qHomophones() {
+  const groupe = HOMOPHONES[Math.floor(Math.random() * HOMOPHONES.length)];
+  const q = groupe.qs[Math.floor(Math.random() * groupe.qs.length)];
+  return construireQCM(q.p.replace("{_}", "____"), groupe.choices, q.c, q.e);
+}
+function qNature() {
+  const phrase = NATURE_PHRASES[Math.floor(Math.random() * NATURE_PHRASES.length)];
+  const candidats = phrase.text.filter(t => t.n);
+  const cible = candidats[Math.floor(Math.random() * candidats.length)];
+  const texte = phrase.text.map(t => (t === cible ? `<b>${t.w}</b>` : t.w)).join(" ");
+  const autres = melanger(Object.keys(NATURES_NOMS).filter(n => n !== cible.n)).slice(0, 2).map(n => NATURES_NOMS[n]);
+  return construireQCM(`${texte}<br>Quelle est la nature de « ${cible.w} » ?`, [NATURES_NOMS[cible.n], ...autres], NATURES_NOMS[cible.n], `« ${cible.w} » est un(e) ${NATURES_NOMS[cible.n]}.`);
+}
+function qAdjectifs() {
+  const q = ADJECTIFS_QS[Math.floor(Math.random() * ADJECTIFS_QS.length)];
+  return construireQCM(q.enonce, q.choices, q.correct, q.expl);
+}
+function qConjugaison() {
+  const q = CONJUGAISON_QUESTIONS[Math.floor(Math.random() * CONJUGAISON_QUESTIONS.length)];
+  const formes = q.choices.map(fin => q.radical + fin);
+  const correct = q.radical + q.correct;
+  const enonce = `${q.pronom} ____ (${q.inf}) : ${q.phrase.replace(/\{V\}|\{AUX\}/, "____")}`;
+  return construireQCM(enonce, formes, correct, q.expl);
+}
+function qFonctions() {
+  const phrase = FONCTIONS_PHRASES[Math.floor(Math.random() * FONCTIONS_PHRASES.length)];
+  const groupes = [];
+  phrase.words.forEach(w => {
+    if (!w.f) return;
+    const dernier = groupes[groupes.length - 1];
+    if (dernier && dernier.f === w.f) dernier.mots.push(w.w);
+    else groupes.push({ f: w.f, mots: [w.w] });
+  });
+  const cible = groupes[Math.floor(Math.random() * groupes.length)];
+  const texteComplet = phrase.words.map(w => w.w).join(" ");
+  const groupeTexte = cible.mots.join(" ");
+  const fonctionsPresentes = new Set(groupes.map(g => g.f));
+  const autresDispo = melanger(Object.keys(FONCTIONS_NOMS).filter(f => f !== cible.f));
+  const autres = autresDispo.slice(0, 2).map(f => FONCTIONS_NOMS[f]);
+  return construireQCM(`${texteComplet}<br>Quelle est la fonction de « ${groupeTexte} » ?`, [FONCTIONS_NOMS[cible.f], ...autres], FONCTIONS_NOMS[cible.f], phrase.expl || `« ${groupeTexte} » = ${FONCTIONS_NOMS[cible.f]}.`);
+}
+
+const JEUX_FRANCAIS = [
+  { id: "homophones", nom: "Homophones", emoji: "🔤", generer: qHomophones },
+  { id: "nature", nom: "Nature des mots", emoji: "🌈", generer: qNature },
+  { id: "adjectifs", nom: "Adjectifs", emoji: "🎨", generer: qAdjectifs },
+  { id: "conjugaison", nom: "Conjugaison", emoji: "📝", generer: qConjugaison },
+  { id: "fonctions", nom: "Fonctions", emoji: "🔍", generer: qFonctions },
+];
+
+let jeuxFrEtat = {};
+async function enregistrerJeuxFr(champs) {
+  try {
+    await setDoc(doc(db, "jeuxFrRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("JeuxFr", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+async function loadJeuxFrancais() {
+  const el = document.getElementById("jeuxfr-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "jeuxFrRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger les jeux. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "francais") return;
+  jeuxFrEtat = data || {};
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">🎮 Jeux de français</div>
+      <h2>Entraîne-toi en jouant</h2>
+    </div>
+    <div class="dic-jeux">${JEUX_FRANCAIS.map(j => {
+      const niv = jeuxFrEtat[j.id]?.niveau || 0;
+      return `<button class="dic-jeu dj-jeufr" data-jeu="${j.id}"><span class="tc-emoji">${j.emoji}</span><span class="tc-title">${j.nom}</span><span class="tc-sub">Niveau ${niv}/5</span></button>`;
+    }).join("")}</div>`;
+  el.querySelectorAll("[data-jeu]").forEach(b => b.addEventListener("click", () => jouerJeuFrancais(b.dataset.jeu)));
+}
+
+function jouerJeuFrancais(jeuId) {
+  const jeu = JEUX_FRANCAIS.find(j => j.id === jeuId);
+  const titre = `${jeu.emoji} ${jeu.nom}`;
+  const total = 8;
+  let i = 0, bonnes = 0;
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="jf-compteur"></h3></div><div class="game-body"></div>`);
+  const afficher = () => {
+    if (i >= total) return finJeuFrancais(corps, titre, bonnes, total, jeuId);
+    const q = jeu.generer();
+    corps.querySelector("#jf-compteur").textContent = `${i + 1} / ${total}`;
+    const zone = corps.querySelector(".game-body");
+    zone.innerHTML = `<div class="tj-question" style="font-size:18px;line-height:1.5">${q.enonce}</div>
+      <div class="bonmot-choix">${q.choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
+      <div id="jf-resultat"></div>`;
+    zone.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      const ok = Number(b.dataset.k) === q.bonneReponse;
+      zone.querySelectorAll("[data-k]").forEach(x => {
+        x.disabled = true;
+        if (Number(x.dataset.k) === q.bonneReponse) x.classList.add("correct");
+        else if (x === b) x.classList.add("incorrect");
+      });
+      noterJeuFrancais(jeuId, ok);
+      if (ok) bonnes += 1;
+      zone.querySelector("#jf-resultat").innerHTML = `<div class="exo-explication">${q.expl || ""}</div><button class="btn-primary btn-block" id="jf-suivant">Suivant →</button>`;
+      zone.querySelector("#jf-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    }));
+  };
+  afficher();
+}
+
+function noterJeuFrancais(jeuId, correct) {
+  if (estParent()) return;
+  const x = { niveau: 0, vus: 0, rates: 0, ...(jeuxFrEtat[jeuId] || {}) };
+  x.niveau = correct ? Math.min(x.niveau + 1, 5) : Math.max(x.niveau - 1, 0);
+  x.vus += 1;
+  if (!correct) x.rates += 1;
+  jeuxFrEtat[jeuId] = x;
+  journaliser({ correct, source: `jeufr-${jeuId}`, question: jeuId });
+  enregistrerJeuxFr({ [jeuId]: x });
+}
+
+function finJeuFrancais(corps, titre, bonnes, total, jeuId) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="jf-encore">🔁 Encore</button>
+    <button class="btn-ghost-small" id="jf-fermer">Fermer</button>`;
+  corps.querySelector("#jf-encore").addEventListener("click", () => jouerJeuFrancais(jeuId));
+  corps.querySelector("#jf-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
 }
 
 // ------------------------------------------------------------
