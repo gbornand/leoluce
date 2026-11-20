@@ -830,6 +830,8 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tb-trou.incorrect { border-color: #d14b4b; background: #fbe9e9; }
 .tb-corr { color: #1f7a4f; font-size: 18px; }
 .tj-question { font-size: clamp(40px, 12vw, 60px); font-weight: 900; text-align: center; margin: 8px 0 14px; color: #2d2a4a; }
+.jf-question { font-size: 18px; line-height: 1.6; text-align: center; margin: 8px 0 14px; color: #2d2a4a; font-weight: 500; }
+.jf-question b { color: #5b6ee8; background: #edeafd; padding: 1px 6px; border-radius: 6px; }
 .tj-ecrire .exo-input { font-size: 30px; }
 .tj-astuce { text-align: center; color: #6a6690; font-size: 14px; margin: 6px 0 4px; }
 .tj-choix .bonmot-btn { font-size: 28px; }

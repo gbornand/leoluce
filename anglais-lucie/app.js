@@ -3826,15 +3826,16 @@ function qFonctions() {
   const phrase = FONCTIONS_PHRASES[Math.floor(Math.random() * FONCTIONS_PHRASES.length)];
   const groupes = [];
   phrase.words.forEach(w => {
-    if (!w.f) return;
+    if (!w.f) { groupes.push(null); return; }
     const dernier = groupes[groupes.length - 1];
-    if (dernier && dernier.f === w.f) dernier.mots.push(w.w);
-    else groupes.push({ f: w.f, mots: [w.w] });
+    if (dernier && dernier.groupe.f === w.f) { dernier.groupe.mots.push(w.w); groupes.push(dernier); return; }
+    const g = { f: w.f, mots: [w.w] };
+    groupes.push({ groupe: g });
   });
-  const cible = groupes[Math.floor(Math.random() * groupes.length)];
-  const texteComplet = phrase.words.map(w => w.w).join(" ");
+  const groupesUniques = [...new Set(groupes.filter(Boolean).map(g => g.groupe))];
+  const cible = groupesUniques[Math.floor(Math.random() * groupesUniques.length)];
+  const texteComplet = phrase.words.map((w, i) => (groupes[i]?.groupe === cible ? `<b>${w.w}</b>` : w.w)).join(" ");
   const groupeTexte = cible.mots.join(" ");
-  const fonctionsPresentes = new Set(groupes.map(g => g.f));
   const autresDispo = melanger(Object.keys(FONCTIONS_NOMS).filter(f => f !== cible.f));
   const autres = autresDispo.slice(0, 2).map(f => FONCTIONS_NOMS[f]);
   return construireQCM(`${texteComplet}<br>Quelle est la fonction de « ${groupeTexte} » ?`, [FONCTIONS_NOMS[cible.f], ...autres], FONCTIONS_NOMS[cible.f], phrase.expl || `« ${groupeTexte} » = ${FONCTIONS_NOMS[cible.f]}.`);
@@ -3897,7 +3898,7 @@ function jouerJeuFrancais(jeuId) {
     const q = jeu.generer();
     corps.querySelector("#jf-compteur").textContent = `${i + 1} / ${total}`;
     const zone = corps.querySelector(".game-body");
-    zone.innerHTML = `<div class="tj-question" style="font-size:18px;line-height:1.5">${q.enonce}</div>
+    zone.innerHTML = `<div class="jf-question">${q.enonce}</div>
       <div class="bonmot-choix">${q.choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
       <div id="jf-resultat"></div>`;
     zone.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
