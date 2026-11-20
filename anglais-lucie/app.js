@@ -190,7 +190,12 @@ function renderContexte() {
     : modeEleve
       ? `<div class="ctx-apercu ctx-eleve">✏️ C'est <b>${prenom}</b> qui travaille : ses réponses comptent. <button class="ctx-bascule" data-bascule="parent">↩️ Mode parent</button></div>`
       : `<div class="ctx-apercu">👁️ Aperçu de l'écran de ${prenom} (rien n'est enregistré). <button class="ctx-bascule ctx-bascule-go" data-bascule="eleve">▶️ Faire travailler ${prenom}</button></div>`;
-  bar.innerHTML = `${enfants}${apercu}<div class="ctx-matieres">${eleveInfo().matieres.filter(m => MATIERES_UI[m]).map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`;
+  // Barre de matières à défilement : gardée pour le parent (navigation rapide pendant la supervision),
+  // retirée pour l'élève depuis que l'accueil (volets + cartes) joue ce rôle.
+  const matieres = profil.role === "parent"
+    ? `<div class="ctx-matieres">${eleveInfo().matieres.filter(m => MATIERES_UI[m]).map(m => `<button class="ctx-matiere${m === matiereCourante ? " active" : ""}" data-matiere="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div>`
+    : "";
+  bar.innerHTML = `${enfants}${apercu}${matieres}`;
   bar.querySelectorAll("[data-eleve]").forEach(b => b.addEventListener("click", () => choisirContexte(b.dataset.eleve, null)));
   bar.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => choisirContexte(eleveCourant, b.dataset.matiere)));
   bar.querySelectorAll("[data-bascule]").forEach(b => b.addEventListener("click", () => basculerModeEleve(b.dataset.bascule === "eleve")));
@@ -313,22 +318,29 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ACCUEIL — volets + matières, objectif du jour, séries
 // ------------------------------------------------------------
 const VOLETS = [
-  { id: "calcul", nom: "Calcul", emoji: "🧮", couleur: "#5b6ee8", matieres: ["tables"], aVenir: ["Calcul mental", "Fractions"] },
-  { id: "musique", nom: "Musique", emoji: "🎵", couleur: "#a152d6", matieres: [], aVenir: ["Solfège"] },
-  { id: "langues", nom: "Langues étrangères", emoji: "🌍", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: ["Japonais"] },
+  { id: "calcul", nom: "Calcul", emoji: "🧮", couleur: "#5b6ee8", matieres: ["tables"], aVenir: [
+      { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
+      { nom: "Fractions", emoji: "🍕", theme: "fraction" },
+    ] },
+  { id: "musique", nom: "Musique", emoji: "🎵", couleur: "#1a1a2e", matieres: [], aVenir: [
+      { nom: "Solfège", emoji: "🎼", theme: "musique" },
+    ] },
+  { id: "langues", nom: "Langues étrangères", emoji: "🌍", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: [
+      { nom: "Japonais", emoji: "🎌", theme: "japon" },
+    ] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
 const CIBLE_MATIERE = { dictee: "dictee", tables: "tables" };
 const COULEURS_MATIERE = {
-  anglais: ["#4D96FF", "#1fa2a0", "rgba(77,150,255,.35)"],
-  espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.35)"],
-  francais: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.35)"],
-  dictee: ["#a152d6", "#5b6ee8", "rgba(161,82,214,.35)"],
-  tables: ["#5b6ee8", "#1fa2a0", "rgba(91,110,232,.35)"],
-  maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.35)"],
-  histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.35)"],
-  svt: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.35)"],
-  physique: ["#C77DFF", "#4D96FF", "rgba(199,125,255,.35)"],
+  anglais: ["#4D96FF", "#2e9d6a", "rgba(77,150,255,.4)"],
+  espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.4)"],
+  francais: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.4)"],
+  dictee: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.4)"],
+  tables: ["#5b6ee8", "#a152d6", "rgba(91,110,232,.4)"],
+  maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.4)"],
+  histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.4)"],
+  svt: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.4)"],
+  physique: ["#C77DFF", "#5b6ee8", "rgba(199,125,255,.4)"],
 };
 
 function renderAccueil() {
@@ -344,10 +356,10 @@ function renderAccueil() {
     const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]);
     if (!presentes.length && !v.aVenir.length) return "";
     return `<div class="acc-volet" style="--volet-couleur:${v.couleur}">
-      <div class="acc-volet-titre">${v.emoji} ${v.nom}</div>
+      <div class="acc-volet-label"><span>${v.emoji} ${v.nom}</span></div>
       <div class="acc-volet-cartes">
         ${presentes.map(carteMatiere).join("")}
-        ${v.aVenir.map(nom => `<div class="acc-carte acc-bientot"><span class="acc-emoji">🚧</span><span class="acc-nom">${nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
+        ${v.aVenir.map(a => `<div class="acc-carte acc-bientot acc-theme-${a.theme}">${a.theme === "musique" ? `<span class="acc-note-deco n1">🎵</span><span class="acc-note-deco n2">🎶</span><span class="acc-note-deco n3">🎵</span>` : ""}<span class="acc-emoji">${a.emoji}</span><span class="acc-nom">${a.nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
       </div>
     </div>`;
   }).join("");
@@ -360,7 +372,7 @@ function renderAccueil() {
       <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
     </div>
     ${voletsHtml}
-    ${apartHtml ? `<div class="acc-volet" style="--volet-couleur:#6a52d6"><div class="acc-volet-titre">📚 Mes révisions</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
+    ${apartHtml ? `<div class="acc-volet" style="--volet-couleur:#6a52d6"><div class="acc-volet-label"><span>📚 Mes révisions</span></div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
   el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
     const m = b.dataset.matiere;
     choisirContexte(eleveCourant, m);
