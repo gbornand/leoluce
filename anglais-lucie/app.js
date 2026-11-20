@@ -319,13 +319,27 @@ const VOLETS = [
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
 const CIBLE_MATIERE = { dictee: "dictee", tables: "tables" };
+const COULEURS_MATIERE = {
+  anglais: ["#4D96FF", "#1fa2a0", "rgba(77,150,255,.35)"],
+  espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.35)"],
+  francais: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.35)"],
+  dictee: ["#a152d6", "#5b6ee8", "rgba(161,82,214,.35)"],
+  tables: ["#5b6ee8", "#1fa2a0", "rgba(91,110,232,.35)"],
+  maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.35)"],
+  histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.35)"],
+  svt: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.35)"],
+  physique: ["#C77DFF", "#4D96FF", "rgba(199,125,255,.35)"],
+};
 
 function renderAccueil() {
   if (estParent()) return;
   const el = document.getElementById("accueil-contenu");
   const info = eleveInfo();
   const mesMatieres = new Set(info.matieres);
-  const carteMatiere = m => `<button class="acc-carte" data-matiere="${m}"><span class="acc-emoji">${MATIERES_UI[m].emoji}</span><span class="acc-nom">${MATIERES_UI[m].nom}</span></button>`;
+  const carteMatiere = m => {
+    const [c1, c2, ombre] = COULEURS_MATIERE[m] || ["#5b6ee8", "#1fa2a0", "rgba(91,110,232,.35)"];
+    return `<button class="acc-carte" style="--carte-c1:${c1};--carte-c2:${c2};--carte-ombre:${ombre}" data-matiere="${m}"><span class="acc-emoji">${MATIERES_UI[m].emoji}</span><span class="acc-nom">${MATIERES_UI[m].nom}</span></button>`;
+  };
   const voletsHtml = VOLETS.map(v => {
     const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]);
     if (!presentes.length && !v.aVenir.length) return "";
@@ -342,11 +356,11 @@ function renderAccueil() {
     <div class="acc-salut">Salut ${esc(info.prenom)} 👋</div>
     <div class="acc-objectif">🎯 Objectif du jour : prends 10 minutes, choisis une matière ci-dessous.</div>
     <div class="acc-series">
-      <div class="acc-serie-item">🔥 <b>${serieCourante}</b> jour${serieCourante > 1 ? "s" : ""} d'affilée</div>
+      <div class="acc-serie-item"><span class="acc-flame">🔥</span> <b>${serieCourante}</b> jour${serieCourante > 1 ? "s" : ""} d'affilée</div>
       <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
     </div>
     ${voletsHtml}
-    ${apartHtml ? `<div class="acc-volet"><div class="acc-volet-titre">📚 Mes révisions</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
+    ${apartHtml ? `<div class="acc-volet" style="--volet-couleur:#6a52d6"><div class="acc-volet-titre">📚 Mes révisions</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
   el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
     const m = b.dataset.matiere;
     choisirContexte(eleveCourant, m);
