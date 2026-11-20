@@ -1,7 +1,7 @@
 {
-  "name": "English Time",
-  "short_name": "English",
-  "description": "Anglais quotidien pour Lucie",
+  "name": "Mes révisions",
+  "short_name": "Révisions",
+  "description": "Révisions quotidiennes multi-matières",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
