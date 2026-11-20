@@ -691,6 +691,27 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tj-defi, .hdr-tdefi { background: linear-gradient(135deg, #f06a3c, #e5484d); }
 .tj-chute, .hdr-tchute { background: linear-gradient(135deg, #a152d6, #5b6ee8); }
 
+/* MUSIQUE */
+.dj-musique-config { background: linear-gradient(135deg, #6a6690, #4a4670); }
+.dj-musique-jouer { background: linear-gradient(135deg, #1a1a2e, #a152d6); }
+.mus-notes-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
+.mus-note-case { border: 2px solid #e6e1fb; background: #fff; border-radius: 12px; padding: 10px 4px; font-weight: 800; font-size: 14px; color: #6a6690; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mus-note-case.on { border-color: #a152d6; background: rgba(161,82,214,.12); color: #a152d6; }
+.mus-note-petit { font-size: 16px; opacity: .6; }
+#mus-portees { display: flex; flex-direction: column; gap: 18px; margin-bottom: 14px; }
+.mus-portee { position: relative; height: 64px; margin: 20px 10px 0; }
+.mus-cle { position: absolute; left: -26px; bottom: -14px; font-size: 44px; color: #2d2a4a; }
+.mus-ligne { position: absolute; left: 0; right: 0; height: 2px; background: #2d2a4a; }
+.mus-note {
+  position: absolute; right: -30px; width: 20px; height: 16px; border-radius: 50%;
+  background: #2d2a4a; transform: translateY(50%);
+}
+.mus-note.ok { background: #4caf50; }
+.mus-note.ko { background: #d14b4b; }
+.mus-reponses { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+.mus-rep-btn { border: none; border-radius: 12px; padding: 12px 18px; font-weight: 800; font-size: 15px; background: #f0ecff; color: #5b6ee8; cursor: pointer; }
+.mus-rep-btn:active { transform: scale(.94); }
+
 /* BADGE IMPORT */
 .fab-import {
   position: fixed; right: 18px; bottom: 24px; width: 56px; height: 56px; border-radius: 50%;

@@ -146,6 +146,7 @@ const MATIERES_UI = {
   espagnol: { nom: "Espagnol", emoji: "💃", savoir: "💃 Vocabulario", regle: "📐 Gramática", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "📚", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
+  musique: { nom: "Musique", emoji: "🎼" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "x²", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
@@ -219,7 +220,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -229,6 +230,7 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="musique"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
   document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
@@ -243,14 +245,16 @@ function appliquerMatiere() {
   document.getElementById("fab-import").hidden = parent;
   const dictee = matiereCourante === "dictee";
   const tables = matiereCourante === "tables";
-  const special = dictee || tables;
+  const musique = matiereCourante === "musique";
+  const special = dictee || tables || musique;
   document.querySelector('.tab-btn[data-tab="today"]').hidden = special;
   document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = special;
   document.getElementById("btn-autre-seance").style.display = parent ? "none" : "";
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
-  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables;
+  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
+  document.querySelector('.tab-btn[data-tab="musique"]').hidden = !musique;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
@@ -258,7 +262,7 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
   if (!actif || actif.hidden || (parent && actif.dataset.tab === "accueil") || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
-    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : parent ? "dashboard" : "accueil"}"]`).click();
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : parent ? "dashboard" : "accueil"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
@@ -307,6 +311,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "notions") loadNotions();
     if (btn.dataset.tab === "dictee") loadDictee();
     if (btn.dataset.tab === "tables") loadTables();
+    if (btn.dataset.tab === "musique") loadMusique();
     if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
@@ -374,19 +379,19 @@ const VOLETS = [
       { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
       { nom: "Fractions", emoji: "🍕", theme: "fraction" },
     ] },
-  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: [
+  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "musique"], aVenir: [
       { nom: "Japonais", emoji: "🎌", theme: "japon" },
-      { nom: "Solfège", emoji: "🎼", theme: "musique" },
     ] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
-const CIBLE_MATIERE = { dictee: "dictee", tables: "tables" };
+const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique" };
 const COULEURS_MATIERE = {
   anglais: ["#4D96FF", "#2e9d6a", "rgba(77,150,255,.4)"],
   espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.4)"],
   francais: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.4)"],
   dictee: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.4)"],
   tables: ["#5b6ee8", "#a152d6", "rgba(91,110,232,.4)"],
+  musique: ["#1a1a2e", "#a152d6", "rgba(26,26,46,.5)"],
   maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.4)"],
   histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.4)"],
   svt: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.4)"],
@@ -2946,6 +2951,202 @@ function jeuTablesChute() {
     };
     question();
   });
+}
+
+// ------------------------------------------------------------
+// MUSIQUE — lecture de notes sur la portée (clé de sol / fa), son synthétisé
+// ------------------------------------------------------------
+const NOTE_MIDI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function freqNote(lettre, octave) {
+  const midi = (octave + 1) * 12 + NOTE_MIDI[lettre];
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+// pos : position sur la portée, 0 = 1ère ligne du bas, +1 par ligne/interligne (ledger lines en dehors de 0-8).
+const PORTEE_SOL = [
+  { pos: -2, solfege: "Do", lettre: "C", octave: 4 }, { pos: -1, solfege: "Ré", lettre: "D", octave: 4 },
+  { pos: 0, solfege: "Mi", lettre: "E", octave: 4 }, { pos: 1, solfege: "Fa", lettre: "F", octave: 4 },
+  { pos: 2, solfege: "Sol", lettre: "G", octave: 4 }, { pos: 3, solfege: "La", lettre: "A", octave: 4 },
+  { pos: 4, solfege: "Si", lettre: "B", octave: 4 }, { pos: 5, solfege: "Do", lettre: "C", octave: 5 },
+  { pos: 6, solfege: "Ré", lettre: "D", octave: 5 }, { pos: 7, solfege: "Mi", lettre: "E", octave: 5 },
+  { pos: 8, solfege: "Fa", lettre: "F", octave: 5 }, { pos: 9, solfege: "Sol", lettre: "G", octave: 5 },
+];
+const PORTEE_FA = [
+  { pos: -2, solfege: "Mi", lettre: "E", octave: 2 }, { pos: -1, solfege: "Fa", lettre: "F", octave: 2 },
+  { pos: 0, solfege: "Sol", lettre: "G", octave: 2 }, { pos: 1, solfege: "La", lettre: "A", octave: 2 },
+  { pos: 2, solfege: "Si", lettre: "B", octave: 2 }, { pos: 3, solfege: "Do", lettre: "C", octave: 3 },
+  { pos: 4, solfege: "Ré", lettre: "D", octave: 3 }, { pos: 5, solfege: "Mi", lettre: "E", octave: 3 },
+  { pos: 6, solfege: "Fa", lettre: "F", octave: 3 }, { pos: 7, solfege: "Sol", lettre: "G", octave: 3 },
+  { pos: 8, solfege: "La", lettre: "A", octave: 3 }, { pos: 9, solfege: "Si", lettre: "B", octave: 3 },
+];
+
+let musiqueEtat = { clef: "sol", notes: null, vitesse: 1, record: 0 };
+let contexteAudio = null;
+function jouerNote(lettre, octave, duree = 0.6) {
+  try {
+    contexteAudio = contexteAudio || new (window.AudioContext || window.webkitAudioContext)();
+    const osc = contexteAudio.createOscillator();
+    const gain = contexteAudio.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freqNote(lettre, octave);
+    gain.gain.setValueAtTime(0.001, contexteAudio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, contexteAudio.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, contexteAudio.currentTime + duree);
+    osc.connect(gain); gain.connect(contexteAudio.destination);
+    osc.start(); osc.stop(contexteAudio.currentTime + duree);
+  } catch (err) { console.error("Audio", err); }
+}
+
+async function enregistrerMusique(champs) {
+  try {
+    await setDoc(doc(db, "musiqueRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("Musique", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+function toutesNotesClef(clef) {
+  const liste = [];
+  if (clef === "sol" || clef === "les-deux") PORTEE_SOL.forEach(n => liste.push({ ...n, clef: "sol", id: `sol-${n.pos}` }));
+  if (clef === "fa" || clef === "les-deux") PORTEE_FA.forEach(n => liste.push({ ...n, clef: "fa", id: `fa-${n.pos}` }));
+  return liste;
+}
+
+async function loadMusique() {
+  const el = document.getElementById("musique-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "musiqueRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger la musique. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "musique") return;
+  const defautNotes = PORTEE_SOL.filter(n => n.pos >= 0 && n.pos <= 4).map(n => `sol-${n.pos}`);
+  musiqueEtat = { clef: data?.clef || "sol", notes: data?.notes?.length ? data.notes : defautNotes, vitesse: data?.vitesse || 1, record: data?.record || 0 };
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">🎼 Musique</div>
+      <h2>Lecture de notes</h2>
+      <div class="dic-jauge-txt">${musiqueEtat.record ? `🏆 Record : ${musiqueEtat.record}` : "Pas encore de record"}</div>
+    </div>
+    <div class="dic-jeux">
+      <button class="dic-jeu dj-musique-config"><span class="tc-emoji">⚙️</span><span class="tc-title">Choisir les notes</span><span class="tc-sub">Clé, notes, vitesse</span></button>
+      <button class="dic-jeu dj-musique-jouer"><span class="tc-emoji">🎵</span><span class="tc-title">Jouer</span><span class="tc-sub">${musiqueEtat.notes.length} note${musiqueEtat.notes.length > 1 ? "s" : ""} choisie${musiqueEtat.notes.length > 1 ? "s" : ""}</span></button>
+    </div>`;
+  el.querySelector(".dj-musique-config").addEventListener("click", ouvrirConfigMusique);
+  el.querySelector(".dj-musique-jouer").addEventListener("click", jeuMusique);
+}
+
+function ouvrirConfigMusique() {
+  let clefChoisie = musiqueEtat.clef;
+  let vitesseChoisie = musiqueEtat.vitesse;
+  const notesCochees = new Set(musiqueEtat.notes);
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎼 Configuration</div><h3>Choisis ta clé</h3></div>
+    <div class="game-body">
+      <div class="tb-choix-titre">Clé</div>
+      <div class="tb-choix tb-choix-grand" id="mus-clefs">
+        <button data-clef="sol" class="${clefChoisie === "sol" ? "on" : ""}">𝄞 Sol</button>
+        <button data-clef="fa" class="${clefChoisie === "fa" ? "on" : ""}">𝄢 Fa</button>
+        <button data-clef="les-deux" class="${clefChoisie === "les-deux" ? "on" : ""}">Les deux</button>
+      </div>
+      <div class="tb-choix-titre">Notes à travailler (au moins 2)</div>
+      <div id="mus-notes" class="mus-notes-grille"></div>
+      <div class="tb-choix-titre">Vitesse de départ</div>
+      <div class="tb-choix tb-choix-grand" id="mus-vitesses">
+        ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
+      </div>
+      <button class="btn-primary btn-block" id="mus-valider">Enregistrer</button>
+    </div>`);
+  const majNotes = () => {
+    const zone = corps.querySelector("#mus-notes");
+    zone.innerHTML = toutesNotesClef(clefChoisie).map(n => `<button data-id="${n.id}" class="mus-note-case ${notesCochees.has(n.id) ? "on" : ""}">${n.solfege}<span class="mus-note-petit">${n.clef === "sol" ? "𝄞" : "𝄢"}</span></button>`).join("");
+    zone.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
+      if (notesCochees.has(b.dataset.id)) notesCochees.delete(b.dataset.id); else notesCochees.add(b.dataset.id);
+      b.classList.toggle("on", notesCochees.has(b.dataset.id));
+    }));
+  };
+  majNotes();
+  corps.querySelectorAll("[data-clef]").forEach(b => b.addEventListener("click", () => {
+    clefChoisie = b.dataset.clef;
+    corps.querySelectorAll("[data-clef]").forEach(x => x.classList.toggle("on", x === b));
+    notesCochees.clear();
+    toutesNotesClef(clefChoisie).slice(0, 5).forEach(n => notesCochees.add(n.id));
+    majNotes();
+  }));
+  corps.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
+    vitesseChoisie = Number(b.dataset.v);
+    corps.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
+  }));
+  corps.querySelector("#mus-valider").addEventListener("click", async () => {
+    if (notesCochees.size < 2) return toast("Choisis au moins 2 notes 🙂");
+    if (await enregistrerMusique({ clef: clefChoisie, notes: [...notesCochees], vitesse: vitesseChoisie })) {
+      document.getElementById("modal-libre-close").click();
+      loadMusique();
+    }
+  });
+}
+
+// JOUER : une note descend la portée de droite à gauche en ralentissant, puis s'arrête et attend
+// la réponse (pas de minuteur ni de "raté" — c'est un entraînement libre, pas un défi chronométré).
+function jeuMusique() {
+  const pool = toutesNotesClef(musiqueEtat.clef).filter(n => musiqueEtat.notes.includes(n.id));
+  if (pool.length < 2) return ouvrirConfigMusique();
+  const duree = { 1: 7000, 2: 4500, 3: 2800 }[musiqueEtat.vitesse] || 7000;
+  const clefs = musiqueEtat.clef === "les-deux" ? ["sol", "fa"] : [musiqueEtat.clef];
+  const noms = [...new Set(pool.map(n => n.solfege))];
+  let score = 0, arrete = false, noteActuelle = null, reglee = false;
+
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">🎼 Musique</div><h3 id="mus-score">Score : 0</h3></div>
+    <div class="game-body">
+      <div id="mus-portees">${clefs.map(c => `
+        <div class="mus-portee">
+          <div class="mus-cle">${c === "sol" ? "𝄞" : "𝄢"}</div>
+          ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${i * 12}px"></div>`).join("")}
+          <div class="mus-note" id="mus-note-${c}" hidden></div>
+        </div>`).join("")}</div>
+      <div class="mus-reponses">${noms.map(n => `<button class="mus-rep-btn" data-rep="${n}">${n}</button>`).join("")}</div>
+      <button class="btn-ghost-small" id="mus-terminer" style="margin-top:10px">🏁 Terminer</button>
+    </div>`);
+
+  const nouvelleNote = () => {
+    if (arrete) return;
+    reglee = false;
+    noteActuelle = pool[Math.floor(Math.random() * pool.length)];
+    corps.querySelectorAll(".mus-note").forEach(n => { n.hidden = true; n.style.transition = "none"; n.style.right = "-30px"; n.classList.remove("ok", "ko"); });
+    const noteEl = corps.querySelector(`#mus-note-${noteActuelle.clef}`);
+    noteEl.hidden = false;
+    noteEl.style.bottom = `${noteActuelle.pos * 6 - 3}px`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      noteEl.style.transition = `right ${duree}ms cubic-bezier(.15,.7,.3,1)`;
+      noteEl.style.right = "78%";
+    }));
+  };
+  const repondre = (nom) => {
+    if (reglee || arrete || !noteActuelle) return;
+    reglee = true;
+    const ok = nom === noteActuelle.solfege;
+    corps.querySelector(`#mus-note-${noteActuelle.clef}`).classList.add(ok ? "ok" : "ko");
+    jouerNote(noteActuelle.lettre, noteActuelle.octave);
+    if (ok) { score += 1; corps.querySelector("#mus-score").textContent = `Score : ${score}`; }
+    journaliser({ correct: ok, source: "musique", question: `${noteActuelle.clef}-${noteActuelle.pos}`, reponse: nom });
+    setTimeout(nouvelleNote, 900);
+  };
+  corps.querySelectorAll("[data-rep]").forEach(b => b.addEventListener("click", () => repondre(b.dataset.rep)));
+  corps.querySelector("#mus-terminer").addEventListener("click", () => {
+    arrete = true;
+    const nouveau = score > musiqueEtat.record;
+    if (nouveau && !estParent()) { musiqueEtat.record = score; enregistrerMusique({ record: score }); }
+    corps.querySelector(".game-body").innerHTML = `<div class="today-score">${nouveau && score ? "🏆 Nouveau record" : "Score"} : ${score}</div>
+      <button class="btn-primary btn-block" id="mus-encore">🔁 Rejouer</button>`;
+    corps.querySelector("#mus-encore").addEventListener("click", jeuMusique);
+  });
+  nouvelleNote();
 }
 
 // ------------------------------------------------------------
