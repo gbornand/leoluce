@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Révisions">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 
@@ -58,6 +59,7 @@
     <button class="tab-btn" data-tab="dictee" hidden>🎧 Ma dictée</button>
     <button class="tab-btn" data-tab="tables" hidden>✖️ Tables</button>
     <button class="tab-btn" data-tab="musique" hidden>🎼 Musique</button>
+    <button class="tab-btn" data-tab="japonais" hidden>🎌 Japonais</button>
     <button class="tab-btn" data-tab="add">+ Un cours</button>
     <button class="tab-btn" data-tab="notions">Mes notions</button>
     <button class="tab-btn" data-tab="entrainer">🎯 S'entraîner</button>
@@ -141,6 +143,11 @@
     <!-- ONGLET MUSIQUE -->
     <section id="tab-musique" class="tab-panel" hidden>
       <div id="musique-contenu"><div class="panel-info">Chargement…</div></div>
+    </section>
+
+    <!-- ONGLET JAPONAIS -->
+    <section id="tab-japonais" class="tab-panel" hidden>
+      <div id="japonais-contenu"><div class="panel-info">Chargement…</div></div>
     </section>
 
     <!-- ONGLET TABLES (maths) -->

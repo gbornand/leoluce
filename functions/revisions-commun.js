@@ -4,10 +4,10 @@ const PARENT_UID = "GoxalGBKNWcyC6OkdENgz8j1u883";
 const LUCIE_UID = "BmPJ62Hhb0V572vQgzwzybbnU8s2";
 const RECAP_DESTINATAIRE = "gbornand@gmail.com";
 const ELEVES = {
-  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "espagnol", "maths", "tables", "musique", "physique", "svt", "histoire", "francais"] },
-  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "dictee", "tables", "musique", "maths", "anglais", "histoire"] },
+  [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "espagnol", "maths", "tables", "musique", "japonais", "physique", "svt", "histoire", "francais"] },
+  "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "dictee", "tables", "musique", "japonais", "maths", "anglais", "histoire"] },
 };
-const NOMS_MATIERES = { anglais: "anglais", espagnol: "espagnol", francais: "français", dictee: "dictée", tables: "tables de multiplication", musique: "musique", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
+const NOMS_MATIERES = { anglais: "anglais", espagnol: "espagnol", francais: "français", dictee: "dictée", tables: "tables de multiplication", musique: "musique", japonais: "japonais", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
 const SCIENCES = ["maths", "physique"];
 const MATIERES_DOCUMENTS = ["svt", "histoire"];
 

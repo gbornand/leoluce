@@ -147,6 +147,7 @@ const MATIERES_UI = {
   francais: { nom: "Français", emoji: "📚", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
   musique: { nom: "Musique", emoji: "🎼" },
+  japonais: { nom: "Japonais", emoji: "🎌" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "x²", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
@@ -220,7 +221,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -231,6 +232,7 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="japonais"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
   document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
@@ -246,15 +248,17 @@ function appliquerMatiere() {
   const dictee = matiereCourante === "dictee";
   const tables = matiereCourante === "tables";
   const musique = matiereCourante === "musique";
-  const special = dictee || tables || musique;
+  const japonais = matiereCourante === "japonais";
+  const special = dictee || tables || musique || japonais;
   document.querySelector('.tab-btn[data-tab="today"]').hidden = special;
   document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = special;
   document.getElementById("btn-autre-seance").style.display = parent ? "none" : "";
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
-  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique;
+  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique || japonais;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = !musique;
+  document.querySelector('.tab-btn[data-tab="japonais"]').hidden = !japonais;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
@@ -262,7 +266,7 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
   if (!actif || actif.hidden || (parent && actif.dataset.tab === "accueil") || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
-    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : parent ? "dashboard" : "accueil"}"]`).click();
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : japonais ? "japonais" : parent ? "dashboard" : "accueil"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
@@ -312,6 +316,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "dictee") loadDictee();
     if (btn.dataset.tab === "tables") loadTables();
     if (btn.dataset.tab === "musique") loadMusique();
+    if (btn.dataset.tab === "japonais") loadJaponais();
     if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
@@ -379,12 +384,10 @@ const VOLETS = [
       { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
       { nom: "Fractions", emoji: "🍕", theme: "fraction" },
     ] },
-  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "musique"], aVenir: [
-      { nom: "Japonais", emoji: "🎌", theme: "japon" },
-    ] },
+  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "musique", "japonais"], aVenir: [] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
-const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique" };
+const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique", japonais: "japonais" };
 const COULEURS_MATIERE = {
   anglais: ["#4D96FF", "#2e9d6a", "rgba(77,150,255,.4)"],
   espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.4)"],
@@ -392,6 +395,7 @@ const COULEURS_MATIERE = {
   dictee: ["#6BCB77", "#1fa2a0", "rgba(107,203,119,.4)"],
   tables: ["#5b6ee8", "#a152d6", "rgba(91,110,232,.4)"],
   musique: ["#1a1a2e", "#a152d6", "rgba(26,26,46,.5)"],
+  japonais: ["#E63946", "#f06a3c", "rgba(230,57,70,.4)"],
   maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.4)"],
   histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.4)"],
   svt: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.4)"],
@@ -3147,6 +3151,145 @@ function jeuMusique() {
     corps.querySelector("#mus-encore").addEventListener("click", jeuMusique);
   });
   nouvelleNote();
+}
+
+// ------------------------------------------------------------
+// JAPONAIS — hiragana : observer, voir le tracé animé, puis s'entraîner avec correction
+// trait par trait (Hanzi Writer, données @k1low/hanzi-writer-data-jp sur jsDelivr).
+// ------------------------------------------------------------
+const HIRA_COLS = [
+  { id: "a", label: "あ列", chars: [["あ", "a", "あい", "amour"], ["い", "i", "いぬ", "chien"], ["う", "u", "うえ", "au-dessus"], ["え", "e", "え", "dessin"], ["お", "o", "おかあさん", "maman"]] },
+  { id: "ka", label: "か列", chars: [["か", "ka", "かさ", "parapluie"], ["き", "ki", "き", "arbre"], ["く", "ku", "くつ", "chaussures"], ["け", "ke", "けいたい", "téléphone"], ["こ", "ko", "こい", "carpe"]] },
+  { id: "sa", label: "さ列", chars: [["さ", "sa", "さくら", "cerisier"], ["し", "shi", "しろくま", "ours blanc"], ["す", "su", "すし", "sushi"], ["せ", "se", "せんせい", "professeur"], ["そ", "so", "そら", "ciel"]] },
+  { id: "ta", label: "た列", chars: [["た", "ta", "たこ", "pieuvre"], ["ち", "chi", "ちず", "carte"], ["つ", "tsu", "つき", "lune"], ["て", "te", "て", "main"], ["と", "to", "とけい", "montre"]] },
+  { id: "na", label: "な列", chars: [["な", "na", "なか", "intérieur"], ["に", "ni", "にく", "viande"], ["ぬ", "nu", "ぬの", "tissu"], ["ね", "ne", "ねこ", "chat"], ["の", "no", "のはら", "prairie"]] },
+  { id: "ha", label: "は列", chars: [["は", "ha", "はな", "fleur"], ["ひ", "hi", "ひと", "personne"], ["ふ", "fu", "ふね", "bateau"], ["へ", "he", "へそ", "nombril"], ["ほ", "ho", "ほし", "étoile"]] },
+  { id: "ma", label: "ま列", chars: [["ま", "ma", "まち", "ville"], ["み", "mi", "みみ", "oreille"], ["む", "mu", "むし", "insecte"], ["め", "me", "め", "œil"], ["も", "mo", "もも", "pêche"]] },
+  { id: "ya", label: "や列", chars: [["や", "ya", "やま", "montagne"], ["ゆ", "yu", "ゆき", "neige"], ["よ", "yo", "よてい", "programme"]] },
+  { id: "ra", label: "ら列", chars: [["ら", "ra", "らいねん", "année prochaine"], ["り", "ri", "りか", "sciences"], ["る", "ru", "くるま", "voiture"], ["れ", "re", "れきし", "histoire"], ["ろ", "ro", "しろくま", "ours blanc"]] },
+  { id: "wa", label: "わ列", chars: [["わ", "wa", "わに", "crocodile"], ["を", "wo", "ごはんをたべる", "manger du riz"], ["ん", "n", "しんかんせん", "shinkansen"]] },
+];
+
+function chargeurDonneesKana(char, onLoad, onError) {
+  fetch(`https://cdn.jsdelivr.net/npm/@k1low/hanzi-writer-data-jp@0.8.0/${encodeURIComponent(char)}.json`)
+    .then(r => r.json()).then(onLoad).catch(onError);
+}
+
+let japonaisEtat = { mastered: [] };
+
+async function enregistrerJaponais(champs) {
+  try {
+    await setDoc(doc(db, "japonaisRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("Japonais", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+async function loadJaponais() {
+  const el = document.getElementById("japonais-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "japonaisRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger le japonais. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "japonais") return;
+  japonaisEtat = { mastered: data?.mastered || [] };
+  const total = HIRA_COLS.reduce((s, c) => s + c.chars.length, 0);
+  const sus = japonaisEtat.mastered.length;
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">🎌 Japonais</div>
+      <h2>Hiragana</h2>
+      <div class="dic-jauge"><span style="width:${total ? Math.round(sus / total * 100) : 0}%"></span></div>
+      <div class="dic-jauge-txt">${sus} / ${total} appris</div>
+    </div>
+    <div class="dic-jeux">${HIRA_COLS.map(c => {
+      const faits = c.chars.filter(ch => japonaisEtat.mastered.includes(ch[0])).length;
+      return `<button class="dic-jeu dj-japonais" data-col="${c.id}"><span class="tc-emoji">${c.chars[0][0]}</span><span class="tc-title">${c.label}</span><span class="tc-sub">${faits} / ${c.chars.length} appris</span></button>`;
+    }).join("")}</div>`;
+  el.querySelectorAll("[data-col]").forEach(b => b.addEventListener("click", () => apprendreColonneJaponais(b.dataset.col)));
+}
+
+// Parcourt une colonne caractère par caractère, chacun en 3 cartes : observer, tracé animé, s'entraîner.
+function apprendreColonneJaponais(colId) {
+  const col = HIRA_COLS.find(c => c.id === colId);
+  let i = 0;
+  let writer = null;
+
+  const carteObserver = (corps, kana, romaji, mot, sens) => {
+    corps.innerHTML = `<div style="text-align:center">
+      <div style="font-size:90px;line-height:1">${kana}</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#2d2a4a;margin-top:4px">${romaji}</div>
+      <div style="color:#827cab;margin-top:4px">${mot} — ${sens}</div>
+      <button class="btn-primary btn-block" id="jp-suite">Suivant → le tracé</button>
+    </div>`;
+    corps.querySelector("#jp-suite").addEventListener("click", () => carteTrace(corps, kana));
+  };
+
+  const carteTrace = (corps, kana) => {
+    corps.innerHTML = `<div style="text-align:center">
+      <div class="jp-writer-zone" id="jp-writer"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+        <button class="btn-ghost-small" id="jp-rejouer">🔁 Revoir le tracé</button>
+      </div>
+      <button class="btn-primary btn-block" id="jp-suite">À ton tour d'écrire →</button>
+    </div>`;
+    writer = HanziWriter.create("jp-writer", kana, { width: 220, height: 220, padding: 12, strokeAnimationSpeed: 1, delayBetweenStrokes: 300, charDataLoader: chargeurDonneesKana });
+    writer.animateCharacter();
+    corps.querySelector("#jp-rejouer").addEventListener("click", () => writer.animateCharacter());
+    corps.querySelector("#jp-suite").addEventListener("click", () => carteQuiz(corps, kana));
+  };
+
+  const carteQuiz = (corps, kana) => {
+    corps.innerHTML = `<div style="text-align:center">
+      <div class="jp-writer-zone" id="jp-writer"></div>
+      <div id="jp-quiz-msg" style="margin-top:10px;font-weight:800;color:#6a6690">Dessine « ${kana} » dans le cadre</div>
+    </div>`;
+    writer = HanziWriter.create("jp-writer", kana, { width: 220, height: 220, padding: 12, showHintAfterMisses: 2, charDataLoader: chargeurDonneesKana });
+    writer.quiz({
+      onMistake: () => { corps.querySelector("#jp-quiz-msg").textContent = "Pas tout à fait, réessaie 🙂"; },
+      onCorrectStroke: () => { corps.querySelector("#jp-quiz-msg").textContent = "Bien !"; },
+      onComplete: () => {
+        corps.querySelector("#jp-quiz-msg").textContent = "✅ Bravo, bien joué !";
+        setTimeout(() => terminerCaractereJaponais(kana), 700);
+      },
+    });
+  };
+
+  const terminerCaractereJaponais = async (kana) => {
+    if (!japonaisEtat.mastered.includes(kana)) {
+      japonaisEtat.mastered.push(kana);
+      await enregistrerJaponais({ mastered: japonaisEtat.mastered });
+    }
+    i += 1;
+    if (i >= col.chars.length) return finColonneJaponais();
+    etape();
+  };
+
+  const finColonneJaponais = () => {
+    const corps = document.getElementById("modal-libre-corps");
+    corps.innerHTML = `<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>🎉 Colonne terminée !</h3></div>
+      <div class="game-body" style="text-align:center">
+        <button class="btn-primary btn-block" id="jp-fermer">Terminer</button>
+      </div>`;
+    corps.querySelector("#jp-fermer").addEventListener("click", () => { document.getElementById("modal-libre-close").click(); loadJaponais(); });
+  };
+
+  const etape = () => {
+    const [kana, romaji, mot, sens] = col.chars[i];
+    const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>${i + 1} / ${col.chars.length}</h3></div>
+      <div class="game-body" id="jp-corps"></div>`);
+    carteObserver(corps.querySelector("#jp-corps"), kana, romaji, mot, sens);
+  };
+  etape();
 }
 
 // ------------------------------------------------------------
