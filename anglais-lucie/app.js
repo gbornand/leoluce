@@ -142,7 +142,7 @@ sur("btn-mdp", "click", () => {
 // ÉLÈVES & MATIÈRES
 // ------------------------------------------------------------
 const MATIERES_UI = {
-  anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
+  anglais: { nom: "Anglais", emoji: "🇬🇧🇺🇸", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
   espagnol: { nom: "Espagnol", emoji: "💃", savoir: "💃 Vocabulario", regle: "📐 Gramática", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
