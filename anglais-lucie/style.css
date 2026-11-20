@@ -724,6 +724,8 @@ div.ap-carte { cursor: default; flex-direction: column; }
 /* JAPONAIS */
 .dj-japonais { background: linear-gradient(135deg, #E63946, #f06a3c); }
 .dj-japonais .tc-emoji { font-size: 30px; }
+.dj-japonais-verrouille { background: #f1eefb; color: #9a95c0; cursor: default; }
+.dj-japonais-verrouille .tc-emoji { font-size: 24px; }
 .jp-writer-zone { width: 220px; height: 220px; margin: 0 auto; border: 2px solid #e6e1fb; border-radius: 16px; background: #fafaff; }
 
 /* BADGE IMPORT */

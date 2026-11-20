@@ -3274,30 +3274,39 @@ async function loadJaponais() {
       <div class="dic-jauge"><span style="width:${total ? Math.round(sus / total * 100) : 0}%"></span></div>
       <div class="dic-jauge-txt">${sus} / ${total} appris</div>
     </div>
-    <div class="dic-jeux">${HIRA_COLS.map(c => {
+    <div class="dic-jeux">${HIRA_COLS.map((c, idx) => {
       const faits = c.chars.filter(ch => japonaisEtat.mastered.includes(ch[0])).length;
-      return `<button class="dic-jeu dj-japonais" data-col="${c.id}"><span class="tc-emoji">${c.chars[0][0]}</span><span class="tc-title">${c.label}</span><span class="tc-sub">${faits} / ${c.chars.length} appris</span></button>`;
+      const precedente = HIRA_COLS[idx - 1];
+      const verrouillee = precedente && precedente.chars.filter(ch => japonaisEtat.mastered.includes(ch[0])).length < seuilColonne(precedente);
+      return verrouillee
+        ? `<div class="dic-jeu dj-japonais-verrouille"><span class="tc-emoji">🔒</span><span class="tc-title">${c.label}</span><span class="tc-sub">Termine « ${precedente.label} » d'abord</span></div>`
+        : `<button class="dic-jeu dj-japonais" data-col="${c.id}"><span class="tc-emoji">${c.chars[0][0]}</span><span class="tc-title">${c.label}</span><span class="tc-sub">${faits} / ${c.chars.length} appris</span></button>`;
     }).join("")}</div>`;
   el.querySelectorAll("[data-col]").forEach(b => b.addEventListener("click", () => apprendreColonneJaponais(b.dataset.col)));
 }
 
-// Parcourt une colonne caractère par caractère, chacun en 3 cartes : observer, tracé animé, s'entraîner.
+function seuilColonne(col) { return Math.min(3, col.chars.length); }
+
+// Parcourt une colonne en 3 cartes par caractère (observer, tracé animé, s'entraîner).
+// Un caractère tracé sans erreur est maîtrisé tout de suite ; s'il y a eu des erreurs, il repasse
+// en fin de file et sera reproposé jusqu'à un tracé propre (maîtrise complète de la colonne).
 function apprendreColonneJaponais(colId) {
   const col = HIRA_COLS.find(c => c.id === colId);
-  let i = 0;
+  let file = col.chars.map((_, idx) => idx);
   let writer = null;
+  let erreurs = 0;
 
-  const carteObserver = (corps, kana, romaji, mot, sens) => {
+  const carteObserver = (corps, kana, romaji, mot, sens, idx) => {
     corps.innerHTML = `<div style="text-align:center">
       <div style="font-size:90px;line-height:1">${kana}</div>
       <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;color:#2d2a4a;margin-top:4px">${romaji}</div>
       <div style="color:#827cab;margin-top:4px">${mot} — ${sens}</div>
       <button class="btn-primary btn-block" id="jp-suite">Suivant → le tracé</button>
     </div>`;
-    corps.querySelector("#jp-suite").addEventListener("click", () => carteTrace(corps, kana));
+    corps.querySelector("#jp-suite").addEventListener("click", () => carteTrace(corps, kana, idx));
   };
 
-  const carteTrace = (corps, kana) => {
+  const carteTrace = (corps, kana, idx) => {
     corps.innerHTML = `<div style="text-align:center">
       <div class="jp-writer-zone" id="jp-writer"></div>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
@@ -3308,38 +3317,40 @@ function apprendreColonneJaponais(colId) {
     writer = HanziWriter.create("jp-writer", kana, { width: 220, height: 220, padding: 12, strokeAnimationSpeed: 1, delayBetweenStrokes: 300, charDataLoader: chargeurDonneesKana });
     writer.animateCharacter();
     corps.querySelector("#jp-rejouer").addEventListener("click", () => writer.animateCharacter());
-    corps.querySelector("#jp-suite").addEventListener("click", () => carteQuiz(corps, kana));
+    corps.querySelector("#jp-suite").addEventListener("click", () => carteQuiz(corps, kana, idx));
   };
 
-  const carteQuiz = (corps, kana) => {
+  const carteQuiz = (corps, kana, idx) => {
+    erreurs = 0;
     corps.innerHTML = `<div style="text-align:center">
       <div class="jp-writer-zone" id="jp-writer"></div>
       <div id="jp-quiz-msg" style="margin-top:10px;font-weight:800;color:#6a6690">Dessine « ${kana} » dans le cadre</div>
     </div>`;
     writer = HanziWriter.create("jp-writer", kana, { width: 220, height: 220, padding: 12, showHintAfterMisses: 2, charDataLoader: chargeurDonneesKana });
     writer.quiz({
-      onMistake: () => { corps.querySelector("#jp-quiz-msg").textContent = "Pas tout à fait, réessaie 🙂"; },
+      onMistake: () => { erreurs += 1; corps.querySelector("#jp-quiz-msg").textContent = "Pas tout à fait, réessaie 🙂"; },
       onCorrectStroke: () => { corps.querySelector("#jp-quiz-msg").textContent = "Bien !"; },
       onComplete: () => {
-        corps.querySelector("#jp-quiz-msg").textContent = "✅ Bravo, bien joué !";
-        setTimeout(() => terminerCaractereJaponais(kana), 700);
+        corps.querySelector("#jp-quiz-msg").textContent = erreurs === 0 ? "✅ Bravo, bien joué !" : "👍 Fait, on le reverra pour bien le fixer.";
+        setTimeout(() => terminerCaractereJaponais(kana, idx, erreurs === 0), 700);
       },
     });
   };
 
-  const terminerCaractereJaponais = async (kana) => {
-    if (!japonaisEtat.mastered.includes(kana)) {
+  const terminerCaractereJaponais = async (kana, idx, propre) => {
+    if (propre && !japonaisEtat.mastered.includes(kana)) {
       japonaisEtat.mastered.push(kana);
       await enregistrerJaponais({ mastered: japonaisEtat.mastered });
+    } else if (!propre) {
+      file.push(idx); // repasse en fin de file, sera reproposé
     }
-    i += 1;
-    if (i >= col.chars.length) return finColonneJaponais();
+    if (!file.length) return finColonneJaponais();
     etape();
   };
 
   const finColonneJaponais = () => {
     const corps = document.getElementById("modal-libre-corps");
-    corps.innerHTML = `<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>🎉 Colonne terminée !</h3></div>
+    corps.innerHTML = `<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>🎉 Colonne maîtrisée !</h3></div>
       <div class="game-body" style="text-align:center">
         <button class="btn-primary btn-block" id="jp-fermer">Terminer</button>
       </div>`;
@@ -3347,10 +3358,11 @@ function apprendreColonneJaponais(colId) {
   };
 
   const etape = () => {
-    const [kana, romaji, mot, sens] = col.chars[i];
-    const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>${i + 1} / ${col.chars.length}</h3></div>
+    const idx = file.shift();
+    const [kana, romaji, mot, sens] = col.chars[idx];
+    const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>Encore ${file.length + 1} à voir</h3></div>
       <div class="game-body" id="jp-corps"></div>`);
-    carteObserver(corps.querySelector("#jp-corps"), kana, romaji, mot, sens);
+    carteObserver(corps.querySelector("#jp-corps"), kana, romaji, mot, sens, idx);
   };
   etape();
 }
