@@ -144,10 +144,10 @@ sur("btn-mdp", "click", () => {
 const MATIERES_UI = {
   anglais: { nom: "Anglais", emoji: "🇬🇧🇺🇸", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
   espagnol: { nom: "Espagnol", emoji: "💃", savoir: "💃 Vocabulario", regle: "📐 Gramática", savoirCourt: "mots", regleCourt: "règles" },
-  francais: { nom: "Français", emoji: "✏️", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
+  francais: { nom: "Français", emoji: "📚", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
-  maths: { nom: "Maths", emoji: "🧮", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
+  maths: { nom: "Maths", emoji: "x²", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   svt: { nom: "SVT", emoji: "🌿", savoir: "🌿 Notions & définitions", regle: "🔬 À comprendre", savoirCourt: "notions", regleCourt: "à comprendre" },
   histoire: { nom: "Histoire-géo", emoji: "🌍", savoir: "📅 Repères & définitions", regle: "🏛️ À comprendre", savoirCourt: "repères", regleCourt: "à comprendre" },
