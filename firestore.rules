@@ -155,6 +155,12 @@ service cloud.firestore {
       allow create, update: if (estParentRev() || (estEleveRev() && id == request.auth.uid)) && request.resource.data.eleve == id;
     }
 
+    // Fractions : un document par élève (id = uid de l'élève), même modèle que Tables.
+    match /fractionsRevisions/{id} {
+      allow read: if estParentRev() || (estEleveRev() && id == request.auth.uid);
+      allow create, update: if (estParentRev() || (estEleveRev() && id == request.auth.uid)) && request.resource.data.eleve == id;
+    }
+
     match /chansonsAnglais/{id} {
       allow read, delete: if accesRev(resource.data);
       allow create: if accesRev(request.resource.data);

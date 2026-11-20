@@ -148,6 +148,7 @@ const MATIERES_UI = {
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
   musique: { nom: "Musique", emoji: "🎼" },
   japonais: { nom: "Japonais", emoji: "🎌" },
+  fractions: { nom: "Fractions", emoji: "🍕" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "x²", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
@@ -221,7 +222,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "fractions-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -233,6 +234,7 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="fractions"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
   document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
@@ -249,16 +251,18 @@ function appliquerMatiere() {
   const tables = matiereCourante === "tables";
   const musique = matiereCourante === "musique";
   const japonais = matiereCourante === "japonais";
-  const special = dictee || tables || musique || japonais;
+  const fractions = matiereCourante === "fractions";
+  const special = dictee || tables || musique || japonais || fractions;
   document.querySelector('.tab-btn[data-tab="today"]').hidden = special;
   document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = special;
   document.getElementById("btn-autre-seance").style.display = parent ? "none" : "";
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
-  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique || japonais;
+  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique || japonais || fractions;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = !musique;
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = !japonais;
+  document.querySelector('.tab-btn[data-tab="fractions"]').hidden = !fractions;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
@@ -266,7 +270,7 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
   if (!actif || actif.hidden || (parent && actif.dataset.tab === "accueil") || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
-    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : japonais ? "japonais" : parent ? "dashboard" : "accueil"}"]`).click();
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : japonais ? "japonais" : fractions ? "fractions" : parent ? "dashboard" : "accueil"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
@@ -317,6 +321,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "tables") loadTables();
     if (btn.dataset.tab === "musique") loadMusique();
     if (btn.dataset.tab === "japonais") loadJaponais();
+    if (btn.dataset.tab === "fractions") loadFractions();
     if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
@@ -380,14 +385,13 @@ sur("fab-import", "click", () => {
 // ACCUEIL — volets + matières, objectif du jour, séries
 // ------------------------------------------------------------
 const VOLETS = [
-  { id: "calcul", nom: "Calcul", couleur: "#5b6ee8", matieres: ["tables"], aVenir: [
+  { id: "calcul", nom: "Calcul", couleur: "#5b6ee8", matieres: ["tables", "fractions"], aVenir: [
       { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
-      { nom: "Fractions", emoji: "🍕", theme: "fraction" },
     ] },
   { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "musique", "japonais"], aVenir: [] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
-const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique", japonais: "japonais" };
+const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique", japonais: "japonais", fractions: "fractions" };
 const COULEURS_MATIERE = {
   anglais: ["#4D96FF", "#2e9d6a", "rgba(77,150,255,.4)"],
   espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.4)"],
@@ -396,6 +400,7 @@ const COULEURS_MATIERE = {
   tables: ["#5b6ee8", "#a152d6", "rgba(91,110,232,.4)"],
   musique: ["#1a1a2e", "#a152d6", "rgba(26,26,46,.5)"],
   japonais: ["#E63946", "#f06a3c", "rgba(230,57,70,.4)"],
+  fractions: ["#f06a3c", "#ffb347", "rgba(240,106,60,.4)"],
   maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.4)"],
   histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.4)"],
   svt: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.4)"],
@@ -3214,6 +3219,176 @@ function jeuMusique() {
       <button class="btn-primary btn-block" id="mus-encore">🔁 Rejouer</button>`;
     corps.querySelector("#mus-encore").addEventListener("click", jeuMusique);
   });
+}
+
+// ------------------------------------------------------------
+// FRACTIONS — un seul niveau de maîtrise (0-5), questions mélangées selon la classe :
+// CE2 = lire/comparer (camembert), collège = simplifier/additionner (même dénominateur).
+// ------------------------------------------------------------
+function pgcd(a, b) { return b === 0 ? a : pgcd(b, a % b); }
+function genFractionBase(denMax) {
+  const den = 2 + Math.floor(Math.random() * (denMax - 1));
+  const num = 1 + Math.floor(Math.random() * (den - 1));
+  return { num, den };
+}
+function pieSvgFraction(num, den) {
+  const pct = Math.round(num / den * 100);
+  return `<div style="width:120px;height:120px;border-radius:50%;margin:0 auto 12px;background:conic-gradient(#f06a3c 0% ${pct}%, #fbe0c2 ${pct}% 100%);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.15)"></div>`;
+}
+function questionFractionLecture(denMax) {
+  const f = genFractionBase(denMax);
+  const texte = `${f.num}/${f.den}`;
+  const distracteurs = new Set();
+  let essais = 0;
+  while (distracteurs.size < 2 && essais < 30) {
+    essais += 1;
+    const varieNum = Math.random() < 0.5;
+    const d = varieNum
+      ? { num: Math.min(f.den - 1, Math.max(1, f.num + (Math.random() < 0.5 ? 1 : -1))), den: f.den }
+      : { num: f.num, den: Math.max(f.num + 1, f.den + (Math.random() < 0.5 ? 1 : -1)) };
+    const cle = `${d.num}/${d.den}`;
+    if (cle !== texte) distracteurs.add(cle);
+  }
+  const choix = melanger([texte, ...distracteurs]);
+  return { visuel: pieSvgFraction(f.num, f.den), enonce: "Quelle fraction est coloriée ?", type: "qcm", choix, bonneReponse: choix.indexOf(texte) };
+}
+function questionFractionComparer(denMax) {
+  const den = 2 + Math.floor(Math.random() * (denMax - 1));
+  let n1 = 1 + Math.floor(Math.random() * (den - 1));
+  let n2 = 1 + Math.floor(Math.random() * (den - 1));
+  while (n2 === n1) n2 = 1 + Math.floor(Math.random() * (den - 1));
+  const plusGrand = `${Math.max(n1, n2)}/${den}`;
+  const choix = melanger([`${n1}/${den}`, `${n2}/${den}`]);
+  return { enonce: `Quelle est la plus grande fraction : ${n1}/${den} ou ${n2}/${den} ?`, type: "qcm", choix, bonneReponse: choix.indexOf(plusGrand) };
+}
+function questionFractionSimplifier(denMax) {
+  let f;
+  do { f = genFractionBase(denMax); } while (pgcd(f.num, f.den) === 1);
+  const g = pgcd(f.num, f.den);
+  return { enonce: `Simplifie : ${f.num}/${f.den}`, type: "texte", bonneTexte: `${f.num / g}/${f.den / g}` };
+}
+function questionFractionCalculer(denMax) {
+  const den = 2 + Math.floor(Math.random() * (denMax - 1));
+  const n1 = 1 + Math.floor(Math.random() * (den - 1));
+  const n2 = 1 + Math.floor(Math.random() * (den - 1));
+  const somme = n1 + n2;
+  const g = pgcd(somme, den);
+  const texte = g > 1 ? `${somme / g}/${den / g}` : `${somme}/${den}`;
+  return { enonce: `Calcule et simplifie si possible : ${n1}/${den} + ${n2}/${den}`, type: "texte", bonneTexte: texte };
+}
+
+let fractionsEtat = { niveau: 0, vus: 0, rates: 0 };
+async function enregistrerFractions(champs) {
+  try {
+    await setDoc(doc(db, "fractionsRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("Fractions", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+async function loadFractions() {
+  const el = document.getElementById("fractions-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "fractionsRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger les fractions. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "fractions") return;
+  fractionsEtat = { niveau: data?.niveau || 0, vus: data?.vus || 0, rates: data?.rates || 0 };
+  const pct = Math.round(fractionsEtat.niveau / 5 * 100);
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">🍕 Fractions</div>
+      <h2>Ma maîtrise</h2>
+      <div class="dic-jauge"><span style="width:${pct}%"></span></div>
+      <div class="dic-jauge-txt">Niveau ${fractionsEtat.niveau}/5 · ${fractionsEtat.vus} question${fractionsEtat.vus > 1 ? "s" : ""} faites</div>
+    </div>
+    <div class="dic-jeux">
+      <button class="dic-jeu dj-fraction"><span class="tc-emoji">🍕</span><span class="tc-title">Entraînement</span><span class="tc-sub">Lire, comparer, simplifier, calculer</span></button>
+    </div>`;
+  el.querySelector(".dj-fraction").addEventListener("click", jeuFractionsEntrainement);
+}
+
+function noterFraction(correct) {
+  if (estParent()) return;
+  fractionsEtat.niveau = correct ? Math.min(fractionsEtat.niveau + 1, 5) : Math.max(fractionsEtat.niveau - 1, 0);
+  fractionsEtat.vus += 1;
+  if (!correct) fractionsEtat.rates += 1;
+  journaliser({ correct, source: "fractions", question: "fractions" });
+  enregistrerFractions({ niveau: fractionsEtat.niveau, vus: fractionsEtat.vus, rates: fractionsEtat.rates });
+}
+
+function jeuFractionsEntrainement() {
+  const niveauEleve = eleveInfo()?.niveau === "ce2" ? "ce2" : "college";
+  const denMax = niveauEleve === "ce2" ? 6 : 12;
+  const titre = "🍕 Fractions";
+  const total = 8;
+  let i = 0, bonnes = 0;
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="fr-compteur"></h3></div><div class="game-body"></div>`);
+  const generer = () => niveauEleve === "ce2"
+    ? (Math.random() < 0.6 ? questionFractionLecture(denMax) : questionFractionComparer(denMax))
+    : (Math.random() < 0.5 ? questionFractionSimplifier(denMax) : questionFractionCalculer(denMax));
+  const afficher = () => {
+    if (i >= total) return finJeuFractions(corps, titre, bonnes, total, jeuFractionsEntrainement);
+    const q = generer();
+    corps.querySelector("#fr-compteur").textContent = `${i + 1} / ${total}`;
+    const zone = corps.querySelector(".game-body");
+    const suivant = () => { i += 1; afficher(); };
+    if (q.type === "qcm") {
+      zone.innerHTML = `${q.visuel || ""}<div class="tj-question" style="font-size:20px">${q.enonce}</div>
+        <div class="bonmot-choix">${q.choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
+        <div id="fr-resultat"></div>`;
+      zone.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+        const ok = Number(b.dataset.k) === q.bonneReponse;
+        zone.querySelectorAll("[data-k]").forEach(x => {
+          x.disabled = true;
+          if (Number(x.dataset.k) === q.bonneReponse) x.classList.add("correct");
+          else if (x === b) x.classList.add("incorrect");
+        });
+        noterFraction(ok);
+        if (ok) bonnes += 1;
+        zone.querySelector("#fr-resultat").innerHTML = `<button class="btn-primary btn-block" id="fr-suivant">Suivant →</button>`;
+        zone.querySelector("#fr-suivant").addEventListener("click", suivant);
+      }));
+    } else {
+      zone.innerHTML = `<div class="tj-question" style="font-size:20px">${q.enonce}</div>
+        <div class="ap-ecrire tj-ecrire"><input type="text" class="exo-input" id="fr-saisie" placeholder="ex: 3/4" autocomplete="off"><button class="btn-primary btn-small" id="fr-ok">OK</button></div>
+        <div id="fr-resultat"></div>`;
+      const valider = () => {
+        const input = zone.querySelector("#fr-saisie");
+        const v = input.value.trim().replace(/\s/g, "");
+        if (!v || input.disabled) return;
+        const ok = v === q.bonneTexte;
+        input.disabled = true;
+        zone.querySelector("#fr-ok").disabled = true;
+        input.classList.add(ok ? "correct" : "incorrect");
+        noterFraction(ok);
+        if (ok) bonnes += 1;
+        zone.querySelector("#fr-resultat").innerHTML = `${ok ? "" : `<div class="pr-verdict ko">Réponse : ${q.bonneTexte}</div>`}<button class="btn-primary btn-block" id="fr-suivant">Suivant →</button>`;
+        zone.querySelector("#fr-suivant").addEventListener("click", suivant);
+      };
+      zone.querySelector("#fr-ok").addEventListener("click", valider);
+      zone.querySelector("#fr-saisie").addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+      zone.querySelector("#fr-saisie").focus();
+    }
+  };
+  afficher();
+}
+
+function finJeuFractions(corps, titre, bonnes, total, relancer) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="fr-encore">🔁 Encore</button>
+    <button class="btn-ghost-small" id="fr-fermer">Fermer</button>`;
+  corps.querySelector("#fr-encore").addEventListener("click", relancer);
+  corps.querySelector("#fr-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
 }
 
 // ------------------------------------------------------------
