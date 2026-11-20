@@ -3129,6 +3129,7 @@ function ouvrirConfigMusique() {
 // active et s'immobilise pile dessus si on bloque ; ça accélère tant qu'on répond vite.
 const MUS_ESPACEMENT = 72;
 const MUS_ZONE_RALENTI = 140;
+const MUS_BASE_Y = 24; // marge sous la 1ère ligne, pour que les notes sous la portée (ledger lines) ne soient pas rognées
 function jeuMusique() {
   const [ampliMin, ampliMax] = AMPLITUDE_NIVEAUX[(musiqueEtat.niveau || 1) - 1];
   const clefs = musiqueEtat.clef === "les-deux" ? ["sol", "fa"] : [musiqueEtat.clef];
@@ -3147,9 +3148,11 @@ function jeuMusique() {
       <div id="mus-portees">${clefs.map(c => `
         <div class="mus-portee-vue">
           <div class="mus-cle">${c === "sol" ? "𝄞" : "𝄢"}</div>
-          <div class="mus-surlignage"></div>
-          ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${i * 12}px"></div>`).join("")}
-          <div class="mus-piste" id="mus-piste-${c}"></div>
+          <div class="mus-fenetre">
+            <div class="mus-surlignage"></div>
+            ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${MUS_BASE_Y + i * 12}px"></div>`).join("")}
+            <div class="mus-piste" id="mus-piste-${c}"></div>
+          </div>
         </div>`).join("")}</div>
       <div class="mus-reponses">${noms.map(n => `<button class="mus-rep-btn" data-rep="${n}">${n}</button>`).join("")}</div>
       <button class="btn-ghost-small" id="mus-terminer" style="margin-top:10px">🏁 Terminer</button>
@@ -3163,7 +3166,7 @@ function jeuMusique() {
       el.className = "mus-note-fixe";
       el.dataset.i = i;
       el.style.left = `${i * MUS_ESPACEMENT}px`;
-      el.style.bottom = `${n.pos * 6 - 3}px`;
+      el.style.bottom = `${MUS_BASE_Y + n.pos * 6 - 4.5}px`;
       piste.appendChild(el);
     }
   };
