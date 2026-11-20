@@ -547,6 +547,8 @@ async function nouvelleSeance() {
 function normaliser(s) {
   return String(s || "").toLowerCase().replace(/[’`]/g, "'")
     .replace(/(\d)[.,](\d)/g, "$1§$2")
+    .replace(/(\d)\s+(?=\d)/g, "$1")
+    .replace(/\bste\b/g, "sainte").replace(/\bst\b/g, "saint")
     .replace(/[.,!?;:"]/g, "")
     .replace(/§/g, ".")
     .replace(/\s+/g, " ").trim();
@@ -654,12 +656,13 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
     ok.textContent = "Valider";
     ok.addEventListener("click", () => {
       if (!choisis.length) return;
+      const etapes = parEtapes ? etapesAttendues(ex.reponse, ex.mots) : null;
       const correct = parEtapes
-        ? JSON.stringify(choisis.map(c => normaliser(c.mot))) === JSON.stringify(String(ex.reponse).split("|").map(normaliser))
+        ? JSON.stringify(choisis.map(c => normaliser(c.mot))) === JSON.stringify(etapes.map(normaliser))
         : normaliser(choisis.map(c => c.mot).join(" ")) === normaliser(ex.reponse);
       ok.disabled = true; effacer.disabled = true;
       cible.classList.add(correct ? "correct" : "incorrect");
-      finish(correct, parEtapes ? String(ex.reponse).split("|").map(s => s.trim()).join(" → ") : ex.reponse, choisis.map(c => c.mot).join(parEtapes ? " → " : " "));
+      finish(correct, parEtapes ? etapes.join(" → ") : ex.reponse, choisis.map(c => c.mot).join(parEtapes ? " → " : " "));
     });
     majCible();
     actions.append(effacer, ok);
@@ -1602,6 +1605,20 @@ function phrasesEntrainement(n = 8, idsFiltre = null) {
 }
 
 function motsDe(s) { return normaliser(s).split(" ").filter(Boolean); }
+
+// Découpe le texte attendu d'un exercice "ordre par étapes" en retrouvant chaque étape
+// connue (ex.mots) dans ex.reponse, plutôt que de couper bêtement sur "|" : une étape
+// peut elle-même contenir un "|" (ex. "768 | événement"), ce qui rendrait un simple split ambigu.
+function etapesAttendues(reponse, mots) {
+  const texte = String(reponse || "");
+  const valides = (mots || []).filter(Boolean);
+  if (valides.length) {
+    const echap = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const trouves = texte.match(new RegExp(valides.map(echap).join("|"), "g")) || [];
+    if (trouves.length === valides.length) return trouves;
+  }
+  return texte.split("|").map((s) => s.trim());
+}
 
 function comparerMots(attendu, donne) {
   const restant = motsDe(donne);
