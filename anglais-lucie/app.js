@@ -346,7 +346,7 @@ function renderAccueil() {
       <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
     </div>
     ${voletsHtml}
-    ${apartHtml ? `<div class="acc-volet"><div class="acc-volet-titre">📚 Mes matières</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
+    ${apartHtml ? `<div class="acc-volet"><div class="acc-volet-titre">📚 Mes révisions</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
   el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
     const m = b.dataset.matiere;
     choisirContexte(eleveCourant, m);
