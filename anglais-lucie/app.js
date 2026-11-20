@@ -314,19 +314,30 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
+// Barre du haut : se cache en scrollant vers le bas, revient dès qu'on remonte un peu.
+(() => {
+  let dernierY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    if (Math.abs(y - dernierY) < 6) return;
+    const descend = y > dernierY && y > 80;
+    document.querySelector(".topbar").classList.toggle("topbar-cachee", descend);
+    document.getElementById("contexte-bar").classList.toggle("ctx-remontee", descend);
+    dernierY = y;
+  }, { passive: true });
+})();
+
 // ------------------------------------------------------------
 // ACCUEIL — volets + matières, objectif du jour, séries
 // ------------------------------------------------------------
 const VOLETS = [
-  { id: "calcul", nom: "Calcul", emoji: "🧮", couleur: "#5b6ee8", matieres: ["tables"], aVenir: [
+  { id: "calcul", nom: "Calcul", couleur: "#5b6ee8", matieres: ["tables"], aVenir: [
       { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
       { nom: "Fractions", emoji: "🍕", theme: "fraction" },
     ] },
-  { id: "musique", nom: "Musique", emoji: "🎵", couleur: "#1a1a2e", matieres: [], aVenir: [
-      { nom: "Solfège", emoji: "🎼", theme: "musique" },
-    ] },
-  { id: "langues", nom: "Langues étrangères", emoji: "🌍", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: [
+  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: [
       { nom: "Japonais", emoji: "🎌", theme: "japon" },
+      { nom: "Solfège", emoji: "🎼", theme: "musique" },
     ] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
@@ -355,13 +366,10 @@ function renderAccueil() {
   const voletsHtml = VOLETS.map(v => {
     const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]);
     if (!presentes.length && !v.aVenir.length) return "";
-    return `<div class="acc-volet" style="--volet-couleur:${v.couleur}">
-      <div class="acc-volet-label"><span>${v.emoji} ${v.nom}</span></div>
-      <div class="acc-volet-cartes">
+    return `<div class="acc-volet-cartes">
         ${presentes.map(carteMatiere).join("")}
         ${v.aVenir.map(a => `<div class="acc-carte acc-bientot acc-theme-${a.theme}">${a.theme === "musique" ? `<span class="acc-note-deco n1">🎵</span><span class="acc-note-deco n2">🎶</span><span class="acc-note-deco n3">🎵</span>` : ""}<span class="acc-emoji">${a.emoji}</span><span class="acc-nom">${a.nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
-      </div>
-    </div>`;
+      </div>`;
   }).join("");
   const apartHtml = MATIERES_A_PART.filter(m => mesMatieres.has(m) && MATIERES_UI[m]).map(carteMatiere).join("");
   el.innerHTML = `
@@ -372,7 +380,7 @@ function renderAccueil() {
       <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
     </div>
     ${voletsHtml}
-    ${apartHtml ? `<div class="acc-volet" style="--volet-couleur:#6a52d6"><div class="acc-volet-label"><span>📚 Mes révisions</span></div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
+    ${apartHtml ? `<div class="acc-volet-cartes">${apartHtml}</div>` : ""}`;
   el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
     const m = b.dataset.matiere;
     choisirContexte(eleveCourant, m);
