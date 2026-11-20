@@ -495,6 +495,38 @@ exports.initialiserRevisions = onCall(
   }
 );
 
+// Série des sœurs (façon Duolingo) : avance d'un jour seulement si TOUS les élèves ont au moins
+// une réponse la veille ; sinon repart à 0. Calculée côté serveur (pas de lecture croisée côté
+// élève) à chaque appel, mais comptée une seule fois par jour grâce à `derniereMajDate`.
+exports.majSerieFamille = onCall(
+  { region: "europe-west1", invoker: "public" },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Connexion requise.");
+    if (uid !== PARENT_UID && !ELEVES[uid]) throw new HttpsError("permission-denied", "Accès réservé.");
+
+    const hier = new Date();
+    hier.setDate(hier.getDate() - 1);
+    const hierISO = hier.toISOString().slice(0, 10);
+
+    const ref = db.collection("revisionsMeta").doc("serieFamille");
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : { jours: 0, derniereMajDate: null };
+
+    if (data.derniereMajDate !== hierISO) {
+      const uids = Object.keys(ELEVES);
+      const presences = await Promise.all(uids.map(id =>
+        db.collection("reponsesAnglais").where("eleve", "==", id).where("date", "==", hierISO).limit(1).get()
+      ));
+      const tousActifsHier = presences.every(s => !s.empty);
+      const jours = tousActifsHier ? (data.jours || 0) + 1 : 0;
+      await ref.set({ jours, derniereMajDate: hierISO }, { merge: true });
+      return { jours };
+    }
+    return { jours: data.jours || 0 };
+  }
+);
+
 // Reçoit photos/PDF d'un cours, les fait analyser selon la matière, stocke le cours et crée une
 // fiche de suivi (répétition espacée) par notion, due dès aujourd'hui.
 exports.extraireCoursAnglais = onCall(

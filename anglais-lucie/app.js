@@ -418,6 +418,22 @@ function toutesLesCartes() {
   return items;
 }
 
+// Série des sœurs : calculée côté serveur (chacune ne peut pas lire les réponses de l'autre),
+// mise en cache pour la session pour ne pas rappeler la fonction à chaque re-rendu de l'accueil.
+let serieFamilleCache = null;
+async function obtenirSerieFamille() {
+  if (serieFamilleCache !== null) return serieFamilleCache;
+  try {
+    const majSerieFamille = httpsCallable(functions, "majSerieFamille", { timeout: 30000 });
+    const r = await majSerieFamille({});
+    serieFamilleCache = r.data.jours;
+  } catch (err) {
+    console.error("Série famille", err);
+    return null;
+  }
+  return serieFamilleCache;
+}
+
 function renderAccueil() {
   if (estParent()) return;
   const el = document.getElementById("accueil-contenu");
@@ -444,10 +460,15 @@ function renderAccueil() {
     <div class="acc-objectif">🎯 Objectif du jour : prends 10 minutes, choisis une matière ci-dessous.</div>
     <div class="acc-series">
       <div class="acc-serie-item"><span class="acc-flame">🔥</span> <b>${serieCourante}</b> jour${serieCourante > 1 ? "s" : ""} d'affilée</div>
-      <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
+      <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — <span id="acc-sf-val">…</span></div>
     </div>
     ${voletsHtml}
     ${apartHtml ? `<div class="acc-volet-cartes">${apartHtml}</div>` : ""}`;
+  obtenirSerieFamille().then(j => {
+    const span = document.getElementById("acc-sf-val");
+    if (!span) return;
+    span.textContent = j === null ? "indisponible" : `${j} jour${j > 1 ? "s" : ""}`;
+  });
   el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", (e) => {
     if (e.target.closest(".acc-retirer")) { e.stopPropagation(); masquerCarte(b.dataset.matiere); return; }
     const m = b.dataset.matiere;
