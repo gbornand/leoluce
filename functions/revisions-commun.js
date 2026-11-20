@@ -6,6 +6,9 @@ const RECAP_DESTINATAIRE = "gbornand@gmail.com";
 const ELEVES = {
   [LUCIE_UID]: { prenom: "Lucie", niveau: "college", matieres: ["anglais", "espagnol", "maths", "tables", "musique", "japonais", "physique", "svt", "histoire", "francais"] },
   "PKRatKwnzDZt0BzZjMfO3PFnGxU2": { prenom: "Léonie", niveau: "ce2", matieres: ["francais", "dictee", "tables", "musique", "japonais", "maths", "anglais", "histoire"] },
+  // Géraldine (parent) peut aussi "Faire travailler" ce profil pour jouer elle-même à quelques jeux,
+  // volontairement limité à ceux-là (pas de cours/dictée/+Un cours pour elle).
+  [PARENT_UID]: { prenom: "Géraldine", niveau: "adulte", matieres: ["musique"] },
 };
 const NOMS_MATIERES = { anglais: "anglais", espagnol: "espagnol", francais: "français", dictee: "dictée", tables: "tables de multiplication", musique: "musique", japonais: "japonais", maths: "mathématiques", physique: "physique-chimie", svt: "SVT", histoire: "histoire-géographie" };
 const SCIENCES = ["maths", "physique"];

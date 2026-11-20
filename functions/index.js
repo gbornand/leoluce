@@ -514,7 +514,7 @@ exports.majSerieFamille = onCall(
     const data = snap.exists ? snap.data() : { jours: 0, derniereMajDate: null };
 
     if (data.derniereMajDate !== hierISO) {
-      const uids = Object.keys(ELEVES);
+      const uids = Object.keys(ELEVES).filter(id => id !== PARENT_UID);
       const presences = await Promise.all(uids.map(id =>
         db.collection("reponsesAnglais").where("eleve", "==", id).where("date", "==", hierISO).limit(1).get()
       ));

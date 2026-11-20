@@ -3004,7 +3004,10 @@ const PORTEE_FA = [
   { pos: 8, solfege: "La", lettre: "A", octave: 3 }, { pos: 9, solfege: "Si", lettre: "B", octave: 3 },
 ];
 
-let musiqueEtat = { clef: "sol", notes: null, vitesse: 1, record: 0 };
+// Niveaux = ambitus (toutes les notes Do à Si sont dispo dès le niveau 1, seule la plage de
+// positions sur la portée s'élargit) : du plus proche du centre de la portée au plus large.
+const AMPLITUDE_NIVEAUX = [[0, 4], [-1, 5], [-2, 6], [-2, 8], [-2, 9]];
+let musiqueEtat = { clef: "les-deux", niveau: 1, vitesse: 1, record: 0 };
 let contexteAudio = null;
 function jouerNote(lettre, octave, duree = 0.6) {
   try {
@@ -3052,8 +3055,7 @@ async function loadMusique() {
     return;
   }
   if (eleve !== eleveCourant || matiereCourante !== "musique") return;
-  const defautNotes = PORTEE_SOL.filter(n => n.pos >= 0 && n.pos <= 4).map(n => `sol-${n.pos}`);
-  musiqueEtat = { clef: data?.clef || "sol", notes: data?.notes?.length ? data.notes : defautNotes, vitesse: data?.vitesse || 1, record: data?.record || 0 };
+  musiqueEtat = { clef: data?.clef || "les-deux", niveau: data?.niveau || 1, vitesse: data?.vitesse || 1, record: data?.record || 0 };
   el.innerHTML = `
     <div class="tb-hero">
       <div class="dic-kicker">🎼 Musique</div>
@@ -3061,8 +3063,8 @@ async function loadMusique() {
       <div class="dic-jauge-txt">${musiqueEtat.record ? `🏆 Record : ${musiqueEtat.record}` : "Pas encore de record"}</div>
     </div>
     <div class="dic-jeux">
-      <button class="dic-jeu dj-musique-config"><span class="tc-emoji">⚙️</span><span class="tc-title">Choisir les notes</span><span class="tc-sub">Clé, notes, vitesse</span></button>
-      <button class="dic-jeu dj-musique-jouer"><span class="tc-emoji">🎵</span><span class="tc-title">Jouer</span><span class="tc-sub">${musiqueEtat.notes.length} note${musiqueEtat.notes.length > 1 ? "s" : ""} choisie${musiqueEtat.notes.length > 1 ? "s" : ""}</span></button>
+      <button class="dic-jeu dj-musique-config"><span class="tc-emoji">⚙️</span><span class="tc-title">Choisir le niveau</span><span class="tc-sub">Clé, ambitus, vitesse</span></button>
+      <button class="dic-jeu dj-musique-jouer"><span class="tc-emoji">🎵</span><span class="tc-title">Jouer</span><span class="tc-sub">Niveau ${musiqueEtat.niveau}</span></button>
     </div>`;
   el.querySelector(".dj-musique-config").addEventListener("click", ouvrirConfigMusique);
   el.querySelector(".dj-musique-jouer").addEventListener("click", jeuMusique);
@@ -3070,8 +3072,8 @@ async function loadMusique() {
 
 function ouvrirConfigMusique() {
   let clefChoisie = musiqueEtat.clef;
+  let niveauChoisi = musiqueEtat.niveau;
   let vitesseChoisie = musiqueEtat.vitesse;
-  const notesCochees = new Set(musiqueEtat.notes);
   const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎼 Configuration</div><h3>Choisis ta clé</h3></div>
     <div class="game-body">
       <div class="tb-choix-titre">Clé</div>
@@ -3080,93 +3082,128 @@ function ouvrirConfigMusique() {
         <button data-clef="fa" class="mus-choix-btn ${clefChoisie === "fa" ? "on" : ""}"><span class="mus-clef-symb">𝄢</span>Fa</button>
         <button data-clef="les-deux" class="mus-choix-btn ${clefChoisie === "les-deux" ? "on" : ""}"><span class="mus-clef-symb">𝄞𝄢</span>Les deux</button>
       </div>
-      <div class="tb-choix-titre">Notes à travailler (au moins 2)</div>
-      <div id="mus-notes"></div>
+      <div class="tb-choix-titre">Niveau (toutes les notes, l'ambitus s'élargit)</div>
+      <div class="mus-niveaux-grille" id="mus-niveaux">
+        ${[1, 2, 3, 4, 5].map(n => `<button data-n="${n}" class="mus-choix-btn ${niveauChoisi === n ? "on" : ""}">${n}</button>`).join("")}
+      </div>
       <div class="tb-choix-titre">Vitesse de départ</div>
       <div class="mus-vitesses-grille" id="mus-vitesses">
         ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="mus-choix-btn ${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
       </div>
       <button class="btn-primary btn-block" id="mus-valider">Enregistrer</button>
     </div>`);
-  const majNotes = () => {
-    const zone = corps.querySelector("#mus-notes");
-    const parClef = clefChoisie === "les-deux" ? ["sol", "fa"] : [clefChoisie];
-    const carte = n => `<button data-id="${n.id}" class="mus-note-case ${notesCochees.has(n.id) ? "on" : ""}">${n.solfege}<span class="mus-note-octave">${n.octave}</span></button>`;
-    zone.innerHTML = parClef.map(c => `
-      <div class="mus-notes-groupe">
-        <div class="mus-notes-soustitre">${c === "sol" ? "𝄞 Clé de sol" : "𝄢 Clé de fa"}</div>
-        <div class="mus-notes-grille">${toutesNotesClef(c).map(carte).join("")}</div>
-      </div>`).join("");
-    zone.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
-      if (notesCochees.has(b.dataset.id)) notesCochees.delete(b.dataset.id); else notesCochees.add(b.dataset.id);
-      b.classList.toggle("on", notesCochees.has(b.dataset.id));
-    }));
-  };
-  majNotes();
   corps.querySelectorAll("[data-clef]").forEach(b => b.addEventListener("click", () => {
     clefChoisie = b.dataset.clef;
     corps.querySelectorAll("[data-clef]").forEach(x => x.classList.toggle("on", x === b));
-    notesCochees.clear();
-    toutesNotesClef(clefChoisie).slice(0, 5).forEach(n => notesCochees.add(n.id));
-    majNotes();
+  }));
+  corps.querySelectorAll("[data-n]").forEach(b => b.addEventListener("click", () => {
+    niveauChoisi = Number(b.dataset.n);
+    corps.querySelectorAll("[data-n]").forEach(x => x.classList.toggle("on", x === b));
   }));
   corps.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
     vitesseChoisie = Number(b.dataset.v);
     corps.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
   }));
   corps.querySelector("#mus-valider").addEventListener("click", async () => {
-    if (notesCochees.size < 2) return toast("Choisis au moins 2 notes 🙂");
-    if (await enregistrerMusique({ clef: clefChoisie, notes: [...notesCochees], vitesse: vitesseChoisie })) {
+    if (await enregistrerMusique({ clef: clefChoisie, niveau: niveauChoisi, vitesse: vitesseChoisie })) {
       document.getElementById("modal-libre-close").click();
       loadMusique();
     }
   });
 }
 
-// JOUER : une note descend la portée de droite à gauche en ralentissant, puis s'arrête et attend
-// la réponse (pas de minuteur ni de "raté" — c'est un entraînement libre, pas un défi chronométré).
+// JOUER : plusieurs notes visibles à la fois sur la portée (comme une vraie partition qui défile),
+// la note active est surlignée tout à gauche ; on voit les suivantes pendant qu'on déchiffre.
+// Défilement CONTINU (boucle d'animation, pas des à-coups) : ça ralentit à l'approche de la note
+// active et s'immobilise pile dessus si on bloque ; ça accélère tant qu'on répond vite.
+const MUS_ESPACEMENT = 72;
+const MUS_ZONE_RALENTI = 140;
 function jeuMusique() {
-  const pool = toutesNotesClef(musiqueEtat.clef).filter(n => musiqueEtat.notes.includes(n.id));
-  if (pool.length < 2) return ouvrirConfigMusique();
-  const duree = { 1: 7000, 2: 4500, 3: 2800 }[musiqueEtat.vitesse] || 7000;
+  const [ampliMin, ampliMax] = AMPLITUDE_NIVEAUX[(musiqueEtat.niveau || 1) - 1];
   const clefs = musiqueEtat.clef === "les-deux" ? ["sol", "fa"] : [musiqueEtat.clef];
-  const noms = [...new Set(pool.map(n => n.solfege))];
-  let score = 0, arrete = false, noteActuelle = null, reglee = false;
+  const pool = toutesNotesClef(musiqueEtat.clef).filter(n => n.pos >= ampliMin && n.pos <= ampliMax);
+  if (pool.length < 2) return ouvrirConfigMusique();
+  const vitesseBase = { 1: 35, 2: 60, 3: 95 }[musiqueEtat.vitesse] || 35;
+  const vitesseMax = vitesseBase * 2.5;
+  const noms = ["Do", "Ré", "Mi", "Fa", "Sol", "La", "Si"];
+  let score = 0, arrete = false, reglee = false, index = 0;
+  let position = 0, vitesseActuelle = vitesseBase, depuisArret = 0;
+  let sequence = [];
+  const piocher = () => pool[Math.floor(Math.random() * pool.length)];
 
   const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">🎼 Musique</div><h3 id="mus-score">Score : 0</h3></div>
     <div class="game-body">
       <div id="mus-portees">${clefs.map(c => `
-        <div class="mus-portee">
+        <div class="mus-portee-vue">
           <div class="mus-cle">${c === "sol" ? "𝄞" : "𝄢"}</div>
+          <div class="mus-surlignage"></div>
           ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${i * 12}px"></div>`).join("")}
-          <div class="mus-note" id="mus-note-${c}" hidden></div>
+          <div class="mus-piste" id="mus-piste-${c}"></div>
         </div>`).join("")}</div>
       <div class="mus-reponses">${noms.map(n => `<button class="mus-rep-btn" data-rep="${n}">${n}</button>`).join("")}</div>
       <button class="btn-ghost-small" id="mus-terminer" style="margin-top:10px">🏁 Terminer</button>
     </div>`);
 
-  const nouvelleNote = () => {
-    if (arrete) return;
-    reglee = false;
-    noteActuelle = pool[Math.floor(Math.random() * pool.length)];
-    corps.querySelectorAll(".mus-note").forEach(n => { n.hidden = true; n.style.transition = "none"; n.style.right = "-30px"; n.classList.remove("ok", "ko"); });
-    const noteEl = corps.querySelector(`#mus-note-${noteActuelle.clef}`);
-    noteEl.hidden = false;
-    noteEl.style.bottom = `${noteActuelle.pos * 6 - 3}px`;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      noteEl.style.transition = `right ${duree}ms cubic-bezier(.15,.7,.3,1)`;
-      noteEl.style.right = "78%";
-    }));
+  const ajouterAuDom = (depuis) => {
+    for (let i = depuis; i < sequence.length; i++) {
+      const n = sequence[i];
+      const piste = corps.querySelector(`#mus-piste-${n.clef}`);
+      const el = document.createElement("div");
+      el.className = "mus-note-fixe";
+      el.dataset.i = i;
+      el.style.left = `${i * MUS_ESPACEMENT}px`;
+      el.style.bottom = `${n.pos * 6 - 3}px`;
+      piste.appendChild(el);
+    }
   };
+  const completerSequence = () => {
+    const avant = sequence.length;
+    while (sequence.length < index + 14) sequence.push(piocher());
+    ajouterAuDom(avant);
+  };
+  completerSequence();
+
+  let dernierTemps = performance.now();
+  const animer = (t) => {
+    if (arrete || document.getElementById("modal-libre").hidden) { arrete = true; return; }
+    const dt = Math.min(50, t - dernierTemps);
+    dernierTemps = t;
+    const cible = index * MUS_ESPACEMENT;
+    const distance = cible - position;
+    if (distance > 0.5) {
+      const facteur = Math.max(0, Math.min(1, distance / MUS_ZONE_RALENTI));
+      position = Math.min(cible, position + vitesseActuelle * facteur * (dt / 1000));
+      depuisArret = 0;
+    } else {
+      position = cible;
+      depuisArret += dt;
+    }
+    clefs.forEach(c => { corps.querySelector(`#mus-piste-${c}`).style.transform = `translateX(-${position}px)`; });
+    requestAnimationFrame(animer);
+  };
+  requestAnimationFrame(animer);
+
   const repondre = (nom) => {
-    if (reglee || arrete || !noteActuelle) return;
+    if (reglee || arrete) return;
     reglee = true;
-    const ok = nom === noteActuelle.solfege;
-    corps.querySelector(`#mus-note-${noteActuelle.clef}`).classList.add(ok ? "ok" : "ko");
-    jouerNote(noteActuelle.lettre, noteActuelle.octave);
-    if (ok) { score += 1; corps.querySelector("#mus-score").textContent = `Score : ${score}`; }
-    journaliser({ correct: ok, source: "musique", question: `${noteActuelle.clef}-${noteActuelle.pos}`, reponse: nom });
-    setTimeout(nouvelleNote, 900);
+    const actuelle = sequence[index];
+    const ok = nom === actuelle.solfege;
+    const noteEl = corps.querySelector(`#mus-piste-${actuelle.clef} .mus-note-fixe[data-i="${index}"]`);
+    noteEl?.classList.add(ok ? "ok" : "ko");
+    jouerNote(actuelle.lettre, actuelle.octave);
+    if (ok) {
+      score += 1;
+      corps.querySelector("#mus-score").textContent = `Score : ${score}`;
+      if (depuisArret < 1500) vitesseActuelle = Math.min(vitesseMax, vitesseActuelle * 1.08);
+    } else {
+      vitesseActuelle = vitesseBase;
+    }
+    journaliser({ correct: ok, source: "musique", question: `${actuelle.clef}-${actuelle.pos}`, reponse: nom });
+    setTimeout(() => {
+      index += 1;
+      completerSequence();
+      reglee = false;
+    }, ok ? 400 : 900);
   };
   corps.querySelectorAll("[data-rep]").forEach(b => b.addEventListener("click", () => repondre(b.dataset.rep)));
   corps.querySelector("#mus-terminer").addEventListener("click", () => {
@@ -3177,7 +3214,6 @@ function jeuMusique() {
       <button class="btn-primary btn-block" id="mus-encore">🔁 Rejouer</button>`;
     corps.querySelector("#mus-encore").addEventListener("click", jeuMusique);
   });
-  nouvelleNote();
 }
 
 // ------------------------------------------------------------
