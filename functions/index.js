@@ -863,7 +863,7 @@ function htmlRecapRevisions(recaps) {
 }
 
 async function envoyerRecapRevisions(sujetPrefixe = "") {
-  const recaps = await Promise.all(Object.keys(ELEVES).map(construireRecapEleve));
+  const recaps = await Promise.all(Object.keys(ELEVES).filter(id => id !== PARENT_UID).map(construireRecapEleve));
   await transporter().sendMail({
     from: `"Mes révisions" <${SMTP_USER}>`,
     to: RECAP_DESTINATAIRE,

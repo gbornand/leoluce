@@ -149,6 +149,7 @@ const MATIERES_UI = {
   musique: { nom: "Musique", emoji: "🎼" },
   japonais: { nom: "Japonais", emoji: "🎌" },
   fractions: { nom: "Fractions", emoji: "🍕" },
+  verbes: { nom: "Verbes irréguliers", emoji: "💬" },
   dictee: { nom: "Dictée", emoji: "🎧", savoir: "🎧 Mots de la dictée", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   maths: { nom: "Maths", emoji: "x²", savoir: "📏 À connaître par cœur", regle: "🧮 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
   physique: { nom: "Physique", emoji: "⚛️", savoir: "⚛️ À connaître", regle: "🔬 Méthodes", savoirCourt: "à savoir", regleCourt: "méthodes" },
@@ -222,7 +223,7 @@ function reinitialiserEcran() {
   document.getElementById("modal-libre").hidden = true;
   document.getElementById("modal-notion").hidden = true;
   clearInterval(jeuTimer);
-  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "fractions-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
+  ["dashboard-contenu", "dictee-contenu", "tables-contenu", "musique-contenu", "japonais-contenu", "fractions-contenu", "verbes-contenu", "controles-contenu", "notions-list", "songs-list", "vocab-questions", "gram-questions", "ce-questions", "figure-du-jour", "contexte-bar"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
@@ -235,6 +236,7 @@ function reinitialiserEcran() {
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="fractions"]').hidden = true;
+  document.querySelector('.tab-btn[data-tab="verbes"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = true;
   document.getElementById("dst-bandeau").hidden = true;
   dicteeChoisie = null;
@@ -252,17 +254,19 @@ function appliquerMatiere() {
   const musique = matiereCourante === "musique";
   const japonais = matiereCourante === "japonais";
   const fractions = matiereCourante === "fractions";
-  const special = dictee || tables || musique || japonais || fractions;
+  const verbes = matiereCourante === "verbes";
+  const special = dictee || tables || musique || japonais || fractions || verbes;
   document.querySelector('.tab-btn[data-tab="today"]').hidden = special;
   document.querySelector('.tab-btn[data-tab="entrainer"]').hidden = special;
   document.getElementById("btn-autre-seance").style.display = parent ? "none" : "";
   document.querySelector('.tab-btn[data-tab="notions"]').hidden = special;
-  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique || japonais || fractions;
+  document.querySelector('.tab-btn[data-tab="add"]').hidden = tables || musique || japonais || fractions || verbes;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = !dictee;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = !tables;
   document.querySelector('.tab-btn[data-tab="musique"]').hidden = !musique;
   document.querySelector('.tab-btn[data-tab="japonais"]').hidden = !japonais;
   document.querySelector('.tab-btn[data-tab="fractions"]').hidden = !fractions;
+  document.querySelector('.tab-btn[data-tab="verbes"]').hidden = !verbes;
   document.querySelector('.tab-btn[data-tab="controles"]').hidden = eleveInfo()?.niveau === "ce2";
   document.querySelector('.tab-btn[data-tab="add"]').textContent = dictee ? "+ Une dictée" : "+ Un cours";
   const titreAjout = document.querySelector("#tab-add h2");
@@ -270,7 +274,7 @@ function appliquerMatiere() {
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
   if (!actif || actif.hidden || (parent && actif.dataset.tab === "accueil") || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
-    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : japonais ? "japonais" : fractions ? "fractions" : parent ? "dashboard" : "accueil"}"]`).click();
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : musique ? "musique" : japonais ? "japonais" : fractions ? "fractions" : verbes ? "verbes" : parent ? "dashboard" : "accueil"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
@@ -322,6 +326,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "musique") loadMusique();
     if (btn.dataset.tab === "japonais") loadJaponais();
     if (btn.dataset.tab === "fractions") loadFractions();
+    if (btn.dataset.tab === "verbes") loadVerbes();
     if (btn.dataset.tab === "controles") loadControles();
     if (btn.dataset.tab === "dashboard") loadDashboard();
     if (btn.dataset.tab === "chansons") loadChansons();
@@ -388,10 +393,10 @@ const VOLETS = [
   { id: "calcul", nom: "Calcul", couleur: "#5b6ee8", matieres: ["tables", "fractions"], aVenir: [
       { nom: "Calcul mental", emoji: "⚡", theme: "calc" },
     ] },
-  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "musique", "japonais"], aVenir: [] },
+  { id: "langues", nom: "Langues étrangères & Musique", couleur: "#1fa2a0", matieres: ["anglais", "espagnol", "verbes", "musique", "japonais"], aVenir: [] },
 ];
 const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
-const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique", japonais: "japonais", fractions: "fractions" };
+const CIBLE_MATIERE = { dictee: "dictee", tables: "tables", musique: "musique", japonais: "japonais", fractions: "fractions", verbes: "verbes" };
 const COULEURS_MATIERE = {
   anglais: ["#4D96FF", "#2e9d6a", "rgba(77,150,255,.4)"],
   espagnol: ["#FF6B9D", "#f06a3c", "rgba(255,107,157,.4)"],
@@ -401,6 +406,7 @@ const COULEURS_MATIERE = {
   musique: ["#1a1a2e", "#a152d6", "rgba(26,26,46,.5)"],
   japonais: ["#E63946", "#f06a3c", "rgba(230,57,70,.4)"],
   fractions: ["#f06a3c", "#ffb347", "rgba(240,106,60,.4)"],
+  verbes: ["#4D96FF", "#a152d6", "rgba(77,150,255,.4)"],
   maths: ["#f06a3c", "#e5484d", "rgba(240,106,60,.4)"],
   histoire: ["#1fa2a0", "#4D96FF", "rgba(31,162,160,.4)"],
   svt: ["#6BCB77", "#2e9d6a", "rgba(107,203,119,.4)"],
@@ -3389,6 +3395,234 @@ function finJeuFractions(corps, titre, bonnes, total, relancer) {
     <button class="btn-ghost-small" id="fr-fermer">Fermer</button>`;
   corps.querySelector("#fr-encore").addEventListener("click", relancer);
   corps.querySelector("#fr-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+}
+
+// ------------------------------------------------------------
+// VERBES IRRÉGULIERS ANGLAIS — traduction (QCM) + formes (prétérit, + participe si 3 colonnes).
+// Réservé à Lucie (Léonie trop débutante). Repris de la liste de leoluce (verbes-anglais.html),
+// participe passé ajouté pour l'option 3 colonnes.
+// ------------------------------------------------------------
+const VERBES_IRREGULIERS = [
+  { inf: "Be", past: ["was", "were"], pp: ["been"], fr: "être" },
+  { inf: "Become", past: ["became"], pp: ["become"], fr: "devenir" },
+  { inf: "Build", past: ["built"], pp: ["built"], fr: "construire" },
+  { inf: "Buy", past: ["bought"], pp: ["bought"], fr: "acheter" },
+  { inf: "Bring", past: ["brought"], pp: ["brought"], fr: "apporter" },
+  { inf: "Come", past: ["came"], pp: ["come"], fr: "venir" },
+  { inf: "Choose", past: ["chose"], pp: ["chosen"], fr: "choisir" },
+  { inf: "Do", past: ["did"], pp: ["done"], fr: "faire" },
+  { inf: "Drink", past: ["drank"], pp: ["drunk"], fr: "boire" },
+  { inf: "Drive", past: ["drove"], pp: ["driven"], fr: "conduire" },
+  { inf: "Eat", past: ["ate"], pp: ["eaten"], fr: "manger" },
+  { inf: "Fall", past: ["fell"], pp: ["fallen"], fr: "tomber" },
+  { inf: "Feel", past: ["felt"], pp: ["felt"], fr: "ressentir" },
+  { inf: "Feed", past: ["fed"], pp: ["fed"], fr: "nourrir" },
+  { inf: "Find", past: ["found"], pp: ["found"], fr: "trouver" },
+  { inf: "Forget", past: ["forgot"], pp: ["forgotten"], fr: "oublier" },
+  { inf: "Fly", past: ["flew"], pp: ["flown"], fr: "voler" },
+  { inf: "Get", past: ["got"], pp: ["got"], fr: "obtenir" },
+  { inf: "Give", past: ["gave"], pp: ["given"], fr: "donner" },
+  { inf: "Go", past: ["went"], pp: ["gone"], fr: "aller" },
+  { inf: "Grow", past: ["grew"], pp: ["grown"], fr: "grandir" },
+  { inf: "Hide", past: ["hid"], pp: ["hidden"], fr: "cacher" },
+  { inf: "Hear", past: ["heard"], pp: ["heard"], fr: "entendre" },
+  { inf: "Have", past: ["had"], pp: ["had"], fr: "avoir" },
+  { inf: "Hold", past: ["held"], pp: ["held"], fr: "tenir" },
+  { inf: "Hurt", past: ["hurt"], pp: ["hurt"], fr: "blesser" },
+  { inf: "Keep", past: ["kept"], pp: ["kept"], fr: "garder" },
+  { inf: "Know", past: ["knew"], pp: ["known"], fr: "savoir" },
+  { inf: "Leave", past: ["left"], pp: ["left"], fr: "quitter" },
+  { inf: "Lose", past: ["lost"], pp: ["lost"], fr: "perdre" },
+  { inf: "Make", past: ["made"], pp: ["made"], fr: "fabriquer" },
+  { inf: "Meet", past: ["met"], pp: ["met"], fr: "rencontrer" },
+  { inf: "Put", past: ["put"], pp: ["put"], fr: "mettre" },
+  { inf: "Pay", past: ["paid"], pp: ["paid"], fr: "payer" },
+  { inf: "Read", past: ["read"], pp: ["read"], fr: "lire" },
+  { inf: "Run", past: ["ran"], pp: ["run"], fr: "courir" },
+  { inf: "Say", past: ["said"], pp: ["said"], fr: "dire" },
+  { inf: "See", past: ["saw"], pp: ["seen"], fr: "voir" },
+  { inf: "Send", past: ["sent"], pp: ["sent"], fr: "envoyer" },
+  { inf: "Sell", past: ["sold"], pp: ["sold"], fr: "vendre" },
+  { inf: "Show", past: ["showed"], pp: ["shown"], fr: "montrer" },
+  { inf: "Sing", past: ["sang"], pp: ["sung"], fr: "chanter" },
+  { inf: "Sit", past: ["sat"], pp: ["sat"], fr: "s'asseoir" },
+  { inf: "Sleep", past: ["slept"], pp: ["slept"], fr: "dormir" },
+  { inf: "Speak", past: ["spoke"], pp: ["spoken"], fr: "parler" },
+  { inf: "Swim", past: ["swam"], pp: ["swum"], fr: "nager" },
+  { inf: "Take", past: ["took"], pp: ["taken"], fr: "prendre" },
+  { inf: "Tell", past: ["told"], pp: ["told"], fr: "raconter" },
+  { inf: "Think", past: ["thought"], pp: ["thought"], fr: "penser" },
+  { inf: "Throw", past: ["threw"], pp: ["thrown"], fr: "lancer" },
+  { inf: "Understand", past: ["understood"], pp: ["understood"], fr: "comprendre" },
+  { inf: "Wear", past: ["wore"], pp: ["worn"], fr: "porter" },
+  { inf: "Wake", past: ["woke"], pp: ["woken"], fr: "se réveiller" },
+  { inf: "Win", past: ["won"], pp: ["won"], fr: "gagner" },
+  { inf: "Write", past: ["wrote"], pp: ["written"], fr: "écrire" },
+];
+
+let verbesEtat = { colonnes: 2, faits: {} };
+function cleVerbe(v) { return v.inf.toLowerCase(); }
+function infoVerbe(v) { return verbesEtat.faits[cleVerbe(v)] || null; }
+
+async function enregistrerVerbes(champs) {
+  try {
+    await setDoc(doc(db, "verbesRevisions", eleveCourant), { eleve: eleveCourant, ...champs }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("Verbes", err);
+    toast(`⚠️ Non enregistré (${err.code || err.message})`);
+    return false;
+  }
+}
+
+function serieVerbes(n, pool = VERBES_IRREGULIERS) {
+  const auj = todayISO();
+  const rang = v => {
+    const x = infoVerbe(v);
+    if (!x) return 1;
+    if (x.dernierResultat === false) return 0;
+    if ((x.prochaineDate || "") <= auj) return 2 + x.niveau / 10;
+    return 3 + x.niveau;
+  };
+  return melanger(pool).sort((a, b) => rang(a) - rang(b)).slice(0, n);
+}
+
+function noterVerbe(v, correct) {
+  if (estParent()) return;
+  const cle = cleVerbe(v);
+  const x = { niveau: 0, vus: 0, rates: 0, ...(verbesEtat.faits[cle] || {}) };
+  const monte = correct && x.monteLe !== todayISO();
+  x.niveau = correct ? Math.min(x.niveau + (monte ? 1 : 0), 5) : Math.max(x.niveau - 1, 0);
+  if (monte) x.monteLe = todayISO();
+  x.vus += 1;
+  if (!correct) x.rates += 1;
+  x.dernierResultat = correct;
+  const d = new Date();
+  d.setDate(d.getDate() + (correct ? NIVEAUX_JOURS[x.niveau] : 0));
+  x.prochaineDate = d.toISOString().slice(0, 10);
+  verbesEtat.faits[cle] = x;
+  journaliser({ correct, source: "verbes", question: v.inf, reponse: "" });
+  enregistrerVerbes({ faits: { [cle]: x } });
+}
+
+async function loadVerbes() {
+  const el = document.getElementById("verbes-contenu");
+  const eleve = eleveCourant;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, "verbesRevisions", eleve));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = `<div class="panel-info">❌ Impossible de charger les verbes. Recharge la page.</div>`;
+    return;
+  }
+  if (eleve !== eleveCourant || matiereCourante !== "verbes") return;
+  verbesEtat = { colonnes: data?.colonnes || 2, faits: data?.faits || {} };
+  const sus = VERBES_IRREGULIERS.filter(v => (infoVerbe(v)?.niveau || 0) >= 3).length;
+  el.innerHTML = `
+    <div class="tb-hero">
+      <div class="dic-kicker">💬 Verbes irréguliers</div>
+      <h2>${verbesEtat.colonnes} colonnes : infinitif${verbesEtat.colonnes === 3 ? ", prétérit, participe" : ", prétérit"}</h2>
+      <div class="dic-jauge"><span style="width:${Math.round(sus / VERBES_IRREGULIERS.length * 100)}%"></span></div>
+      <div class="dic-jauge-txt">${sus} / ${VERBES_IRREGULIERS.length} bien sus</div>
+      <div class="tb-choix-titre">Tu les travailles sur combien de colonnes en classe ?</div>
+      <div class="vb-colonnes-grille" id="vb-colonnes">
+        <button data-c="2" class="mus-choix-btn ${verbesEtat.colonnes === 2 ? "on" : ""}">2 colonnes<br>infinitif + prétérit</button>
+        <button data-c="3" class="mus-choix-btn ${verbesEtat.colonnes === 3 ? "on" : ""}">3 colonnes<br>+ participe passé</button>
+      </div>
+    </div>
+    <div class="dic-jeux">
+      <button class="dic-jeu dj-verbes-trad"><span class="tc-emoji">🇫🇷</span><span class="tc-title">Traduction</span><span class="tc-sub">Que veut dire ce verbe ?</span></button>
+      <button class="dic-jeu dj-verbes-formes"><span class="tc-emoji">✍️</span><span class="tc-title">Formes irrégulières</span><span class="tc-sub">Écris le(s) forme(s)</span></button>
+    </div>`;
+  el.querySelectorAll("#vb-colonnes [data-c]").forEach(b => b.addEventListener("click", async () => {
+    if (await enregistrerVerbes({ colonnes: Number(b.dataset.c) })) loadVerbes();
+  }));
+  el.querySelector(".dj-verbes-trad").addEventListener("click", jeuVerbesTraduction);
+  el.querySelector(".dj-verbes-formes").addEventListener("click", jeuVerbesFormes);
+}
+
+function distracteursFr(v, n = 2) {
+  return melanger(VERBES_IRREGULIERS.filter(x => x.fr !== v.fr).map(x => x.fr)).slice(0, n);
+}
+
+function jeuVerbesTraduction() {
+  const serie = serieVerbes(10);
+  const titre = "🇫🇷 Traduction";
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="vb-compteur"></h3></div><div class="game-body"></div>`);
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuVerbes(corps, titre, bonnes, serie.length, jeuVerbesTraduction);
+    const v = serie[i];
+    const choix = melanger([v.fr, ...distracteursFr(v)]);
+    corps.querySelector("#vb-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question" style="font-size:32px">${v.inf}</div>
+      <div class="bonmot-choix">${choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
+      <div id="vb-resultat"></div>`;
+    corps.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      const ok = choix[Number(b.dataset.k)] === v.fr;
+      corps.querySelectorAll("[data-k]").forEach(x => {
+        x.disabled = true;
+        if (x.textContent === v.fr) x.classList.add("correct");
+        else if (x === b) x.classList.add("incorrect");
+      });
+      noterVerbe(v, ok);
+      if (ok) bonnes += 1;
+      corps.querySelector("#vb-resultat").innerHTML = `<button class="btn-primary btn-block" id="vb-suivant">Suivant →</button>`;
+      corps.querySelector("#vb-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    }));
+  };
+  afficher();
+}
+
+function jeuVerbesFormes() {
+  const serie = serieVerbes(10);
+  const titre = "✍️ Formes irrégulières";
+  const trois = verbesEtat.colonnes === 3;
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="vb-compteur"></h3></div><div class="game-body"></div>`);
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuVerbes(corps, titre, bonnes, serie.length, jeuVerbesFormes);
+    const v = serie[i];
+    corps.querySelector("#vb-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question" style="font-size:32px">${v.inf}</div>
+      <div class="ap-ecrire tj-ecrire" style="flex-direction:column;align-items:stretch;gap:8px">
+        <input type="text" class="exo-input" id="vb-pret" placeholder="prétérit" autocomplete="off">
+        ${trois ? `<input type="text" class="exo-input" id="vb-pp" placeholder="participe passé" autocomplete="off">` : ""}
+        <button class="btn-primary btn-small" id="vb-ok">OK</button>
+      </div>
+      <div id="vb-resultat"></div>`;
+    const valider = () => {
+      const pret = corps.querySelector("#vb-pret");
+      const vPret = pret.value.trim().toLowerCase();
+      const vPp = trois ? corps.querySelector("#vb-pp").value.trim().toLowerCase() : "";
+      if (!vPret || (trois && !vPp) || pret.disabled) return;
+      const okPret = v.past.includes(vPret);
+      const okPp = !trois || v.pp.includes(vPp);
+      const ok = okPret && okPp;
+      corps.querySelectorAll(".exo-input").forEach(inp => { inp.disabled = true; });
+      pret.classList.add(okPret ? "correct" : "incorrect");
+      if (trois) corps.querySelector("#vb-pp").classList.add(okPp ? "correct" : "incorrect");
+      corps.querySelector("#vb-ok").disabled = true;
+      noterVerbe(v, ok);
+      if (ok) bonnes += 1;
+      corps.querySelector("#vb-resultat").innerHTML = `${ok ? "" : `<div class="pr-verdict ko">Réponse : ${v.past.join(" / ")}${trois ? ` — ${v.pp.join(" / ")}` : ""}</div>`}<button class="btn-primary btn-block" id="vb-suivant">Suivant →</button>`;
+      corps.querySelector("#vb-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    };
+    corps.querySelector("#vb-ok").addEventListener("click", valider);
+    corps.querySelectorAll(".exo-input").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") valider(); }));
+    corps.querySelector("#vb-pret").focus();
+  };
+  afficher();
+}
+
+function finJeuVerbes(corps, titre, bonnes, total, relancer) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="vb-encore">🔁 Encore</button>
+    <button class="btn-ghost-small" id="vb-fermer">Fermer</button>`;
+  corps.querySelector("#vb-encore").addEventListener("click", relancer);
+  corps.querySelector("#vb-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
 }
 
 // ------------------------------------------------------------

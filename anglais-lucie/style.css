@@ -727,6 +727,10 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .dj-japonais-verrouille { background: #f1eefb; color: #9a95c0; cursor: default; }
 .dj-japonais-verrouille .tc-emoji { font-size: 24px; }
 .dj-fraction { background: linear-gradient(135deg, #f06a3c, #ffb347); }
+.dj-verbes-trad { background: linear-gradient(135deg, #4D96FF, #1fa2a0); }
+.dj-verbes-formes { background: linear-gradient(135deg, #a152d6, #5b6ee8); }
+.vb-colonnes-grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.vb-colonnes-grille .mus-choix-btn { padding: 10px 8px; font-size: 12px; line-height: 1.5; }
 .jp-writer-zone { width: 220px; height: 220px; margin: 0 auto; border: 2px solid #e6e1fb; border-radius: 16px; background: #fafaff; }
 
 /* BADGE IMPORT */
