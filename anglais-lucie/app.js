@@ -3166,7 +3166,7 @@ function jeuMusique() {
       el.className = "mus-note-fixe";
       el.dataset.i = i;
       el.style.left = `${i * MUS_ESPACEMENT}px`;
-      el.style.bottom = `${MUS_BASE_Y + n.pos * 6 - 4.5}px`;
+      el.style.bottom = `${MUS_BASE_Y + n.pos * 6 + 1}px`;
       piste.appendChild(el);
     }
   };
