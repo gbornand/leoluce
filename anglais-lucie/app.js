@@ -202,7 +202,7 @@ function basculerModeEleve(actif) {
   const eleve = eleveCourant, matiere = matiereCourante;
   reinitialiserEcran();
   choisirContexte(eleve, matiere);
-  const cible = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`);
+  const cible = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "accueil"}"]`);
   if (!cible.hidden) cible.click();
   window.scrollTo(0, 0);
 }
@@ -219,8 +219,8 @@ function reinitialiserEcran() {
   document.getElementById("today-score").hidden = true;
   document.getElementById("today-content").hidden = true;
   document.getElementById("streak").hidden = true;
-  document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== "tab-today"; });
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "today"));
+  document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== "tab-accueil"; });
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "accueil"));
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="dictee"]').hidden = true;
   document.querySelector('.tab-btn[data-tab="tables"]').hidden = true;
@@ -251,8 +251,8 @@ function appliquerMatiere() {
   if (titreAjout) titreAjout.textContent = dictee ? "Ajoute ta nouvelle liste de mots" : "Ajoute un cours";
   document.querySelector('.tab-btn[data-tab="notions"]').textContent = parent ? "Notions" : "Mes notions";
   const actif = document.querySelector(".tab-btn.active");
-  if (!actif || actif.hidden || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
-    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : parent ? "dashboard" : "today"}"]`).click();
+  if (!actif || actif.hidden || (parent && actif.dataset.tab === "accueil") || (special && !["add", "dashboard", "controles"].includes(actif.dataset.tab))) {
+    document.querySelector(`.tab-btn[data-tab="${dictee ? "dictee" : tables ? "tables" : parent ? "dashboard" : "accueil"}"]`).click();
   }
   const anglais = matiereCourante === "anglais";
   const tabChansons = document.querySelector('.tab-btn[data-tab="chansons"]');
@@ -284,8 +284,8 @@ onAuthStateChanged(auth, async (user) => {
   const memo = lireLocal("eleve-courant");
   modeEleve = profil.role === "parent" && lireLocal("mode-eleve") === "1";
   choisirContexte(profil.eleves.some(e => e.uid === memo) ? memo : profil.eleves[0].uid, null);
-  const accueil = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "today"}"]`);
-  if (!accueil.hidden) accueil.click();
+  const ongletDepart = document.querySelector(`.tab-btn[data-tab="${estParent() ? "dashboard" : "accueil"}"]`);
+  if (!ongletDepart.hidden) ongletDepart.click();
 });
 
 // ------------------------------------------------------------
@@ -305,8 +305,54 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "chansons") loadChansons();
     if (btn.dataset.tab === "entrainer" && !Object.keys(notionsById).length) loadNotions();
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
+    if (btn.dataset.tab === "accueil") renderAccueil();
   });
 });
+
+// ------------------------------------------------------------
+// ACCUEIL — volets + matières, objectif du jour, séries
+// ------------------------------------------------------------
+const VOLETS = [
+  { id: "calcul", nom: "Calcul", emoji: "🧮", couleur: "#5b6ee8", matieres: ["tables"], aVenir: ["Calcul mental", "Fractions"] },
+  { id: "musique", nom: "Musique", emoji: "🎵", couleur: "#a152d6", matieres: [], aVenir: ["Solfège"] },
+  { id: "langues", nom: "Langues étrangères", emoji: "🌍", couleur: "#1fa2a0", matieres: ["anglais", "espagnol"], aVenir: ["Japonais"] },
+];
+const MATIERES_A_PART = ["francais", "dictee", "maths", "histoire", "svt", "physique"];
+const CIBLE_MATIERE = { dictee: "dictee", tables: "tables" };
+
+function renderAccueil() {
+  if (estParent()) return;
+  const el = document.getElementById("accueil-contenu");
+  const info = eleveInfo();
+  const mesMatieres = new Set(info.matieres);
+  const carteMatiere = m => `<button class="acc-carte" data-matiere="${m}"><span class="acc-emoji">${MATIERES_UI[m].emoji}</span><span class="acc-nom">${MATIERES_UI[m].nom}</span></button>`;
+  const voletsHtml = VOLETS.map(v => {
+    const presentes = v.matieres.filter(m => mesMatieres.has(m) && MATIERES_UI[m]);
+    if (!presentes.length && !v.aVenir.length) return "";
+    return `<div class="acc-volet" style="--volet-couleur:${v.couleur}">
+      <div class="acc-volet-titre">${v.emoji} ${v.nom}</div>
+      <div class="acc-volet-cartes">
+        ${presentes.map(carteMatiere).join("")}
+        ${v.aVenir.map(nom => `<div class="acc-carte acc-bientot"><span class="acc-emoji">🚧</span><span class="acc-nom">${nom}</span><span class="acc-tag">Bientôt</span></div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+  const apartHtml = MATIERES_A_PART.filter(m => mesMatieres.has(m) && MATIERES_UI[m]).map(carteMatiere).join("");
+  el.innerHTML = `
+    <div class="acc-salut">Salut ${esc(info.prenom)} 👋</div>
+    <div class="acc-objectif">🎯 Objectif du jour : prends 10 minutes, choisis une matière ci-dessous.</div>
+    <div class="acc-series">
+      <div class="acc-serie-item">🔥 <b>${serieCourante}</b> jour${serieCourante > 1 ? "s" : ""} d'affilée</div>
+      <div class="acc-serie-item acc-serie-soeurs">👭 Série des sœurs — bientôt</div>
+    </div>
+    ${voletsHtml}
+    ${apartHtml ? `<div class="acc-volet"><div class="acc-volet-titre">📚 Mes matières</div><div class="acc-volet-cartes">${apartHtml}</div></div>` : ""}`;
+  el.querySelectorAll("[data-matiere]").forEach(b => b.addEventListener("click", () => {
+    const m = b.dataset.matiere;
+    choisirContexte(eleveCourant, m);
+    document.querySelector(`.tab-btn[data-tab="${CIBLE_MATIERE[m] || "today"}"]`).click();
+  }));
+}
 
 // ------------------------------------------------------------
 // AUJOURD'HUI — exercices du jour
@@ -1570,12 +1616,16 @@ function calculerMotivation({ reponses, seances, rows }) {
   return { serie, badges };
 }
 
+let serieCourante = 0, faitAujourdhuiCourant = false;
 function majSerie(serie, faitAujourdhui) {
+  serieCourante = serie;
+  faitAujourdhuiCourant = faitAujourdhui;
   const el = document.getElementById("streak");
   el.hidden = serie === 0;
   el.className = `streak${faitAujourdhui ? "" : " streak-attente"}`;
   el.textContent = `🔥 ${serie}`;
   el.title = faitAujourdhui ? `${serie} jour(s) d'affilée` : `${serie} jour(s) d'affilée — fais ta séance aujourd'hui pour continuer !`;
+  if (!document.getElementById("tab-accueil").hidden) renderAccueil();
 }
 
 function annoncerNouveauxBadges(obtenus, badges) {

@@ -46,7 +46,8 @@
     <div class="topbar-title">🦉 Mes révisions</div>
     <nav class="tabs">
       <button class="tab-btn" data-tab="dashboard" hidden>📊 Tableau de bord</button>
-      <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
+      <button class="tab-btn active" data-tab="accueil">🏠 Accueil</button>
+      <button class="tab-btn" data-tab="today">Aujourd'hui</button>
       <button class="tab-btn" data-tab="dictee" hidden>🎧 Ma dictée</button>
       <button class="tab-btn" data-tab="tables" hidden>✖️ Tables</button>
       <button class="tab-btn" data-tab="add">+ Un cours</button>
@@ -73,8 +74,13 @@
       </div>
     </section>
 
+    <!-- ONGLET ACCUEIL -->
+    <section id="tab-accueil" class="tab-panel">
+      <div id="accueil-contenu"><div class="panel-info">Chargement…</div></div>
+    </section>
+
     <!-- ONGLET AUJOURD'HUI -->
-    <section id="tab-today" class="tab-panel">
+    <section id="tab-today" class="tab-panel" hidden>
       <div id="dst-bandeau" class="dst-bandeau" hidden></div>
       <div id="today-loading" class="panel-info">Chargement de ta séance du jour…</div>
       <div id="today-empty" class="panel-info" hidden>

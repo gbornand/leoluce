@@ -684,6 +684,22 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tj-qcm, .hdr-tqcm { background: linear-gradient(135deg, #1fa2a0, #3f7fe0); }
 .tj-defi, .hdr-tdefi { background: linear-gradient(135deg, #f06a3c, #e5484d); }
 .tj-chute, .hdr-tchute { background: linear-gradient(135deg, #a152d6, #5b6ee8); }
+
+/* ACCUEIL */
+.acc-salut { font-size: 22px; font-weight: 900; color: #2d2a4a; margin-bottom: 4px; }
+.acc-objectif { background: #fff4df; color: #a3710c; border-radius: 14px; padding: 10px 14px; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.acc-series { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.acc-serie-item { background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 800; color: #2d2a4a; box-shadow: 0 2px 8px rgba(91,110,232,.1); }
+.acc-serie-soeurs { opacity: .6; }
+.acc-volet { margin-bottom: 18px; }
+.acc-volet-titre { font-size: 15px; font-weight: 900; color: #2d2a4a; margin-bottom: 8px; }
+.acc-volet-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.acc-carte { background: linear-gradient(135deg, var(--volet-couleur, #5b6ee8), #1fa2a0); border: none; border-radius: 18px; padding: 16px 12px; text-align: left; cursor: pointer; color: #fff; font: inherit; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 5px 16px rgba(91,110,232,.16); transition: transform .12s; }
+.acc-carte:active { transform: scale(.96); }
+.acc-carte .acc-emoji { font-size: 26px; }
+.acc-carte .acc-nom { font-size: 14px; font-weight: 800; }
+.acc-bientot { background: #f1eefb; color: #9a95c0; cursor: default; position: relative; }
+.acc-bientot .acc-tag { font-size: 9px; font-weight: 800; text-transform: uppercase; background: rgba(0,0,0,.08); border-radius: 999px; padding: 2px 8px; align-self: flex-start; }
 .chute-zone { position: relative; height: 220px; overflow: hidden; background: linear-gradient(180deg, #f1eefb, #fff); border-radius: 16px; margin: 10px 0 14px; }
 .chute-ligne { position: absolute; bottom: 46px; left: 0; right: 0; height: 2px; background: rgba(240,106,60,.45); }
 .chute-ligne::after { content: "⬇️ réponds avant la ligne"; position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 10px; font-weight: 700; color: #a3710c; white-space: nowrap; }
