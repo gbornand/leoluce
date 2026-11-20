@@ -687,6 +687,16 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tj-defi, .hdr-tdefi { background: linear-gradient(135deg, #f06a3c, #e5484d); }
 .tj-chute, .hdr-tchute { background: linear-gradient(135deg, #a152d6, #5b6ee8); }
 
+/* BADGE IMPORT */
+.fab-import {
+  position: fixed; right: 18px; bottom: 24px; width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #a152d6, #5b6ee8); color: #fff; font-size: 24px; border: none;
+  box-shadow: 0 6px 18px rgba(91,110,232,.4); z-index: 50; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: transform .15s;
+}
+.fab-import:active { transform: scale(.92); }
+.fab-import[hidden] { display: none; }
+
 /* ACCUEIL */
 #accueil-contenu { animation: accFade .4s ease; }
 @keyframes accFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

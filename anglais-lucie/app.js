@@ -142,7 +142,7 @@ sur("btn-mdp", "click", () => {
 // ÉLÈVES & MATIÈRES
 // ------------------------------------------------------------
 const MATIERES_UI = {
-  anglais: { nom: "Anglais", emoji: "🇬🇧🇺🇸", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
+  anglais: { nom: "Anglais", emoji: "🔤", savoir: "🔤 Vocabulaire", regle: "📐 Grammaire", savoirCourt: "mots", regleCourt: "règles" },
   espagnol: { nom: "Espagnol", emoji: "💃", savoir: "💃 Vocabulario", regle: "📐 Gramática", savoirCourt: "mots", regleCourt: "règles" },
   francais: { nom: "Français", emoji: "📚", savoir: "✏️ Mots à savoir", regle: "📐 Règles", savoirCourt: "mots", regleCourt: "règles" },
   tables: { nom: "Tables", emoji: "✖️", savoir: "✖️ Calculs", regle: "📐 Astuces", savoirCourt: "calculs", regleCourt: "astuces" },
@@ -240,6 +240,7 @@ function reinitialiserEcran() {
 function appliquerMatiere() {
   const parent = estParent();
   document.querySelector('.tab-btn[data-tab="dashboard"]').hidden = !parent;
+  document.getElementById("fab-import").hidden = parent;
   const dictee = matiereCourante === "dictee";
   const tables = matiereCourante === "tables";
   const special = dictee || tables;
@@ -312,6 +313,18 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "today" && document.getElementById("today-content").hidden) loadToday();
     if (btn.dataset.tab === "accueil") renderAccueil();
   });
+});
+
+// Badge flottant "Ajouter un cours" : propose la matière avant d'ouvrir l'écran d'import.
+sur("fab-import", "click", () => {
+  const options = eleveInfo().matieres.filter(m => m !== "tables" && MATIERES_UI[m]);
+  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📸 Ajouter un cours</div><h3>Pour quelle matière ?</h3></div>
+    <div class="game-body"><div class="tb-choix tb-choix-grand">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
+  corps.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("modal-libre-close").click();
+    choisirContexte(eleveCourant, b.dataset.m);
+    document.querySelector('.tab-btn[data-tab="add"]').click();
+  }));
 });
 
 // Barre du haut : se cache en scrollant vers le bas, revient dès qu'on remonte un peu.
