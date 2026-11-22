@@ -356,7 +356,7 @@ function majEnteteMatiere() {
 sur("btn-matiere-actuelle", "click", () => {
   const options = eleveInfo().matieres.filter(m => MATIERES_UI[m]);
   const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">Changer de matière</div><h3>Laquelle ?</h3></div>
-    <div class="game-body"><div class="tb-choix tb-choix-grand">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
+    <div class="game-body"><div class="tb-choix tb-choix-matiere">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji}<br>${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
   corps.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
     document.getElementById("modal-libre-close").click();
     choisirContexte(eleveCourant, b.dataset.m);
@@ -367,7 +367,7 @@ sur("btn-matiere-actuelle", "click", () => {
 sur("fab-import", "click", () => {
   const options = eleveInfo().matieres.filter(m => m !== "tables" && MATIERES_UI[m]);
   const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📸 Ajouter un cours</div><h3>Pour quelle matière ?</h3></div>
-    <div class="game-body"><div class="tb-choix tb-choix-grand">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
+    <div class="game-body"><div class="tb-choix tb-choix-matiere">${options.map(m => `<button data-m="${m}">${MATIERES_UI[m].emoji}<br>${MATIERES_UI[m].nom}</button>`).join("")}</div></div>`);
   corps.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
     document.getElementById("modal-libre-close").click();
     choisirContexte(eleveCourant, b.dataset.m);
@@ -388,6 +388,18 @@ sur("fab-import", "click", () => {
     dernierY = y;
   }, { passive: true });
 })();
+
+// Clavier mobile qui recouvre le bouton Valider/OK : quand le clavier s'ouvre (le viewport visuel
+// rétrécit), on fait remonter le champ actif pour que son bouton reste atteignable, sans toucher
+// au code de chaque jeu.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const actif = document.activeElement;
+    if (actif && (actif.tagName === "INPUT" || actif.tagName === "TEXTAREA")) {
+      setTimeout(() => actif.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+    }
+  });
+}
 
 // ------------------------------------------------------------
 // ACCUEIL — volets + matières, objectif du jour, séries
@@ -2051,6 +2063,35 @@ function bonneEcriture(attendu, saisie) {
   const s = normaliser(saisie);
   return s === normaliser(attendu) || s === normaliser(sansArticle(attendu));
 }
+// Diff lettre à lettre entre ce que l'enfant a écrit et le mot correct, pour montrer la vraie faute
+// (et pas un rappel générique des pièges habituels). Compare contre la forme la plus proche
+// (avec ou sans article) pour ne pas afficher l'article entier comme "manquant" à tort.
+function htmlDiffEcriture(mot, saisie) {
+  const propre = String(saisie || "").trim();
+  if (!propre) return "";
+  const cibleAvecArticle = normaliser(mot).length - normaliser(propre).length;
+  const cibleSansArticle = normaliser(sansArticle(mot)).length - normaliser(propre).length;
+  const cible = Math.abs(cibleSansArticle) < Math.abs(cibleAvecArticle) ? sansArticle(mot) : mot;
+  const a = propre, b = cible;
+  const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    dp[i][j] = a[i - 1].toLowerCase() === b[j - 1].toLowerCase() ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  }
+  let i = a.length, j = b.length;
+  const ops = [];
+  while (i > 0 && j > 0) {
+    if (a[i - 1].toLowerCase() === b[j - 1].toLowerCase()) { ops.push({ t: a[i - 1] === b[j - 1] ? "eg" : "maj", c: b[j - 1] }); i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) { ops.push({ t: "en-trop", c: a[i - 1] }); i--; }
+    else { ops.push({ t: "manque", c: b[j - 1] }); j--; }
+  }
+  while (i > 0) ops.push({ t: "en-trop", c: a[--i] });
+  while (j > 0) ops.push({ t: "manque", c: b[--j] });
+  ops.reverse();
+  const correct = ops.filter(o => o.t !== "en-trop").map(o => o.t === "eg" ? esc(o.c) : `<b class="piege">${esc(o.c)}</b>`).join("");
+  const ecrit = ops.filter(o => o.t !== "manque").map(o => o.t === "eg" ? esc(o.c) : `<b class="piege">${esc(o.c)}</b>`).join("");
+  return `<div class="dic-diff-ligne"><span class="dic-diff-label">Tu as écrit</span> ${ecrit || "<i>(rien)</i>"}</div>
+    <div class="dic-diff-ligne"><span class="dic-diff-label">Il fallait écrire</span> ${correct}</div>`;
+}
 function estArticle(m, s, i) {
   return i === 0 && m.syllabes.length > 1 && (/['’]$/.test(s) || m.mot.startsWith(s + " "));
 }
@@ -2309,7 +2350,7 @@ function apprendreMots(liste, depart = 0) {
       <div class="ap-nav">
         <button class="btn-ghost-small" id="ap-prec" ${i === 0 && etape === 0 ? "disabled" : ""}>← Retour</button>
         <button class="pr-micro di-play ap-son" id="ap-son" title="Écouter">🔊</button>
-        <button class="btn-ghost-small" id="ap-suivant">Mot suivant →</button>
+        <button class="btn-ghost-small" id="ap-suivant" ${etape === 4 ? "disabled" : ""}>Mot suivant →</button>
       </div>`;
     if (etape === 0) dire(m.mot, 0.8, "fr");
     corps.querySelector("#ap-son").addEventListener("click", () => dire(m.mot, 0.8, "fr"));
@@ -2331,8 +2372,10 @@ function apprendreMots(liste, depart = 0) {
       corps.querySelector("#ap-valider").disabled = true;
       input.classList.add(ok ? "correct" : "incorrect");
       noterMot(m, ok, { source: "dictee-apprendre", reponse: input.value.trim() });
-      corps.querySelector("#ap-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo, c'est juste !" : "💡 Presque ! Regarde bien les pièges :"}</div>
+      corps.querySelector("#ap-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo, c'est juste !" : "💡 Regarde ta faute :"}</div>
+        ${ok ? "" : `<div class="dic-diff">${htmlDiffEcriture(m.mot, input.value)}</div>`}
         <div class="ap-mot ap-petit">${htmlPieges(m)}</div>`;
+      corps.querySelector("#ap-suivant").disabled = false;
     };
     corps.querySelector("#ap-valider").addEventListener("click", valider);
     input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
@@ -2399,7 +2442,8 @@ function jeuEcrire(mode) {
       corps.querySelector("#dj-revoir")?.remove();
       input.classList.add(ok ? "correct" : "incorrect");
       noterMot(m, ok, { source: `dictee-${mode}`, reponse: input.value.trim() });
-      corps.querySelector("#dj-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo !" : "💡 Le mot s'écrit :"}</div>
+      corps.querySelector("#dj-resultat").innerHTML = `<div class="pr-verdict ${ok ? "ok" : "ko"}">${ok ? "✅ Bravo !" : "💡 Regarde ta faute :"}</div>
+        ${ok ? "" : `<div class="dic-diff">${htmlDiffEcriture(m.mot, input.value)}</div>`}
         <div class="ap-mot ap-petit">${htmlPieges(m)}</div>
         <button class="btn-primary btn-block" id="dj-suivant">Mot suivant →</button>`;
       corps.querySelector("#dj-suivant").addEventListener("click", () => { i += 1; afficher(); });
@@ -2715,7 +2759,9 @@ function finJeuTables(corps, titre, bonnes, total, relancer, rates = []) {
 }
 
 // Champ de réponse numérique (clavier chiffres sur téléphone) + bouton OK.
-function champNombre(corps, onValider) {
+// longueurAttendue (nb de chiffres de la bonne réponse) : dès que l'enfant a tapé autant de
+// chiffres, on valide tout seul — plus besoin d'atteindre le bouton OK (souvent caché par le clavier).
+function champNombre(corps, onValider, longueurAttendue = null) {
   const input = corps.querySelector("#tj-saisie");
   const valider = () => {
     const v = input.value.trim().replace(/\s/g, "");
@@ -2724,6 +2770,9 @@ function champNombre(corps, onValider) {
   };
   corps.querySelector("#tj-ok").addEventListener("click", valider);
   input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+  if (longueurAttendue) input.addEventListener("input", () => {
+    if (input.value.replace(/\s/g, "").length >= longueurAttendue) valider();
+  });
   input.focus();
   return input;
 }
@@ -2831,7 +2880,7 @@ function jeuTablesEcrire() {
         <button class="btn-primary btn-block" id="tj-suivant">Suivant →</button>`;
       corps.querySelector("#tj-suivant").addEventListener("click", () => { i += 1; afficher(); });
       corps.querySelector("#tj-suivant").focus();
-    });
+    }, String(f.t * f.n).length);
   };
   afficher();
 }
@@ -2880,14 +2929,25 @@ function jeuTablesQcm() {
 // DÉFI 1 MINUTE : le plus de bonnes réponses possible ; record gardé.
 function jeuTablesDefi() {
   const titre = "⏱️ Défi 1 minute";
+  let choisies = [...tablesEtat.actives];
   const corps = ouvrirLibre(`<div class="game-head hdr-tdefi"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur">Prête ?</h3></div>
-    <div class="game-body"><p class="ap-legende">60 secondes pour réussir le plus de calculs des tables ${listeTables(tablesEtat.actives)}.${tablesEtat.record ? ` Ton record : ${tablesEtat.record}.` : ""}</p>
+    <div class="game-body"><p class="ap-legende">60 secondes pour réussir le plus de calculs possible.${tablesEtat.record ? ` Ton record : ${tablesEtat.record}.` : ""}</p>
+    <div class="tb-choix-titre">Tables à travailler :</div>
+    <div class="tb-choix tb-choix-clair" id="tj-choix-tables">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(t => `<button data-table="${t}" class="${choisies.includes(t) ? "on" : ""}">${t}</button>`).join("")}</div>
     <button class="btn-primary btn-block" id="tj-go">C'est parti !</button></div>`);
+  corps.querySelector("#tj-choix-tables").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-table]");
+    if (!b) return;
+    const t = Number(b.dataset.table);
+    choisies = choisies.includes(t) ? choisies.filter(x => x !== t) : [...choisies, t];
+    b.classList.toggle("on");
+  });
   corps.querySelector("#tj-go").addEventListener("click", () => {
+    if (!choisies.length) return;
     let bonnes = 0, total = 0, reste = 60;
     const rates = [];
     const fin = Date.now() + 60000;
-    const pool = faitsActifs();
+    const pool = choisies.flatMap(faitsDeTable);
     const terminer = () => {
       clearInterval(tablesMinuteur);
       const nouveau = bonnes > tablesEtat.record;
@@ -2914,9 +2974,8 @@ function jeuTablesDefi() {
         if (ok) return question();
         input.disabled = true;
         input.classList.add("incorrect");
-        corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">${f.t} × ${f.n} = ${f.t * f.n}</div>`;
-        setTimeout(question, 1200);
-      });
+        setTimeout(question, 400);
+      }, String(f.t * f.n).length);
     };
     question();
   });
@@ -2926,10 +2985,21 @@ function jeuTablesDefi() {
 // Une bonne réponse accélère un peu la chute suivante ; raté = la réponse correcte s'affiche puis on enchaîne.
 function jeuTablesChute() {
   const titre = "🪂 Ça tombe !";
+  let choisies = [...tablesEtat.actives];
   const corps = ouvrirLibre(`<div class="game-head hdr-tchute"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur">Prête ?</h3></div>
     <div class="game-body"><p class="ap-legende">60 secondes : réponds avant que le calcul touche la ligne !</p>
+    <div class="tb-choix-titre">Tables à travailler :</div>
+    <div class="tb-choix tb-choix-clair" id="tj-choix-tables">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(t => `<button data-table="${t}" class="${choisies.includes(t) ? "on" : ""}">${t}</button>`).join("")}</div>
     <button class="btn-primary btn-block" id="tj-go">C'est parti !</button></div>`);
+  corps.querySelector("#tj-choix-tables").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-table]");
+    if (!b) return;
+    const t = Number(b.dataset.table);
+    choisies = choisies.includes(t) ? choisies.filter(x => x !== t) : [...choisies, t];
+    b.classList.toggle("on");
+  });
   corps.querySelector("#tj-go").addEventListener("click", () => {
+    if (!choisies.length) return;
     let bonnes = 0, total = 0, fallMs = 6000, arrete = false;
     const rates = [];
     const fin = Date.now() + 60000;
@@ -2949,7 +3019,7 @@ function jeuTablesChute() {
     }, 250);
     const question = () => {
       if (arrete || Date.now() >= fin || document.getElementById("modal-libre").hidden) return;
-      const f = serieTables(1)[0];
+      const f = serieTables(1, choisies.flatMap(faitsDeTable))[0];
       let reglee = false;
       corps.querySelector(".game-body").innerHTML = `
         <div class="chute-zone"><div class="chute-ligne"></div>
@@ -2964,10 +3034,9 @@ function jeuTablesChute() {
         if (!rates.some(x => x.t === f.t && x.n === f.n)) rates.push(f);
         noterFait(f, false, { ms: fallMs, donne: "" });
         item.classList.add("ko");
-        corps.querySelector("#tj-resultat").innerHTML = `<div class="pr-verdict ko">⌛ ${f.t} × ${f.n} = ${f.t * f.n}</div>`;
         corps.querySelector("#tj-saisie").disabled = true;
         corps.querySelector("#tj-ok").disabled = true;
-        setTimeout(question, 900);
+        setTimeout(question, 500);
       });
       champNombre(corps, v => {
         if (reglee || arrete) return;
@@ -2982,11 +3051,8 @@ function jeuTablesChute() {
         corps.querySelector("#tj-ok").disabled = true;
         corps.querySelector("#tj-saisie").classList.add(ok ? "correct" : "incorrect");
         item.classList.add(ok ? "ok" : "ko");
-        corps.querySelector("#tj-resultat").innerHTML = ok
-          ? `<div class="pr-verdict ok">✅ Bravo !</div>`
-          : `<div class="pr-verdict ko">${f.t} × ${f.n} = ${f.t * f.n}</div>`;
-        setTimeout(question, ok ? 500 : 1100);
-      });
+        setTimeout(question, ok ? 350 : 500);
+      }, String(f.t * f.n).length);
     };
     question();
   });
@@ -3938,7 +4004,7 @@ function finJeuFrancais(corps, titre, bonnes, total, jeuId) {
 
 // ------------------------------------------------------------
 // JAPONAIS — hiragana : observer, voir le tracé animé, puis s'entraîner avec correction
-// trait par trait (Hanzi Writer, données @k1low/hanzi-writer-data-jp sur jsDelivr).
+// trait par trait (Hanzi Writer, données kanji-writer-data-jp sur jsDelivr).
 // ------------------------------------------------------------
 const HIRA_COLS = [
   { id: "a", label: "あ列", chars: [["あ", "a", "あい", "amour"], ["い", "i", "いぬ", "chien"], ["う", "u", "うえ", "au-dessus"], ["え", "e", "え", "dessin"], ["お", "o", "おかあさん", "maman"]] },
@@ -3954,7 +4020,7 @@ const HIRA_COLS = [
 ];
 
 function chargeurDonneesKana(char, onLoad, onError) {
-  fetch(`https://cdn.jsdelivr.net/npm/@k1low/hanzi-writer-data-jp@0.8.0/${encodeURIComponent(char)}.json`)
+  fetch(`https://cdn.jsdelivr.net/npm/kanji-writer-data-jp@0.0.1/${encodeURIComponent(char)}.json`)
     .then(r => r.json()).then(onLoad).catch(onError);
 }
 

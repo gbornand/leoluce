@@ -622,6 +622,9 @@ body {
 .syl-1 { color: #0f9d58; }
 .syl-art { color: #8a84b5; font-weight: 700; }
 .piege { color: #e0262f; font-weight: 900; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.dic-diff { background: #fdf2f2; border-radius: 12px; padding: 10px 14px; margin: 8px 0; text-align: left; }
+.dic-diff-ligne { font-size: 17px; font-weight: 700; color: #2d2a4a; margin: 4px 0; }
+.dic-diff-label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #8a84b5; letter-spacing: .03em; }
 
 .dic-mots { display: flex; flex-direction: column; gap: 8px; }
 .dic-mot { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 14px; padding: 8px 10px; box-shadow: 0 2px 8px rgba(91,110,232,.07); }
@@ -681,8 +684,12 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .tb-choix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .tb-choix button { width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255,255,255,.6); background: transparent; color: #fff; font: inherit; font-weight: 900; font-size: 16px; cursor: pointer; }
 .tb-choix button.on { background: #fff; color: #3f5bd8; border-color: #fff; }
+.tb-choix-clair button { width: 40px; height: 40px; border-radius: 12px; border: 2px solid #e6e1fb; background: #fff; color: #6a6690; }
+.tb-choix-clair button.on { border-color: #5b6ee8; background: linear-gradient(135deg, #5b6ee8, #1fa2a0); color: #fff; }
 .tb-choix-grand { justify-content: center; }
 .tb-choix-grand button { width: 64px; height: 64px; font-size: 26px; background: linear-gradient(135deg, #5b6ee8, #1fa2a0); border: none; }
+.tb-choix-matiere { justify-content: center; }
+.tb-choix-matiere button { width: auto; height: auto; min-width: 84px; padding: 14px 10px; border-radius: 16px; font-size: 14px; line-height: 1.3; white-space: normal; background: linear-gradient(135deg, #5b6ee8, #1fa2a0); border: none; }
 .tj-apprendre, .hdr-tapprendre { background: linear-gradient(135deg, #2e9d6a, #1d6fd8); }
 .tj-apprendre { grid-column: 1 / -1; padding: 20px 18px; }
 .tj-apprendre .tc-title { font-size: 20px; }
@@ -721,6 +728,19 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .mus-rep-btn { border: 1px solid #d8d4ea; border-radius: 10px; padding: 14px 10px; font-weight: 700; font-size: 15px; background: #f4f2fb; color: #2d2a4a; cursor: pointer; flex: 1; min-width: 70px; }
 .mus-rep-btn:active { transform: scale(.94); background: #e6e1fb; }
 .mus-niveaux-grille { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 4px; }
+
+/* Téléphone tourné en paysage (faible hauteur) : resserrer pour que les boutons de réponse et
+   "Terminer" restent visibles sans avoir à faire défiler. Les positions des notes (calculées en JS
+   par rapport à mus-portee-vue) ne sont pas touchées ici. */
+@media (max-height: 480px) {
+  .game-head { padding: 10px 18px 8px; }
+  .game-head h3 { font-size: 17px; }
+  .game-body { padding: 8px 18px 14px; }
+  #mus-portees { gap: 4px; margin-bottom: 6px; }
+  .mus-reponses { margin-top: 4px; gap: 5px; }
+  .mus-rep-btn { padding: 8px 6px; font-size: 13px; }
+  .chute-zone { height: 120px; margin: 6px 0 8px; }
+}
 
 /* JAPONAIS */
 .dj-japonais { background: linear-gradient(135deg, #E63946, #f06a3c); }
