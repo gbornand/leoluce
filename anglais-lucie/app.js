@@ -2718,7 +2718,7 @@ async function loadTables() {
       <button class="dic-jeu tj-entrainement" data-tjeu="entrainement"><span class="tc-emoji">🎯</span><span class="tc-title">Entraînement</span><span class="tc-sub">Mes erreurs reviennent en premier</span></button>
       <button class="dic-jeu tj-qcm" data-tjeu="qcm"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon résultat</span><span class="tc-sub">Trouve la bonne réponse</span></button>
       <button class="dic-jeu tj-defi" data-tjeu="defi"><span class="tc-emoji">⏱️</span><span class="tc-title">Défi 1 minute</span><span class="tc-sub">${tablesEtat.record ? `Bats ton record : ${tablesEtat.record}` : "Le plus de calculs possible"}</span></button>
-      <button class="dic-jeu tj-chute" data-tjeu="chute"><span class="tc-emoji">🪂</span><span class="tc-title">Calcul qui tombe</span><span class="tc-sub">${tablesEtat.recordChute ? `Bats ton record : ${tablesEtat.recordChute}` : "Réponds avant qu'il touche la ligne !"}</span></button>
+      <button class="dic-jeu tj-chute" data-tjeu="chute"><span class="tc-emoji">🪂</span><span class="tc-title">Calcul qui tombe</span><span class="tc-sub">${tablesEtat.recordChute ? `Bats ton record : ${tablesEtat.recordChute}` : "Réponds avant qu'il touche le bas !"}</span></button>
     </div>
     <h3 class="section-title">🗺️ Ma carte des tables</h3>
     <div class="tb-legende"><span class="tb-case tb-su">su</span><span class="tb-case tb-encours">en cours</span><span class="tb-case tb-rate">raté</span><span class="tb-case tb-neuf">pas vu</span></div>
@@ -2987,7 +2987,7 @@ function jeuTablesChute() {
   const titre = "🪂 Ça tombe !";
   let choisies = [...tablesEtat.actives];
   const corps = ouvrirLibre(`<div class="game-head hdr-tchute"><div class="modal-kicker">${titre}</div><h3 id="tj-compteur">Prête ?</h3></div>
-    <div class="game-body"><p class="ap-legende">60 secondes : réponds avant que le calcul touche la ligne !</p>
+    <div class="game-body"><p class="ap-legende">60 secondes : réponds avant que le calcul touche le bas !</p>
     <div class="tb-choix-titre">Tables à travailler :</div>
     <div class="tb-choix tb-choix-clair" id="tj-choix-tables">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(t => `<button data-table="${t}" class="${choisies.includes(t) ? "on" : ""}">${t}</button>`).join("")}</div>
     <button class="btn-primary btn-block" id="tj-go">C'est parti !</button></div>`);
@@ -3021,8 +3021,9 @@ function jeuTablesChute() {
       if (arrete || Date.now() >= fin || document.getElementById("modal-libre").hidden) return;
       const f = serieTables(1, choisies.flatMap(faitsDeTable))[0];
       let reglee = false;
+      const gouttes = Array.from({ length: 10 }, () => `<span class="chute-goutte" style="left:${Math.round(Math.random() * 94)}%;animation-duration:${1800 + Math.random() * 1400}ms;animation-delay:-${Math.round(Math.random() * 2000)}ms">💧</span>`).join("");
       corps.querySelector(".game-body").innerHTML = `
-        <div class="chute-zone"><div class="chute-ligne"></div>
+        <div class="chute-zone">${gouttes}
           <div class="chute-item" id="chute-item" style="animation-duration:${fallMs}ms">${enonce(f)} = ?</div>
         </div>${HTML_SAISIE}<div id="tj-resultat"></div>`;
       const item = corps.querySelector("#chute-item");
