@@ -1383,7 +1383,13 @@ function themesVocab(vocab) {
     if (!map.has(t)) map.set(t, []);
     map.get(t).push(n);
   });
-  return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  // Les thèmes du cours le plus récemment ajouté passent en premier (plus facile à retrouver
+  // juste après un import), puis à nombre de mots égal pour les thèmes plus anciens.
+  const dateTheme = mots => mots.reduce((max, n) => {
+    const d = coursById[n.coursId]?.dateAjout || "";
+    return d > max ? d : max;
+  }, "");
+  return [...map.entries()].sort((a, b) => dateTheme(b[1]).localeCompare(dateTheme(a[1])) || b[1].length - a[1].length);
 }
 
 function melanger(arr) {
