@@ -2777,7 +2777,7 @@ function champNombre(corps, onValider, longueurAttendue = null) {
   return input;
 }
 
-const HTML_SAISIE = `<div class="ap-ecrire tj-ecrire"><input type="text" inputmode="numeric" pattern="[0-9]*" class="exo-input" id="tj-saisie" placeholder="?" autocomplete="off"><button class="btn-primary btn-small" id="tj-ok">OK</button></div>`;
+const HTML_SAISIE = `<div class="ap-ecrire tj-ecrire"><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" class="exo-input" id="tj-saisie" placeholder="?" autocomplete="off"><button class="btn-primary btn-small" id="tj-ok">OK</button></div>`;
 
 // APPRENDRE : choix de la table, lecture, puis cache-cache en 3 manches (3, 6 puis 10 résultats cachés).
 function choisirTableAApprendre() {
@@ -4020,12 +4020,29 @@ const HIRA_COLS = [
   { id: "wa", label: "わ列", chars: [["わ", "wa", "わに", "crocodile"], ["を", "wo", "ごはんをたべる", "manger du riz"], ["ん", "n", "しんかんせん", "shinkansen"]] },
 ];
 
+const KATA_COLS = [
+  { id: "a", label: "ア列", chars: [["ア", "a", "アイス", "glace"], ["イ", "i", "イギリス", "Angleterre"], ["ウ", "u", "ウール", "laine"], ["エ", "e", "エアコン", "climatisation"], ["オ", "o", "オレンジ", "orange"]] },
+  { id: "ka", label: "カ列", chars: [["カ", "ka", "カメラ", "appareil photo"], ["キ", "ki", "キウイ", "kiwi"], ["ク", "ku", "クラス", "classe"], ["ケ", "ke", "ケーキ", "gâteau"], ["コ", "ko", "コアラ", "koala"]] },
+  { id: "sa", label: "サ列", chars: [["サ", "sa", "サラダ", "salade"], ["シ", "shi", "シャツ", "chemise"], ["ス", "su", "スープ", "soupe"], ["セ", "se", "セーター", "pull"], ["ソ", "so", "ソファ", "canapé"]] },
+  { id: "ta", label: "タ列", chars: [["タ", "ta", "タクシー", "taxi"], ["チ", "chi", "チーズ", "fromage"], ["ツ", "tsu", "ツアー", "excursion"], ["テ", "te", "テレビ", "télévision"], ["ト", "to", "トマト", "tomate"]] },
+  { id: "na", label: "ナ列", chars: [["ナ", "na", "ナイフ", "couteau"], ["ニ", "ni", "ニット", "tricot"], ["ヌ", "nu", "ヌードル", "nouilles"], ["ネ", "ne", "ネクタイ", "cravate"], ["ノ", "no", "ノート", "cahier"]] },
+  { id: "ha", label: "ハ列", chars: [["ハ", "ha", "ハンバーガー", "hamburger"], ["ヒ", "hi", "ヒーター", "radiateur"], ["フ", "fu", "フォーク", "fourchette"], ["ヘ", "he", "ヘリコプター", "hélicoptère"], ["ホ", "ho", "ホテル", "hôtel"]] },
+  { id: "ma", label: "マ列", chars: [["マ", "ma", "マスク", "masque"], ["ミ", "mi", "ミルク", "lait"], ["ム", "mu", "ムービー", "film"], ["メ", "me", "メニュー", "menu"], ["モ", "mo", "モデル", "modèle"]] },
+  { id: "ya", label: "ヤ列", chars: [["ヤ", "ya", "ヤード", "yard (unité)"], ["ユ", "yu", "ユーモア", "humour"], ["ヨ", "yo", "ヨーグルト", "yaourt"]] },
+  { id: "ra", label: "ラ列", chars: [["ラ", "ra", "ラジオ", "radio"], ["リ", "ri", "リボン", "ruban"], ["ル", "ru", "ルール", "règle"], ["レ", "re", "レモン", "citron"], ["ロ", "ro", "ロボット", "robot"]] },
+  { id: "wa", label: "ワ列", chars: [["ワ", "wa", "ワイン", "vin"], ["ヲ", "wo", "ヲ", "lettre très rare, presque plus utilisée"], ["ン", "n", "パン", "pain"]] },
+];
+
 function chargeurDonneesKana(char, onLoad, onError) {
   fetch(`https://cdn.jsdelivr.net/npm/kanji-writer-data-jp@0.0.1/${encodeURIComponent(char)}.json`)
     .then(r => r.json()).then(onLoad).catch(onError);
 }
 
-let japonaisEtat = { mastered: [] };
+let japonaisEtat = { mastered: [], masteredKata: [] };
+let japonaisScript = "hira";
+
+function colsScript(script) { return script === "kata" ? KATA_COLS : HIRA_COLS; }
+function masteredScript(script) { return script === "kata" ? japonaisEtat.masteredKata : japonaisEtat.mastered; }
 
 async function enregistrerJaponais(champs) {
   try {
@@ -4051,25 +4068,40 @@ async function loadJaponais() {
     return;
   }
   if (eleve !== eleveCourant || matiereCourante !== "japonais") return;
-  japonaisEtat = { mastered: data?.mastered || [] };
-  const total = HIRA_COLS.reduce((s, c) => s + c.chars.length, 0);
-  const sus = japonaisEtat.mastered.length;
+  japonaisEtat = { mastered: data?.mastered || [], masteredKata: data?.masteredKata || [] };
+  const cols = colsScript(japonaisScript);
+  const mastered = masteredScript(japonaisScript);
+  const total = cols.reduce((s, c) => s + c.chars.length, 0);
+  const sus = mastered.length;
   el.innerHTML = `
     <div class="tb-hero">
       <div class="dic-kicker">🎌 Japonais</div>
-      <h2>Hiragana</h2>
+      <h2>${japonaisScript === "kata" ? "Katakana" : "Hiragana"}</h2>
       <div class="dic-jauge"><span style="width:${total ? Math.round(sus / total * 100) : 0}%"></span></div>
       <div class="dic-jauge-txt">${sus} / ${total} appris</div>
+      <div class="vb-colonnes-grille" id="jp-script-choix">
+        <button data-s="hira" class="mus-choix-btn ${japonaisScript === "hira" ? "on" : ""}">あ Hiragana</button>
+        <button data-s="kata" class="mus-choix-btn ${japonaisScript === "kata" ? "on" : ""}">ア Katakana</button>
+      </div>
     </div>
-    <div class="dic-jeux">${HIRA_COLS.map((c, idx) => {
-      const faits = c.chars.filter(ch => japonaisEtat.mastered.includes(ch[0])).length;
-      const precedente = HIRA_COLS[idx - 1];
-      const verrouillee = precedente && precedente.chars.filter(ch => japonaisEtat.mastered.includes(ch[0])).length < seuilColonne(precedente);
+    <div class="dic-jeux">${cols.map((c, idx) => {
+      const faits = c.chars.filter(ch => mastered.includes(ch[0])).length;
+      const precedente = cols[idx - 1];
+      const verrouillee = precedente && precedente.chars.filter(ch => mastered.includes(ch[0])).length < seuilColonne(precedente);
       return verrouillee
         ? `<div class="dic-jeu dj-japonais-verrouille"><span class="tc-emoji">🔒</span><span class="tc-title">${c.label}</span><span class="tc-sub">Termine « ${precedente.label} » d'abord</span></div>`
         : `<button class="dic-jeu dj-japonais" data-col="${c.id}"><span class="tc-emoji">${c.chars[0][0]}</span><span class="tc-title">${c.label}</span><span class="tc-sub">${faits} / ${c.chars.length} appris</span></button>`;
-    }).join("")}</div>`;
-  el.querySelectorAll("[data-col]").forEach(b => b.addEventListener("click", () => apprendreColonneJaponais(b.dataset.col)));
+    }).join("")}${colsMaitrisees(cols, mastered) >= 2
+      ? `<button class="dic-jeu" id="jp-revision"><span class="tc-emoji">📝</span><span class="tc-title">Test de révision</span><span class="tc-sub">Mélange de plusieurs colonnes</span></button>`
+      : ""}</div>`;
+  el.querySelectorAll("#jp-script-choix [data-s]").forEach(b => b.addEventListener("click", () => { japonaisScript = b.dataset.s; loadJaponais(); }));
+  el.querySelectorAll("[data-col]").forEach(b => b.addEventListener("click", () => apprendreColonneJaponais(b.dataset.col, japonaisScript)));
+  const revBtn = el.querySelector("#jp-revision");
+  if (revBtn) revBtn.addEventListener("click", () => jeuRevisionJaponais(japonaisScript));
+}
+
+function colsMaitrisees(cols, mastered) {
+  return cols.filter(c => c.chars.every(ch => mastered.includes(ch[0]))).length;
 }
 
 function seuilColonne(col) { return Math.min(3, col.chars.length); }
@@ -4077,8 +4109,9 @@ function seuilColonne(col) { return Math.min(3, col.chars.length); }
 // Parcourt une colonne en 3 cartes par caractère (observer, tracé animé, s'entraîner).
 // Un caractère tracé sans erreur est maîtrisé tout de suite ; s'il y a eu des erreurs, il repasse
 // en fin de file et sera reproposé jusqu'à un tracé propre (maîtrise complète de la colonne).
-function apprendreColonneJaponais(colId) {
-  const col = HIRA_COLS.find(c => c.id === colId);
+function apprendreColonneJaponais(colId, script) {
+  const col = colsScript(script).find(c => c.id === colId);
+  const champMastered = script === "kata" ? "masteredKata" : "mastered";
   let file = col.chars.map((_, idx) => idx);
   let writer = null;
   let erreurs = 0;
@@ -4125,9 +4158,9 @@ function apprendreColonneJaponais(colId) {
   };
 
   const terminerCaractereJaponais = async (kana, idx, propre) => {
-    if (propre && !japonaisEtat.mastered.includes(kana)) {
-      japonaisEtat.mastered.push(kana);
-      await enregistrerJaponais({ mastered: japonaisEtat.mastered });
+    if (propre && !japonaisEtat[champMastered].includes(kana)) {
+      japonaisEtat[champMastered].push(kana);
+      await enregistrerJaponais({ [champMastered]: japonaisEtat[champMastered] });
     } else if (!propre) {
       file.push(idx); // repasse en fin de file, sera reproposé
     }
@@ -4137,11 +4170,15 @@ function apprendreColonneJaponais(colId) {
 
   const finColonneJaponais = () => {
     const corps = document.getElementById("modal-libre-corps");
+    const proposerRevision = colsMaitrisees(colsScript(script), japonaisEtat[champMastered]) >= 2;
     corps.innerHTML = `<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎌 ${col.label}</div><h3>🎉 Colonne maîtrisée !</h3></div>
       <div class="game-body" style="text-align:center">
-        <button class="btn-primary btn-block" id="jp-fermer">Terminer</button>
+        ${proposerRevision ? `<button class="btn-primary btn-block" id="jp-revision-suite">📝 Petit test de révision</button>` : ""}
+        <button class="btn-ghost-small" id="jp-fermer">Terminer</button>
       </div>`;
     corps.querySelector("#jp-fermer").addEventListener("click", () => { document.getElementById("modal-libre-close").click(); loadJaponais(); });
+    const revBtn = corps.querySelector("#jp-revision-suite");
+    if (revBtn) revBtn.addEventListener("click", () => jeuRevisionJaponais(script));
   };
 
   const etape = () => {
@@ -4152,6 +4189,48 @@ function apprendreColonneJaponais(colId) {
     carteObserver(corps.querySelector("#jp-corps"), kana, romaji, mot, sens, idx);
   };
   etape();
+}
+
+// Petit QCM qui mélange des caractères déjà maîtrisés de plusieurs colonnes
+// (romaji à retrouver), pour fixer la lecture au-delà de la colonne du jour.
+function jeuRevisionJaponais(script) {
+  const cols = colsScript(script);
+  const mastered = masteredScript(script);
+  const pool = melanger(cols.flatMap(c => c.chars).filter(([k]) => mastered.includes(k)));
+  const serie = pool.slice(0, Math.min(8, pool.length));
+  const allKana = cols.flatMap(c => c.chars);
+  const titre = `📝 Révision ${script === "kata" ? "katakana" : "hiragana"}`;
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">${titre}</div><h3 id="jp-rev-compteur"></h3></div><div class="game-body"></div>`);
+  let i = 0, bonnes = 0;
+  const afficher = () => {
+    if (i >= serie.length) return finJeuRevisionJaponais(corps, titre, bonnes, serie.length, () => jeuRevisionJaponais(script));
+    const [kana, romaji] = serie[i];
+    const choix = melanger([romaji, ...melanger(allKana.filter(c => c[1] !== romaji)).slice(0, 3).map(c => c[1])]);
+    corps.querySelector("#jp-rev-compteur").textContent = `${i + 1} / ${serie.length}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question" style="font-size:64px">${kana}</div>
+      <div class="bonmot-choix">${choix.map((c, k) => `<button class="choix-btn bonmot-btn" data-k="${k}">${c}</button>`).join("")}</div>
+      <div id="jp-rev-resultat"></div>`;
+    corps.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
+      const ok = choix[Number(b.dataset.k)] === romaji;
+      corps.querySelectorAll("[data-k]").forEach(x => {
+        x.disabled = true;
+        if (x.textContent === romaji) x.classList.add("correct");
+        else if (x === b) x.classList.add("incorrect");
+      });
+      if (ok) bonnes += 1;
+      corps.querySelector("#jp-rev-resultat").innerHTML = `<button class="btn-primary btn-block" id="jp-rev-suivant">Suivant →</button>`;
+      corps.querySelector("#jp-rev-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    }));
+  };
+  afficher();
+}
+
+function finJeuRevisionJaponais(corps, titre, bonnes, total, relancer) {
+  corps.querySelector(".game-body").innerHTML = `<div class="today-score${total && bonnes / total < 0.7 ? " score-low" : ""}">${titre} : ${bonnes}/${total}</div>
+    <button class="btn-primary btn-block" id="jp-rev-encore">🔁 Encore</button>
+    <button class="btn-ghost-small" id="jp-rev-fermer">Fermer</button>`;
+  corps.querySelector("#jp-rev-encore").addEventListener("click", relancer);
+  corps.querySelector("#jp-rev-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
 }
 
 // ------------------------------------------------------------
