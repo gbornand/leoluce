@@ -1289,15 +1289,21 @@ async function loadNotions() {
 
 // Lecture d'un cours en une seule page (lien source en évidence + texte complet), plutôt que
 // morcelé en plein de petites fiches à cliquer une par une.
+// Un recap déjà mis en forme (balises <p>/<table>..., écrit par un script admin, jamais saisi par
+// l'élève) est affiché tel quel ; un recap "ancien" en texte brut (extraction IA classique) est
+// échappé et reformaté en paragraphes, pour rester compatible avec les cours existants.
 function lireCoursEnEntier(coursId) {
   const c = coursById[coursId];
   if (!c) return;
-  const paragraphes = (c.recap || "").split("\n\n").map(p => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+  const recapBrut = c.recap || "";
+  const corps = /<(p|table|div)[ >]/i.test(recapBrut)
+    ? recapBrut
+    : recapBrut.split("\n\n").map(p => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
   const aDesFiches = (c.vocabulaire || []).length || (c.grammaire || []).length;
   ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📖 ${esc(c.titre || "Cours")}</div></div>
     <div class="game-body fiche-lecture">
       ${c.lien ? `<div class="lien-video-box">📺 <a href="${esc(c.lien)}" target="_blank" rel="noopener">${esc(c.lien)}</a></div>` : ""}
-      ${paragraphes}
+      ${corps}
       ${aDesFiches ? `<p class="muted">🎓 Tu peux aussi t'entraîner sur le vocabulaire et la grammaire de ce cours un peu plus bas dans Mes notions.</p>` : ""}
       <button class="btn-ghost-small" id="fiche-fermer">Fermer</button>
     </div>`);

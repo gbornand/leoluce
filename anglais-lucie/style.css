@@ -346,6 +346,32 @@ body {
 .lien-video-box { background: #fff3c4; border: 2px solid #f2c94c; border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; font-weight: 700; word-break: break-all; }
 .lien-video-box a { color: #8a6d00; }
 
+.fiche-section-titre { font-weight: 900; font-size: 15px; color: #4a4670; margin: 22px 0 10px; }
+.fiche-table-wrap { overflow-x: auto; border-radius: 16px; box-shadow: 0 2px 10px rgba(91,110,232,.12); margin-bottom: 18px; }
+.fiche-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; font-size: 13px; }
+.fiche-table th, .fiche-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #ece8fc; }
+.fiche-table thead th { background: linear-gradient(135deg, #5b6ee8, #a152d6); color: #fff; font-weight: 800; font-size: 12px; }
+.fiche-table thead th:first-child { border-top-left-radius: 16px; }
+.fiche-table thead th:last-child { border-top-right-radius: 16px; }
+.fiche-table tbody th { background: #f6f4ff; color: #4a4670; font-weight: 800; white-space: nowrap; }
+.fiche-table tbody tr:last-child td, .fiche-table tbody tr:last-child th { border-bottom: none; }
+.fiche-table td.su { color: #c0392b; font-weight: 800; }
+.fiche-table sup { color: #c0392b; font-weight: 900; }
+
+.fiche-ex-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.fiche-ex-row { display: grid; grid-template-columns: 130px 1fr 90px; gap: 8px; align-items: center; background: #f9f8ff; border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+.fiche-ex-row.corrige { background: #fff3c4; }
+.fiche-ex-poss { color: #8a84b5; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.fiche-ex-pair { font-weight: 800; color: #4a4670; }
+.fiche-ex-pair .arrow { color: #a152d6; font-weight: 900; margin: 0 4px; }
+.fiche-ex-trad { color: #8a84b5; font-style: italic; text-align: right; }
+.fiche-ex-row sup { color: #c0392b; font-weight: 900; }
+
+.fiche-notes { background: #f6f4ff; border-radius: 14px; padding: 14px 16px; font-size: 13px; color: #4a4670; }
+.fiche-notes p { margin-bottom: 8px; }
+.fiche-notes p:last-child { margin-bottom: 0; }
+.fiche-notes sup { color: #c0392b; font-weight: 900; }
+
 .flashcard { position: relative; height: 200px; perspective: 900px; cursor: pointer; }
 .fc-face {
   position: absolute; inset: 0; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center;
