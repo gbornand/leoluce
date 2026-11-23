@@ -196,5 +196,32 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ═══════════════════════════════════════
+    // SUIVI SANTÉ (règles, migraines, suivi de Lucie) — ajouté le 2026-11-23.
+    // Accès réservé à Géraldine uniquement (compte unique, aucun autre membre de la
+    // famille n'a accès à ces données, même pas Lucie elle-même).
+    // ═══════════════════════════════════════
+    function estGeraldineSante() {
+      return request.auth != null && request.auth.uid == "GoxalGBKNWcyC6OkdENgz8j1u883";
+    }
+
+    match /santeRegles/{id} {
+      allow read, delete: if estGeraldineSante();
+      allow create: if estGeraldineSante() && request.resource.data.uid == request.auth.uid;
+      allow update: if estGeraldineSante() && resource.data.uid == request.auth.uid;
+    }
+
+    match /santeMigraines/{id} {
+      allow read, delete: if estGeraldineSante();
+      allow create: if estGeraldineSante() && request.resource.data.uid == request.auth.uid;
+      allow update: if estGeraldineSante() && resource.data.uid == request.auth.uid;
+    }
+
+    match /santeLucie/{id} {
+      allow read, delete: if estGeraldineSante();
+      allow create: if estGeraldineSante() && request.resource.data.uid == request.auth.uid;
+      allow update: if estGeraldineSante() && resource.data.uid == request.auth.uid;
+    }
+
   }
 }

@@ -8,10 +8,26 @@
         "**/.*",
         "**/node_modules/**",
         "calendrier/**",
+        "sante/**",
         "functions/**",
         "scripts/**",
         "*adminsdk*.json",
         "*service-account*.json"
+      ]
+    },
+    {
+      "target": "sante",
+      "public": "sante",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        }
       ]
     },
     {

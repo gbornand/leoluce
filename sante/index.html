@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Suivi santé</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#e07a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Santé">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ÉCRAN CONNEXION -->
+<section id="screen-login" class="screen">
+  <div class="login-card">
+    <div class="login-emoji">🩺</div>
+    <h1>Suivi santé</h1>
+    <p class="login-sub">Règles, migraines &amp; suivi de Lucie</p>
+    <form id="login-form">
+      <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+      <label>Mot de passe
+        <div class="password-field">
+          <input type="password" id="login-password" required autocomplete="current-password">
+          <button type="button" id="btn-toggle-password" class="btn-toggle-password" title="Afficher le mot de passe" aria-label="Afficher le mot de passe">👁</button>
+        </div>
+      </label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button type="submit" class="btn-primary btn-block">Se connecter</button>
+    </form>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="screen-app" class="screen" hidden>
+  <header class="topbar">
+    <div class="topbar-title">🩺 Suivi santé</div>
+    <div class="topbar-actions">
+      <button id="btn-logout" class="btn-ghost btn-whoami" title="Se déconnecter">👤 Déconnexion ↪</button>
+    </div>
+  </header>
+
+  <nav class="main-tabs">
+    <button class="btn-ghost main-tab-btn active" data-tab="moi">🩸 Moi</button>
+    <button class="btn-ghost main-tab-btn" data-tab="lucie">👧 Lucie</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ONGLET MOI -->
+    <div id="tab-moi" class="tab-pane">
+
+      <section class="panel" id="panel-regles">
+        <div class="panel-header">
+          <h2>🩸 Règles</h2>
+          <button id="btn-add-regle" class="btn-fab" title="Nouvelle entrée règles">+</button>
+        </div>
+        <div class="summary-row" id="summary-regles"></div>
+        <div id="list-regles" class="entry-list"></div>
+      </section>
+
+      <section class="panel" id="panel-migraines">
+        <div class="panel-header">
+          <h2>🤕 Migraines</h2>
+          <button id="btn-add-migraine" class="btn-fab" title="Nouvelle migraine">+</button>
+        </div>
+        <div class="summary-row" id="summary-migraines"></div>
+        <div id="list-migraines" class="entry-list"></div>
+      </section>
+
+    </div>
+
+    <!-- ONGLET LUCIE -->
+    <div id="tab-lucie" class="tab-pane" hidden>
+
+      <section class="panel" id="panel-lucie">
+        <div class="panel-header">
+          <h2>👧 Lucie — ventre &amp; migraines</h2>
+          <button id="btn-add-lucie" class="btn-fab" title="Nouvelle entrée">+</button>
+        </div>
+        <div class="summary-row" id="summary-lucie"></div>
+        <div class="type-filter" id="lucie-filter">
+          <button class="btn-ghost active" data-type="all">Tout</button>
+          <button class="btn-ghost" data-type="ventre">🟠 Ventre</button>
+          <button class="btn-ghost" data-type="migraine">🟣 Migraine</button>
+        </div>
+        <div id="list-lucie" class="entry-list"></div>
+      </section>
+
+    </div>
+
+  </main>
+</section>
+
+<!-- MODALE RÈGLES -->
+<div id="modal-regle" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-regle-title">Nouvelle entrée règles</h3>
+    <form id="form-regle">
+      <input type="hidden" id="regle-id">
+      <div class="form-row">
+        <label>Date de début <input type="date" id="regle-debut" required></label>
+        <label>Date de fin <input type="date" id="regle-fin" placeholder="optionnel"></label>
+      </div>
+      <label>Flux
+        <select id="regle-flux">
+          <option value="leger">Léger</option>
+          <option value="moyen" selected>Moyen</option>
+          <option value="fort">Fort</option>
+        </select>
+      </label>
+      <div>
+        <span style="font-size:12.5px;color:var(--muted);font-weight:600">Symptômes</span>
+        <div class="checkbox-grid" id="regle-symptomes-grid">
+          <label class="checkbox-label"><input type="checkbox" value="crampes"> Crampes</label>
+          <label class="checkbox-label"><input type="checkbox" value="dos"> Mal de dos</label>
+          <label class="checkbox-label"><input type="checkbox" value="seins"> Seins sensibles</label>
+          <label class="checkbox-label"><input type="checkbox" value="fatigue"> Fatigue</label>
+          <label class="checkbox-label"><input type="checkbox" value="maux_tete"> Maux de tête</label>
+          <label class="checkbox-label"><input type="checkbox" value="moral"> Moral bas</label>
+        </div>
+      </div>
+      <label>Notes <textarea id="regle-notes" rows="2"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" id="btn-delete-regle" class="btn-danger" hidden>Supprimer</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn-ghost" onclick="closeModal('modal-regle')">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE MIGRAINE (Moi) -->
+<div id="modal-migraine" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-migraine-title">Nouvelle migraine</h3>
+    <form id="form-migraine">
+      <input type="hidden" id="migraine-id">
+      <label>Date <input type="date" id="migraine-date" required></label>
+      <div>
+        <span style="font-size:12.5px;color:var(--muted);font-weight:600">Intensité</span>
+        <div class="intensity-picker" id="migraine-intensite-picker">
+          <label><input type="radio" name="migraine-intensite" value="1"><span>1</span></label>
+          <label><input type="radio" name="migraine-intensite" value="2"><span>2</span></label>
+          <label><input type="radio" name="migraine-intensite" value="3" checked><span>3</span></label>
+          <label><input type="radio" name="migraine-intensite" value="4"><span>4</span></label>
+          <label><input type="radio" name="migraine-intensite" value="5"><span>5</span></label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Durée <input type="text" id="migraine-duree" placeholder="ex : 3h, toute la journée"></label>
+        <label>Soulagement
+          <select id="migraine-soulagement">
+            <option value="aucun">Aucun</option>
+            <option value="partiel" selected>Partiel</option>
+            <option value="complet">Complet</option>
+          </select>
+        </label>
+      </div>
+      <label>Aura
+        <select id="migraine-aura">
+          <option value="non" selected>Non</option>
+          <option value="oui">Oui</option>
+          <option value="non_precise">Non précisé</option>
+        </select>
+      </label>
+      <label>Déclencheur possible <input type="text" id="migraine-declencheur" placeholder="ex : stress, manque de sommeil…"></label>
+      <label>Médicament pris <input type="text" id="migraine-medicament"></label>
+      <label>Notes <textarea id="migraine-notes" rows="2"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" id="btn-delete-migraine" class="btn-danger" hidden>Supprimer</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn-ghost" onclick="closeModal('modal-migraine')">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE LUCIE -->
+<div id="modal-lucie" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-lucie-title">Nouvelle entrée — Lucie</h3>
+    <form id="form-lucie">
+      <input type="hidden" id="lucie-id">
+      <div class="form-row">
+        <label>Date <input type="date" id="lucie-date" required></label>
+        <label>Type
+          <select id="lucie-type">
+            <option value="ventre">🟠 Ventre</option>
+            <option value="migraine">🟣 Migraine</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <span style="font-size:12.5px;color:var(--muted);font-weight:600">Intensité</span>
+        <div class="intensity-picker" id="lucie-intensite-picker">
+          <label><input type="radio" name="lucie-intensite" value="1"><span>1</span></label>
+          <label><input type="radio" name="lucie-intensite" value="2"><span>2</span></label>
+          <label><input type="radio" name="lucie-intensite" value="3" checked><span>3</span></label>
+          <label><input type="radio" name="lucie-intensite" value="4"><span>4</span></label>
+          <label><input type="radio" name="lucie-intensite" value="5"><span>5</span></label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Durée <input type="text" id="lucie-duree" placeholder="ex : 2h, toute la nuit"></label>
+        <label>Soulagement
+          <select id="lucie-soulagement">
+            <option value="aucun">Aucun</option>
+            <option value="partiel" selected>Partiel</option>
+            <option value="complet">Complet</option>
+          </select>
+        </label>
+      </div>
+      <label>Contexte / ce qu'elle a mangé avant <input type="text" id="lucie-contexte" placeholder="ex : après le déjeuner à la cantine"></label>
+      <label>Médicament donné <input type="text" id="lucie-medicament"></label>
+      <label>Notes <textarea id="lucie-notes" rows="2"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" id="btn-delete-lucie" class="btn-danger" hidden>Supprimer</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn-ghost" onclick="closeModal('modal-lucie')">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
