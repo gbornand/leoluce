@@ -1203,6 +1203,7 @@ async function loadNotions() {
     <div class="cours-manage-list">${Object.entries(coursById).map(([id, c]) => `
       <div class="cours-manage-item">
         <span class="cours-manage-titre">${esc(c.titre || "Cours")}${c.statut === "attente" ? ` <span class="pill pill-attente">⏳ en préparation</span>` : ""}</span>
+        ${c.recap ? `<button class="btn-ghost-small" data-lire-cours="${esc(id)}">📖 Lire</button>` : ""}
         <button class="btn-ghost-small" data-suppr-cours="${esc(id)}">🗑️ Supprimer</button>
       </div>`).join("")}</div>
     ${categoriesGram(grammaire).map(([cat, items], gi, arr) => {
@@ -1282,7 +1283,25 @@ async function loadNotions() {
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
   el.querySelectorAll("[data-dictee-theme]").forEach(b => b.addEventListener("click", () => lancerDictee(new Set(themes[b.dataset.dicteeTheme][1].map(n => n.id)))));
   el.querySelectorAll("[data-suppr-cours]").forEach(b => b.addEventListener("click", () => supprimerCours(b.dataset.supprCours, b)));
+  el.querySelectorAll("[data-lire-cours]").forEach(b => b.addEventListener("click", () => lireCoursEnEntier(b.dataset.lireCours)));
   await ajouterSectionFigures(el);
+}
+
+// Lecture d'un cours en une seule page (lien source en évidence + texte complet), plutôt que
+// morcelé en plein de petites fiches à cliquer une par une.
+function lireCoursEnEntier(coursId) {
+  const c = coursById[coursId];
+  if (!c) return;
+  const paragraphes = (c.recap || "").split("\n\n").map(p => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+  const aDesFiches = (c.vocabulaire || []).length || (c.grammaire || []).length;
+  ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📖 ${esc(c.titre || "Cours")}</div></div>
+    <div class="game-body fiche-lecture">
+      ${c.lien ? `<div class="lien-video-box">📺 <a href="${esc(c.lien)}" target="_blank" rel="noopener">${esc(c.lien)}</a></div>` : ""}
+      ${paragraphes}
+      ${aDesFiches ? `<p class="muted">🎓 Tu peux aussi t'entraîner sur le vocabulaire et la grammaire de ce cours un peu plus bas dans Mes notions.</p>` : ""}
+      <button class="btn-ghost-small" id="fiche-fermer">Fermer</button>
+    </div>`);
+  document.getElementById("fiche-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
 }
 
 async function supprimerCours(coursId, btn) {
