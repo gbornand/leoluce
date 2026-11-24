@@ -503,6 +503,24 @@ function renderAccueil() {
   }));
   el.querySelectorAll("[data-bientot]").forEach(div => div.querySelector(".acc-retirer").addEventListener("click", () => masquerCarte(div.dataset.bientot)));
   el.querySelector("#btn-perso-accueil").addEventListener("click", ouvrirPersoAccueil);
+  majBadgesRattrapage(el);
+}
+
+// Cours à rattraper (absence) : pastille bleue sur la carte de la matière concernée.
+async function majBadgesRattrapage(el) {
+  const eleve = eleveCourant;
+  let snap;
+  try {
+    snap = await getDocs(query(collection(db, "coursAnglais"), where("eleve", "==", eleve)));
+  } catch (err) { console.error("Cours à rattraper", err); return; }
+  if (eleve !== eleveCourant) return;
+  const parMatiere = {};
+  snap.forEach(d => { const c = d.data(); if (c.rattrapage) { const m = c.matiere || "anglais"; parMatiere[m] = (parMatiere[m] || 0) + 1; } });
+  Object.entries(parMatiere).forEach(([m, n]) => {
+    const carte = el.querySelector(`.acc-carte[data-matiere="${m}"]`);
+    if (!carte || carte.querySelector(".acc-rattrapage")) return;
+    carte.insertAdjacentHTML("beforeend", `<span class="acc-rattrapage">📘 ${n} cours à rattraper</span>`);
+  });
 }
 
 function masquerCarte(cle) {
@@ -1200,9 +1218,10 @@ async function loadNotions() {
     ${graphiqueActivite(reponses)}
     ${htmlBadges(motivation)}
     <h3 class="section-title">Cours importés <span>${Object.keys(coursById).length}</span></h3>
-    <div class="cours-manage-list">${Object.entries(coursById).map(([id, c]) => `
-      <div class="cours-manage-item">
-        <span class="cours-manage-titre">${esc(c.titre || "Cours")}${c.statut === "attente" ? ` <span class="pill pill-attente">⏳ en préparation</span>` : ""}</span>
+    <div class="cours-manage-list">${Object.entries(coursById).sort((a, b) => (b[1].rattrapage ? 1 : 0) - (a[1].rattrapage ? 1 : 0)).map(([id, c]) => `
+      <div class="cours-manage-item${c.rattrapage ? " cours-rattrapage" : ""}">
+        <span class="cours-manage-titre">${esc(c.titre || "Cours")}${c.statut === "attente" ? ` <span class="pill pill-attente">⏳ en préparation</span>` : ""}${c.rattrapage ? `<br><span class="pill pill-rattrapage">📘 À rattraper${c.absenceLe ? ` · absente le ${esc(dateCourteFr(c.absenceLe))}` : ""}</span>` : ""}</span>
+        ${c.rattrapage ? `<button class="btn-ghost-small btn-rattrape" data-rattrape="${esc(id)}">✅ C'est rattrapé</button>` : ""}
         ${c.recap ? `<button class="btn-ghost-small" data-lire-cours="${esc(id)}">📖 Lire</button>` : ""}
         <button class="btn-ghost-small" data-suppr-cours="${esc(id)}">🗑️ Supprimer</button>
       </div>`).join("")}</div>
@@ -1248,8 +1267,8 @@ async function loadNotions() {
     <div class="accordion">${themesVocab(vocab).map(([theme, mots], i) => {
       const pctTheme = Math.round(mots.reduce((s, n) => s + (n.niveau || 0), 0) / (mots.length * 5) * 100);
       return `<div class="acc-item">
-        <button class="acc-head" data-acc="${i}" aria-expanded="false">
-          <span class="acc-name">${esc(theme)}</span>
+        <button class="acc-head${mots.some(n => coursById[n.coursId]?.rattrapage) ? " acc-head-rattrapage" : ""}" data-acc="${i}" aria-expanded="false">
+          <span class="acc-name">${mots.some(n => coursById[n.coursId]?.rattrapage) ? "📘 " : ""}${esc(theme)}</span>
           <span class="acc-count">${mots.length} mot${mots.length > 1 ? "s" : ""}</span>
           <span class="acc-bar"><span style="width:${pctTheme}%"></span></span>
           <span class="acc-pct">${pctTheme}%</span>
@@ -1261,7 +1280,7 @@ async function loadNotions() {
             : `<button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button><button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>`}</div>
           <div class="vocab-grid">${mots.map(n => {
             const st = statutNiveau(n.niveau || 0);
-            return `<button class="vocab-chip ${st.cls}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)} ${marqueDerniere(n)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
+            return `<button class="vocab-chip ${st.cls}${coursById[n.coursId]?.rattrapage ? " vocab-rattrapage" : ""}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)} ${marqueDerniere(n)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
           }).join("")}</div>
         </div>
       </div>`;
@@ -1284,7 +1303,25 @@ async function loadNotions() {
   el.querySelectorAll("[data-dictee-theme]").forEach(b => b.addEventListener("click", () => lancerDictee(new Set(themes[b.dataset.dicteeTheme][1].map(n => n.id)))));
   el.querySelectorAll("[data-suppr-cours]").forEach(b => b.addEventListener("click", () => supprimerCours(b.dataset.supprCours, b)));
   el.querySelectorAll("[data-lire-cours]").forEach(b => b.addEventListener("click", () => lireCoursEnEntier(b.dataset.lireCours)));
+  el.querySelectorAll("[data-rattrape]").forEach(b => b.addEventListener("click", () => marquerRattrape(b.dataset.rattrape, b)));
   await ajouterSectionFigures(el);
+}
+
+function dateCourteFr(iso) {
+  return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+async function marquerRattrape(coursId, btn) {
+  if (!btn.dataset.confirme) { btn.dataset.confirme = "1"; btn.textContent = "❓ Tu l'as bien rattrapé ?"; return; }
+  btn.disabled = true;
+  try {
+    await updateDoc(doc(db, "coursAnglais", coursId), { rattrapage: false, rattrapeLe: new Date().toISOString() });
+    loadNotions();
+  } catch (err) {
+    console.error("Marquer rattrapé", err);
+    btn.disabled = false;
+    btn.textContent = "❌ Échec, réessaie";
+  }
 }
 
 // Lecture d'un cours en une seule page (lien source en évidence + texte complet), plutôt que
@@ -1302,6 +1339,7 @@ function lireCoursEnEntier(coursId) {
   const aDesFiches = (c.vocabulaire || []).length || (c.grammaire || []).length;
   ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">📖 ${esc(c.titre || "Cours")}</div></div>
     <div class="game-body fiche-lecture">
+      ${c.rattrapage ? `<div class="rattrapage-box">📘 <b>Cours à rattraper</b>${c.absenceLe ? ` — tu étais absente le ${esc(dateCourteFr(c.absenceLe))}` : ""}. Recopie-le dans ton cahier, puis entraîne-toi sur ses fiches (en bleu dans Mes notions).</div>` : ""}
       ${c.lien ? `<div class="lien-video-box">📺 <a href="${esc(c.lien)}" target="_blank" rel="noopener">${esc(c.lien)}</a></div>` : ""}
       ${corps}
       ${aDesFiches ? `<p class="muted">🎓 Tu peux aussi t'entraîner sur le vocabulaire et la grammaire de ce cours un peu plus bas dans Mes notions.</p>` : ""}
@@ -1343,8 +1381,9 @@ function dateCoursDe(n) { return coursById[n.coursId]?.dateAjout || ""; }
 
 function carteGram(n) {
   const st = statutNiveau(n.niveau || 0);
-  return `<button class="gram-card ${st.cls}" data-id="${esc(n.id)}">
-    <span class="pill ${st.cls}">${st.label}</span>${marqueDerniere(n)}
+  const aRattraper = coursById[n.coursId]?.rattrapage;
+  return `<button class="gram-card ${st.cls}${aRattraper ? " gram-rattrapage" : ""}" data-id="${esc(n.id)}">
+    <span class="pill ${st.cls}">${st.label}</span>${aRattraper ? ` <span class="pill pill-rattrapage">📘 à rattraper</span>` : ""}${marqueDerniere(n)}
     <div class="gram-card-title">${esc(n.label)}</div>
     ${barreNiveau(n.niveau || 0)}
   </button>`;
