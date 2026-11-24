@@ -701,10 +701,10 @@ function renderTodayList(containerId, items, suiviNotion) {
     score.total += 1;
     el.appendChild(renderExercise(item, {
       onRevoir: suiviNotion && item.notionId ? () => openNotionModal(item.notionId) : null,
-      onAnswered: (correct, donnee) => {
+      onAnswered: (correct, donnee, attendu) => {
         score.repondues += 1;
         if (correct) score.bonnes += 1;
-        const trace = { question: item.phrase || item.question || "", reponse: donnee };
+        const trace = { question: item.phrase || item.question || "", reponse: donnee, attendu };
         if (suiviNotion && item.notionId) enregistrerReponse(item.notionId, correct, { source: "seance", ...trace });
         else journaliser({ correct, source: suiviNotion ? "seance" : "comprehension", ...trace });
         if (!correct) score.erreurs.push({ question: item.question || "", phrase: item.phrase || "", notionId: suiviNotion ? item.notionId || null : null });
@@ -830,7 +830,7 @@ function renderExercise(ex, { onAnswered, onRevoir } = {}) {
       });
       card.appendChild(rapport);
     }
-    onAnswered?.(correct, donnee);
+    onAnswered?.(correct, donnee, bonneReponseTexte || (ex.choix || [])[ex.bonneReponse] || "");
   };
 
   if (type === "trou") {
@@ -947,17 +947,18 @@ function signalerProbleme({ type, question, attendu, donne, correct }) {
 }
 
 // Journal de toutes les réponses (historique) — écriture seule, jamais modifiée.
-function journaliser({ notionId = null, correct, source, question = "", reponse = "" }) {
+function journaliser({ notionId = null, correct, source, question = "", reponse = "", attendu = "" }) {
   if (estParent()) return;
   addDoc(collection(db, "reponsesAnglais"), {
     at: new Date().toISOString(), date: todayISO(), eleve: eleveCourant, matiere: matiereCourante, notionId, correct: !!correct, source,
     question: String(question).slice(0, 300), reponse: String(reponse ?? "").slice(0, 200),
+    ...(attendu ? { attendu: String(attendu).slice(0, 200) } : {}),
   }).catch(err => console.error("Journal réponse", err));
 }
 
-async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance", question = "", reponse = "", journal = true } = {}) {
+async function enregistrerReponse(notionId, correct, { pas = 1, source = "seance", question = "", reponse = "", attendu = "", journal = true } = {}) {
   if (estParent()) return;
-  if (journal) journaliser({ notionId, correct, source, question, reponse });
+  if (journal) journaliser({ notionId, correct, source, question, reponse, attendu });
   try {
     const ref = doc(db, "progressionAnglais", notionId);
     const snap = await getDoc(ref);
@@ -1521,7 +1522,7 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
       b.addEventListener("click", () => {
         if (restant <= 0) return;
         const ok = n.label === courant.label;
-        const trace = { source: "vitesse", question: tradDe(courant), reponse: n.label };
+        const trace = { source: "vitesse", question: tradDe(courant), reponse: n.label, attendu: courant.label };
         if (ok) { score += 1; journaliser({ notionId: courant.id, correct: true, ...trace }); }
         else { erreurs += 1; enregistrerReponse(courant.id, false, trace); }
         b.classList.add(ok ? "correct" : "incorrect");
@@ -1641,7 +1642,7 @@ function ouvrirChanson(c) {
     </div>`);
   const zone = corps.querySelector("#song-questions");
   (c.questions || []).forEach(q => zone?.appendChild(renderExercise(q, {
-    onAnswered: (correct, donnee) => journaliser({ correct, source: "chanson", question: q.question, reponse: donnee }),
+    onAnswered: (correct, donnee, attendu) => journaliser({ correct, source: "chanson", question: q.question, reponse: donnee, attendu }),
   })));
 
   corps.querySelector("#btn-save-song").addEventListener("click", async (e) => {
@@ -1786,10 +1787,10 @@ sur("btn-entrainer", "click", async () => {
     let bonnes = 0, repondues = 0;
     exercices.forEach((ex) => {
       zone.appendChild(renderExercise(ex, {
-        onAnswered: (correct, donnee) => {
+        onAnswered: (correct, donnee, attendu) => {
           repondues += 1;
           if (correct) bonnes += 1;
-          journaliser({ notionId, correct, source: "entrainement", question: ex.phrase || ex.question || "", reponse: donnee });
+          journaliser({ notionId, correct, source: "entrainement", question: ex.phrase || ex.question || "", reponse: donnee, attendu });
           if (repondues < exercices.length) return;
           const parfait = bonnes === exercices.length;
           const reussi = bonnes >= Math.ceil(exercices.length * 0.75);
@@ -2092,11 +2093,11 @@ async function lancerControle(coursId) {
       titre.textContent = `Question ${idx + 1}`;
       body.appendChild(titre);
       body.appendChild(renderExercise(ex, {
-        onAnswered: (correct, donnee) => {
+        onAnswered: (correct, donnee, attendu) => {
           repondues += 1;
           if (correct) bonnes += 1; else if (ex.notionId) erreurs.push(ex.notionId);
-          if (ex.notionId) enregistrerReponse(ex.notionId, correct, { source: "controle", question: ex.phrase || ex.question || "", reponse: donnee });
-          else journaliser({ correct, source: "controle", question: ex.question || "", reponse: donnee });
+          if (ex.notionId) enregistrerReponse(ex.notionId, correct, { source: "controle", question: ex.phrase || ex.question || "", reponse: donnee, attendu });
+          else journaliser({ correct, source: "controle", question: ex.question || "", reponse: donnee, attendu });
           if (repondues < exercices.length) return;
           const note = Math.round(bonnes / exercices.length * 20 * 2) / 2;
           const fin = document.createElement("div");
@@ -4453,11 +4454,41 @@ function tauxReussite(reps) {
   return reps.length ? Math.round(reps.filter(r => r.correct).length / reps.length * 100) : null;
 }
 
-// Les notions les moins sues d'une matière : ratées la dernière fois, puis vues mais encore faibles.
-function notionsARetravailler(prog, n = 6) {
-  const rang = x => (x.dernierResultat === false ? 0 : 1) * 10 + (x.niveau || 0);
-  return prog.filter(x => x.type !== "figure" && (x.dernierResultat === false || (x.dernierVu && (x.niveau || 0) <= 1)))
-    .sort((a, b) => rang(a) - rang(b)).slice(0, n);
+// Les vraies erreurs de la semaine (journal des réponses) : question, ce qu'elle a répondu, la bonne réponse.
+// Une même question ratée plusieurs fois n'apparaît qu'une fois (×N). Les jeux qui ne gardent pas le détail
+// (notes de musique, fractions, jeux de français) sont résumés en une ligne par jeu.
+const SOURCES_MOT = ["dictee", "dictee-apprendre", "dictee-bonmot", "dictee-flash", "dictee-ecoute", "dictee-phrases", "flashcards", "prononciation"];
+const NOMS_JEUX = { musique: "🎼 Lecture de notes", fractions: "🍕 Fractions", verbes: "💬 Verbes irréguliers", "jeufr-homophones": "🎮 Homophones", "jeufr-nature": "🎮 Nature des mots", "jeufr-adjectifs": "🎮 Adjectifs", "jeufr-conjugaison": "🎮 Conjugaison", "jeufr-fonctions": "🎮 Fonctions" };
+
+function htmlErreursSemaine(reps, max = 6) {
+  const ko = reps.filter(r => !r.correct).sort((a, b) => (b.at || "").localeCompare(a.at || ""));
+  const jeux = {};
+  const parQuestion = new Map();
+  ko.forEach(r => {
+    const src = r.source || "";
+    const estJeu = NOMS_JEUX[src] || src.startsWith("jeufr-");
+    if (estJeu && !(src === "verbes" && r.question)) { const nom = NOMS_JEUX[src] || src; jeux[nom] = (jeux[nom] || 0) + 1; return; }
+    if (!r.question) return;
+    const cle = `${src}|${r.question}`;
+    if (parQuestion.has(cle)) { parQuestion.get(cle).fois += 1; return; }
+    parQuestion.set(cle, { ...r, fois: 1 });
+  });
+  const lignes = [...parQuestion.values()].map(r => {
+    const surMot = SOURCES_MOT.includes(r.source) || r.source?.startsWith("dictee");
+    const attendu = r.attendu || (surMot ? r.question : "");
+    const donne = String(r.reponse || "").replace(/\s+/g, " ").trim();
+    const quand = r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }) : "";
+    const tag = r.notionId ? "button" : "div";
+    return `<${tag} class="dash-err${r.notionId ? " dash-ko-btn" : ""}"${r.notionId ? ` data-notion="${esc(r.notionId)}" title="Revoir la fiche"` : ""}>
+      ${surMot ? "" : `<span class="dash-err-q">${esc(r.question)}</span>`}
+      <span class="dash-err-r"><span class="dash-err-ko">✗ ${r.source === "schema" ? `schéma : ${esc(donne)} cases justes` : donne ? `« ${esc(donne)} »` : "pas de réponse"}</span>${attendu ? ` <span class="dash-err-ok">→ ✓ « ${esc(attendu)} »</span>` : ""}</span>
+      <span class="dash-err-meta">${r.fois > 1 ? `raté ${r.fois}× · ` : ""}${esc(quand)}</span>
+    </${tag}>`;
+  });
+  const vus = lignes.slice(0, max).join("");
+  const reste = lignes.slice(max);
+  const jeuxHtml = Object.entries(jeux).map(([nom, n]) => `<div class="dash-err dash-err-jeu">${esc(nom)} : ${n} réponse${n > 1 ? "s" : ""} ratée${n > 1 ? "s" : ""}</div>`).join("");
+  return vus + (reste.length ? `<details class="dash-err-plus"><summary>+ ${reste.length} autre${reste.length > 1 ? "s" : ""} erreur${reste.length > 1 ? "s" : ""}</summary>${reste.join("")}</details>` : "") + jeuxHtml;
 }
 
 async function carteEnfant(e) {
@@ -4503,7 +4534,7 @@ async function carteEnfant(e) {
     } else {
       const prog = progression.filter(mat(m)).filter(x => x.type !== "figure");
       maitrise = prog.length ? Math.round(prog.reduce((s, n) => s + (n.niveau || 0), 0) / (prog.length * 5) * 100) : null;
-      faibles = notionsARetravailler(prog).map(n => `<button class="dash-ko-item dash-ko-btn" data-notion="${esc(n.id)}">${n.dernierResultat === false ? "✗ " : ""}${esc(n.label)}</button>`).join("");
+      faibles = htmlErreursSemaine(repS);
       vide = !prog.length;
     }
     if (vide && !repS.length) return { vide: true, html: `<span class="dash-vide">${MATIERES_UI[m].emoji} ${MATIERES_UI[m].nom}</span>` };
@@ -4514,7 +4545,7 @@ async function carteEnfant(e) {
         <span class="dm-chiffre" title="Réussite sur 7 jours">${taux === null ? "—" : `✅ ${taux} %`}${evol ? ` <span class="${evol > 0 ? "dm-up" : "dm-down"}">${evol > 0 ? "▲" : "▼"} ${Math.abs(evol)}</span>` : ""}</span>
       </button>
       <div class="dm-maitrise"><span class="dm-bar"><span style="width:${maitrise || 0}%"></span></span><span class="dm-pct">${maitrise === null ? "—" : `${maitrise} % su`}</span></div>
-      ${faibles ? `<div class="dm-faibles"><span class="dm-faibles-titre">À retravailler :</span>${faibles}</div>` : repS.length ? `<div class="dm-faibles dm-ok">👍 Rien de raté récemment</div>` : `<div class="dm-faibles dm-rien">Pas travaillé cette semaine</div>`}
+      ${faibles ? `<div class="dm-faibles${m === "tables" ? "" : " dm-erreurs"}"><span class="dm-faibles-titre">${m === "tables" ? "À retravailler :" : "Ses erreurs de la semaine :"}</span>${faibles}</div>` : repS.length ? `<div class="dm-faibles dm-ok">👍 Aucune erreur cette semaine</div>` : `<div class="dm-faibles dm-rien">Pas travaillé cette semaine</div>`}
     </div>` };
   });
   const actifs = blocs.filter(b => !b.vide).sort((a, b) => b.min - a.min);
