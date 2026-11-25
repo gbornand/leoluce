@@ -3388,9 +3388,19 @@ function genFractionBase(denMax) {
   const num = 1 + Math.floor(Math.random() * (den - 1));
   return { num, den };
 }
+// Traits de séparation entre les parts (fines tranches blanches) pour qu'on puisse les compter
+// à l'œil, plutôt qu'un simple dégradé plein/vide difficile à repérer sur le nombre total de parts.
 function pieSvgFraction(num, den) {
-  const pct = Math.round(num / den * 100);
-  return `<div style="width:120px;height:120px;border-radius:50%;margin:0 auto 12px;background:conic-gradient(#f06a3c 0% ${pct}%, #fbe0c2 ${pct}% 100%);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.15)"></div>`;
+  const slice = 360 / den;
+  const gap = Math.min(3, slice / 4);
+  const stops = [];
+  let pos = 0;
+  for (let i = 0; i < den; i++) {
+    const couleur = i < num ? "#f06a3c" : "#fbe0c2";
+    stops.push(`${couleur} ${pos}deg ${pos + slice - gap}deg`, `#fff ${pos + slice - gap}deg ${pos + slice}deg`);
+    pos += slice;
+  }
+  return `<div style="width:120px;height:120px;border-radius:50%;margin:0 auto 12px;background:conic-gradient(${stops.join(",")});border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.15)"></div>`;
 }
 function questionFractionLecture(denMax) {
   const f = genFractionBase(denMax);
