@@ -2244,16 +2244,26 @@ async function loadDictee() {
   const repris = archive ? [] : dictees.filter(c => c.id !== cours.id && (c.dateAjout || "") < (cours.dateAjout || "")).flatMap(c =>
     (c.vocabulaire || []).map((v, index) => ({ ...motDe(c, v, index), reprise: true, origine: c.titre }))
       .filter(m => m.notionId && dejaRates.has(m.notionId) && m.niveau < 3 && !vusIci.has(normaliser(m.mot)) && vusIci.add(normaliser(m.mot))));
-  const mots = [...(fluoSeul ? tous.filter(m => m.prioritaire) : tous), ...repris];
+  // `mots` = uniquement la liste de la semaine : les reprises des dictées précédentes ont leur
+  // propre zone de jeux plus bas (dicteeEtat.repris), pour ne pas rogner le temps sur les mots du jour.
+  const mots = fluoSeul ? tous.filter(m => m.prioritaire) : tous;
   dicteeEtat = { cours, tous, mots, repris };
   const sus = mots.filter(m => m.niveau >= 3).length;
   const archives = dictees.filter(c => c.id !== cours.id);
+  const boutonsJeux = (prefixeData) => `<div class="dic-jeux">
+      <button class="dic-jeu dj-apprendre" data-${prefixeData}="apprendre"><span class="tc-emoji">📖</span><span class="tc-title">Apprendre mes mots</span><span class="tc-sub">Syllabes, pièges, puis j'écris</span></button>
+      <button class="dic-jeu dj-ecoute" data-${prefixeData}="ecoute"><span class="tc-emoji">🎧</span><span class="tc-title">J'écoute, j'écris</span><span class="tc-sub">Le mot est lu, je l'écris</span></button>
+      <button class="dic-jeu dj-bonmot" data-${prefixeData}="bonmot"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon mot</span><span class="tc-sub">Trouve la bonne écriture</span></button>
+      <button class="dic-jeu dj-lettres" data-${prefixeData}="lettres"><span class="tc-emoji">🧩</span><span class="tc-title">Mot en morceaux</span><span class="tc-sub">Remets les morceaux dans l'ordre</span></button>
+      <button class="dic-jeu dj-flash" data-${prefixeData}="flash"><span class="tc-emoji">⚡</span><span class="tc-title">Mot flash</span><span class="tc-sub">Je regarde, il disparaît, je l'écris</span></button>
+      <button class="dic-jeu dj-phrases" data-${prefixeData}="phrases"><span class="tc-emoji">✍️</span><span class="tc-title">Petites phrases</span><span class="tc-sub">Comme le jour de la dictée</span></button>
+    </div>`;
 
   el.innerHTML = `${dicteesEnAttente ? `<div class="panel-info">⏳ Une nouvelle dictée est en préparation. En attendant, tu travailles celle-ci.</div>` : ""}
     <div class="dic-hero${archive ? " dic-hero-archive" : ""}">
       <div class="dic-kicker">${archive ? "📦 Ancienne dictée" : "📝 Dictée de la semaine"}</div>
       <h2>${esc(cours.titre)}</h2>
-      <div class="dic-sub">${esc(dateCourte(cours.dateAjout))} · ${mots.length - repris.length} mot${mots.length - repris.length > 1 ? "s" : ""} à apprendre${fluoSeul ? " (les mots surlignés)" : ""}${repris.length ? ` + ${repris.length} repris des dictées précédentes` : ""}</div>
+      <div class="dic-sub">${esc(dateCourte(cours.dateAjout))} · ${mots.length} mot${mots.length > 1 ? "s" : ""} à apprendre${fluoSeul ? " (les mots surlignés)" : ""}</div>
       <div class="dic-jauge"><span style="width:${mots.length ? Math.round(sus / mots.length * 100) : 0}%"></span></div>
       <div class="dic-jauge-txt">${sus} / ${mots.length} mots bien sus</div>
       ${nbFluo ? `<div class="dic-toggle">
@@ -2262,14 +2272,7 @@ async function loadDictee() {
         : `<div class="dic-astuce">Aucun mot surligné repéré : touche ⭐ à côté d'un mot pour le marquer.</div>`}
       ${archive ? `<button class="dic-retour" id="dic-retour">← Revenir à la dictée de la semaine</button>` : ""}
     </div>
-    <div class="dic-jeux">
-      <button class="dic-jeu dj-apprendre" data-jeu="apprendre"><span class="tc-emoji">📖</span><span class="tc-title">Apprendre mes mots</span><span class="tc-sub">Syllabes, pièges, puis j'écris</span></button>
-      <button class="dic-jeu dj-ecoute" data-jeu="ecoute"><span class="tc-emoji">🎧</span><span class="tc-title">J'écoute, j'écris</span><span class="tc-sub">Le mot est lu, je l'écris</span></button>
-      <button class="dic-jeu dj-bonmot" data-jeu="bonmot"><span class="tc-emoji">🔍</span><span class="tc-title">Le bon mot</span><span class="tc-sub">Trouve la bonne écriture</span></button>
-      <button class="dic-jeu dj-lettres" data-jeu="lettres"><span class="tc-emoji">🧩</span><span class="tc-title">Mot en morceaux</span><span class="tc-sub">Remets les morceaux dans l'ordre</span></button>
-      <button class="dic-jeu dj-flash" data-jeu="flash"><span class="tc-emoji">⚡</span><span class="tc-title">Mot flash</span><span class="tc-sub">Je regarde, il disparaît, je l'écris</span></button>
-      <button class="dic-jeu dj-phrases" data-jeu="phrases"><span class="tc-emoji">✍️</span><span class="tc-title">Petites phrases</span><span class="tc-sub">Comme le jour de la dictée</span></button>
-    </div>
+    ${boutonsJeux("jeu")}
     <h3 class="section-title">📋 Mes mots <span>${tous.length}</span></h3>
     <div class="dic-mots">${tous.map(m => {
       const hors = fluoSeul && !m.prioritaire;
@@ -2281,27 +2284,29 @@ async function loadDictee() {
         <button class="dic-icone dic-star${m.prioritaire ? " on" : ""}" data-star="${m.index}" title="${m.prioritaire ? "Retirer des mots surlignés" : "Marquer comme surligné"}">⭐</button>
       </div>`;
     }).join("")}</div>
-    ${repris.length ? `<h3 class="section-title">🔁 Repris des dictées précédentes <span>${repris.length}</span></h3>
-      <p class="muted dic-repris-info">Des mots qui t'ont piégée avant : ils restent ici jusqu'à ce que tu les saches.</p>
+    <div id="dic-erreur" class="dic-astuce" hidden></div>
+    ${repris.length ? `<h3 class="section-title">🔁 Réviser mes erreurs <span>${repris.length}</span></h3>
+      <p class="muted dic-repris-info">Des mots qui t'ont piégée avant, dans d'autres dictées : ils restent ici jusqu'à ce que tu les saches, séparément des mots de la semaine.</p>
+      ${boutonsJeux("jeu-erreurs")}
       <div class="dic-mots">${repris.map((m, k) => `<div class="dic-mot dic-mot-repris">
         <button class="dic-mot-main" data-voir-repris="${k}"><span class="dic-mot-syl">${htmlSyllabes(m)}</span><span class="dic-mot-sens">${esc(m.origine)}</span></button>
         <span class="pill ${statutNiveau(m.niveau).cls}">À revoir</span>
         <button class="dic-icone" data-dire-repris="${k}" title="Écouter">🔊</button>
       </div>`).join("")}</div>` : ""}
-    <div id="dic-erreur" class="dic-astuce" hidden></div>
     ${archives.length ? `<h3 class="section-title">📦 Dictées précédentes <span>${archives.length}</span></h3>
       ${archives.map(c => `<details class="dic-archive"><summary><b>${esc(c.titre)}</b> <span class="muted">· ${esc(dateCourte(c.dateAjout))} · ${(c.vocabulaire || []).length} mots</span></summary>
         <div class="dic-archive-mots">${(c.vocabulaire || []).map(v => `<span class="${v.prioritaire ? "fluo" : ""}">${esc(v.mot)}</span>`).join("")}</div>
         <button class="btn-ghost-small" data-retravailler="${esc(c.id)}">🔁 Retravailler cette dictée</button></details>`).join("")}` : ""}`;
 
   el.querySelectorAll("[data-jeu]").forEach(b => b.addEventListener("click", () => lancerJeuDictee(b.dataset.jeu)));
+  el.querySelectorAll("[data-jeu-erreurs]").forEach(b => b.addEventListener("click", () => lancerJeuDictee(b.dataset.jeuErreurs, repris)));
   el.querySelectorAll("[data-voir]").forEach(b => b.addEventListener("click", () => {
     const m = tous[Number(b.dataset.voir)];
     const liste = ordreApprentissage();
     const i = liste.indexOf(m);
     apprendreMots(i >= 0 ? liste : [m], Math.max(i, 0));
   }));
-  el.querySelectorAll("[data-voir-repris]").forEach(b => b.addEventListener("click", () => apprendreMots(ordreApprentissage(), Math.max(0, ordreApprentissage().indexOf(repris[Number(b.dataset.voirRepris)])))));
+  el.querySelectorAll("[data-voir-repris]").forEach(b => b.addEventListener("click", () => apprendreMots(ordreApprentissage(repris), Math.max(0, ordreApprentissage(repris).indexOf(repris[Number(b.dataset.voirRepris)])))));
   el.querySelectorAll("[data-dire-repris]").forEach(b => b.addEventListener("click", () => dire(repris[Number(b.dataset.direRepris)].mot, 0.8, "fr")));
   el.querySelectorAll("[data-dire]").forEach(b => b.addEventListener("click", () => dire(tous[Number(b.dataset.dire)].mot, 0.8, "fr")));
   el.querySelectorAll("[data-star]").forEach(b => b.addEventListener("click", () => basculerFluo(tous[Number(b.dataset.star)], b)));
@@ -2345,9 +2350,9 @@ async function choisirListe(complete) {
 }
 
 // Mots les moins sus d'abord (ratés la dernière fois en tête), mélangés à niveau égal.
-function serieDictee(filtre = () => true, n = 10) {
+function serieDictee(filtre = () => true, n = 10, source = dicteeEtat.mots) {
   const rang = m => (m.dernierResultat === false ? -1 : m.niveau);
-  return melanger(dicteeEtat.mots.filter(filtre)).sort((a, b) => rang(a) - rang(b)).slice(0, n);
+  return melanger(source.filter(filtre)).sort((a, b) => rang(a) - rang(b)).slice(0, n);
 }
 
 function noterMot(m, correct, { pas = 1, source, question = "", reponse = "" }) {
@@ -2355,20 +2360,22 @@ function noterMot(m, correct, { pas = 1, source, question = "", reponse = "" }) 
 }
 
 // Ordre des cartes : ratés la dernière fois, puis les moins sus ; les mots déjà sus seulement s'il ne reste qu'eux.
-function ordreApprentissage() {
+function ordreApprentissage(liste = dicteeEtat.mots) {
   const rang = m => (m.dernierResultat === false ? -1 : m.niveau);
-  const aSavoir = dicteeEtat.mots.filter(m => m.niveau < 3);
-  return [...(aSavoir.length ? aSavoir : dicteeEtat.mots)].sort((a, b) => rang(a) - rang(b));
+  const aSavoir = liste.filter(m => m.niveau < 3);
+  return [...(aSavoir.length ? aSavoir : liste)].sort((a, b) => rang(a) - rang(b));
 }
 
-function lancerJeuDictee(jeu) {
-  if (!dicteeEtat?.mots.length) return;
-  if (jeu === "apprendre") return apprendreMots(ordreApprentissage(), 0);
-  if (jeu === "ecoute") return jeuEcrire("ecoute");
-  if (jeu === "flash") return jeuEcrire("flash");
-  if (jeu === "bonmot") return jeuBonMot();
-  if (jeu === "lettres") return jeuMorceaux();
-  if (jeu === "phrases") return jeuPhrases();
+// `source` : mots de la semaine par défaut, ou la liste des reprises (mots à réviser), pour que
+// les deux restent des temps de jeu séparés plutôt que mélangés dans la même série.
+function lancerJeuDictee(jeu, source = dicteeEtat.mots) {
+  if (!source.length) return;
+  if (jeu === "apprendre") return apprendreMots(ordreApprentissage(source), 0);
+  if (jeu === "ecoute") return jeuEcrire("ecoute", source);
+  if (jeu === "flash") return jeuEcrire("flash", source);
+  if (jeu === "bonmot") return jeuBonMot(source);
+  if (jeu === "lettres") return jeuMorceaux(source);
+  if (jeu === "phrases") return jeuPhrases(source);
 }
 
 function finJeuDictee(corps, titre, bonnes, total, relancer, rates = []) {
@@ -2455,8 +2462,8 @@ function apprendreMots(liste, depart = 0) {
 }
 
 // J'ÉCOUTE J'ÉCRIS / MOT FLASH : même saisie, seule la présentation du mot change.
-function jeuEcrire(mode) {
-  const serie = serieDictee();
+function jeuEcrire(mode, source = dicteeEtat.mots) {
+  const serie = serieDictee(() => true, 10, source);
   const flash = mode === "flash";
   const titre = flash ? "⚡ Mot flash" : "🎧 J'écoute, j'écris";
   const corps = ouvrirLibre(`<div class="game-head ${flash ? "hdr-flash" : "hdr-dictee"}"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
@@ -2466,7 +2473,7 @@ function jeuEcrire(mode) {
   const premierEssai = m => !rates.includes(m);
   const afficher = () => {
     clearTimeout(dicteeMinuteur);
-    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, () => jeuEcrire(mode), rates);
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, () => jeuEcrire(mode, source), rates);
     const m = serie[i];
     revu = false;
     corps.querySelector("#dj-compteur").textContent = premierEssai(m) || i < nbMots ? `${Math.min(i + 1, nbMots)} / ${nbMots}` : "🔁 Deuxième essai";
@@ -2526,8 +2533,8 @@ function jeuEcrire(mode) {
 }
 
 // LE BON MOT : 3 écritures, une seule juste.
-function jeuBonMot() {
-  const serie = serieDictee(m => m.erreurs.length > 0);
+function jeuBonMot(source = dicteeEtat.mots) {
+  const serie = serieDictee(m => m.erreurs.length > 0, 10, source);
   const titre = "🔍 Le bon mot";
   const corps = ouvrirLibre(`<div class="game-head hdr-bonmot"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
   if (!serie.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ce jeu n'est pas encore prêt pour cette dictée.</div>`; return; }
@@ -2536,7 +2543,7 @@ function jeuBonMot() {
   const raterMot = m => { if (!rates.includes(m)) { rates.push(m); serie.push(m); } };
   const premierEssai = m => !rates.includes(m);
   const afficher = () => {
-    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, jeuBonMot, rates);
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, () => jeuBonMot(source), rates);
     const m = serie[i];
     const choix = melanger([m.mot, ...m.erreurs]);
     corps.querySelector("#dj-compteur").textContent = premierEssai(m) || i < nbMots ? `${Math.min(i + 1, nbMots)} / ${nbMots}` : "🔁 Deuxième essai";
@@ -2576,8 +2583,8 @@ function morceauxDe(m) {
   return { debut, morceaux, cible: corpsSyl.length >= 2 ? corpsSyl.join("") : base };
 }
 
-function jeuMorceaux() {
-  const serie = serieDictee();
+function jeuMorceaux(source = dicteeEtat.mots) {
+  const serie = serieDictee(() => true, 10, source);
   const titre = "🧩 Mot en morceaux";
   const corps = ouvrirLibre(`<div class="game-head hdr-lettres"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
   let i = 0, bonnes = 0;
@@ -2585,7 +2592,7 @@ function jeuMorceaux() {
   const raterMot = m => { if (!rates.includes(m)) { rates.push(m); serie.push(m); } };
   const premierEssai = m => !rates.includes(m);
   const afficher = () => {
-    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, jeuMorceaux, rates);
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, () => jeuMorceaux(source), rates);
     const m = serie[i];
     const { debut, morceaux, cible } = morceauxDe(m);
     let tirage = melanger(morceaux);
@@ -2633,8 +2640,8 @@ function jeuMorceaux() {
 }
 
 // PETITES PHRASES : une phrase courte par mot, comme le jour de la dictée.
-function jeuPhrases() {
-  const serie = serieDictee(m => m.phrase, 5);
+function jeuPhrases(source = dicteeEtat.mots) {
+  const serie = serieDictee(m => m.phrase, 5, source);
   const titre = "✍️ Petites phrases";
   const corps = ouvrirLibre(`<div class="game-head hdr-phrases"><div class="modal-kicker">${titre}</div><h3 id="dj-compteur"></h3></div><div class="game-body"></div>`);
   if (!serie.length) { corps.querySelector(".game-body").innerHTML = `<div class="panel-info">Ce jeu n'est pas encore prêt pour cette dictée.</div>`; return; }
@@ -2643,7 +2650,7 @@ function jeuPhrases() {
   const raterMot = m => { if (!rates.includes(m)) { rates.push(m); serie.push(m); } };
   const premierEssai = m => !rates.includes(m);
   const afficher = () => {
-    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, jeuPhrases, rates);
+    if (i >= serie.length) return finJeuDictee(corps, titre, bonnes, nbMots, () => jeuPhrases(source), rates);
     const m = serie[i];
     corps.querySelector("#dj-compteur").textContent = premierEssai(m) || i < nbMots ? `${Math.min(i + 1, nbMots)} / ${nbMots}` : "🔁 Deuxième essai";
     corps.querySelector(".game-body").innerHTML = `
