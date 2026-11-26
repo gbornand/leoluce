@@ -1517,19 +1517,22 @@ function lancerJeuVitesse([theme, mots], toutVocab) {
     corps.querySelector("#sp-q").textContent = tradDe(courant);
     const zone = corps.querySelector("#sp-choix");
     zone.innerHTML = "";
+    let repondu = false;
     melanger([courant, ...leurres]).forEach(n => {
       const b = document.createElement("button");
       b.className = "choix-btn";
       b.textContent = n.label;
       b.addEventListener("click", () => {
-        if (restant <= 0) return;
+        if (restant <= 0 || repondu) return;
+        repondu = true;
         const ok = n.label === courant.label;
         const trace = { source: "vitesse", question: tradDe(courant), reponse: n.label, attendu: courant.label };
         if (ok) { score += 1; journaliser({ notionId: courant.id, correct: true, ...trace }); }
         else { erreurs += 1; enregistrerReponse(courant.id, false, trace); }
         b.classList.add(ok ? "correct" : "incorrect");
+        if (!ok) zone.querySelectorAll(".choix-btn").forEach(autre => { if (autre.textContent === courant.label) autre.classList.add("correct"); });
         corps.querySelector("#sp-score").textContent = score;
-        setTimeout(suivante, ok ? 250 : 700);
+        setTimeout(suivante, ok ? 900 : 1800);
       });
       zone.appendChild(b);
     });
