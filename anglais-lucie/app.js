@@ -1855,7 +1855,11 @@ async function openNotionModal(notionId) {
   const btn = document.getElementById("btn-entrainer");
   btn.hidden = false;
   btn.disabled = false;
-  if (verbeEspagnol) document.getElementById("btn-conjuguer-espagnol").addEventListener("click", () => jeuConjuguerEspagnol(notionId, verbeEspagnol));
+  if (verbeEspagnol) document.getElementById("btn-conjuguer-espagnol").addEventListener("click", () => {
+    document.getElementById("modal-notion").hidden = true;
+    modalNotionId = null;
+    jeuConjuguerEspagnol(notionId, verbeEspagnol);
+  });
   document.getElementById("modal-notion").hidden = false;
 }
 
