@@ -1173,6 +1173,7 @@ async function loadNotions() {
   const toutesSeances = seancesSnap.docs.map(d => d.data());
   const reponses = toutesReponses.filter(dansMatiere);
   const seances = toutesSeances.filter(dansMatiere).sort((a, b) => (b.finieLe || "").localeCompare(a.finieLe || ""));
+  const serieMatiere = serieDe(reponses);
   coursById = {};
   coursSnap.forEach(d => { if (dansMatiere(d.data())) coursById[d.id] = d.data(); });
   notionsById = {};
@@ -1215,6 +1216,7 @@ async function loadNotions() {
       <div class="stat"><div class="stat-val">${travaillees}<span>/${rows.length}</span></div><div class="stat-lbl">notions déjà travaillées</div></div>
       <div class="stat"><div class="stat-val">${derniere ? `${derniere.score}<span>/${derniere.total}</span>` : "—"}</div><div class="stat-lbl">dernière séance</div></div>
       <div class="stat stat-alert"><div class="stat-val">${ratees}</div><div class="stat-lbl">à reprendre (✗)</div></div>
+      <div class="stat"><div class="stat-val">🔥 ${serieMatiere.serie}</div><div class="stat-lbl">jour${serieMatiere.serie > 1 ? "s" : ""} d'affilée en ${esc(ui().nom.toLowerCase())}</div></div>
     </div>
     ${graphiqueActivite(reponses)}
     ${htmlBadges(motivation)}
