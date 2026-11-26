@@ -3283,7 +3283,7 @@ const PORTEE_FA = [
 // Niveaux = ambitus (toutes les notes Do à Si sont dispo dès le niveau 1, seule la plage de
 // positions sur la portée s'élargit) : du plus proche du centre de la portée au plus large.
 const AMPLITUDE_NIVEAUX = [[0, 4], [-1, 5], [-2, 6], [-2, 8], [-2, 9]];
-let musiqueEtat = { clef: "les-deux", niveau: 1, vitesse: 1, record: 0 };
+let musiqueEtat = { clef: "les-deux", niveau: 1, vitesse: 1, record: 0, mode: "niveau", notesPerso: [] };
 let contexteAudio = null;
 function jouerNote(lettre, octave, duree = 0.6) {
   try {
@@ -3331,7 +3331,12 @@ async function loadMusique() {
     return;
   }
   if (eleve !== eleveCourant || matiereCourante !== "musique") return;
-  musiqueEtat = { clef: data?.clef || "les-deux", niveau: data?.niveau || 1, vitesse: data?.vitesse || 1, record: data?.record || 0 };
+  musiqueEtat = {
+    clef: data?.clef || "les-deux", niveau: data?.niveau || 1, vitesse: data?.vitesse || 1, record: data?.record || 0,
+    mode: data?.mode || "niveau", notesPerso: data?.notesPerso || [],
+  };
+  const modePerso = musiqueEtat.mode === "perso";
+  const nbPerso = musiqueEtat.notesPerso.length;
   el.innerHTML = `
     <div class="tb-hero">
       <div class="dic-kicker">🎼 Musique</div>
@@ -3340,52 +3345,94 @@ async function loadMusique() {
     </div>
     <div class="dic-jeux">
       <button class="dic-jeu dj-musique-config"><span class="tc-emoji">⚙️</span><span class="tc-title">Choisir le niveau</span><span class="tc-sub">Clé, ambitus, vitesse</span></button>
-      <button class="dic-jeu dj-musique-jouer"><span class="tc-emoji">🎵</span><span class="tc-title">Jouer</span><span class="tc-sub">Niveau ${musiqueEtat.niveau}</span></button>
+      <button class="dic-jeu dj-musique-jouer"><span class="tc-emoji">🎵</span><span class="tc-title">Jouer</span><span class="tc-sub">${modePerso ? `${nbPerso} note${nbPerso > 1 ? "s" : ""} choisies` : `Niveau ${musiqueEtat.niveau}`}</span></button>
     </div>`;
   el.querySelector(".dj-musique-config").addEventListener("click", ouvrirConfigMusique);
   el.querySelector(".dj-musique-jouer").addEventListener("click", jeuMusique);
 }
 
 function ouvrirConfigMusique() {
+  let modeChoisi = musiqueEtat.mode || "niveau";
   let clefChoisie = musiqueEtat.clef;
   let niveauChoisi = musiqueEtat.niveau;
   let vitesseChoisie = musiqueEtat.vitesse;
-  const corps = ouvrirLibre(`<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎼 Configuration</div><h3>Choisis ta clé</h3></div>
-    <div class="game-body">
-      <div class="tb-choix-titre">Clé</div>
-      <div class="mus-clefs-grille" id="mus-clefs">
-        <button data-clef="sol" class="mus-choix-btn ${clefChoisie === "sol" ? "on" : ""}"><span class="mus-clef-symb">𝄞</span>Sol</button>
-        <button data-clef="fa" class="mus-choix-btn ${clefChoisie === "fa" ? "on" : ""}"><span class="mus-clef-symb">𝄢</span>Fa</button>
-        <button data-clef="les-deux" class="mus-choix-btn ${clefChoisie === "les-deux" ? "on" : ""}"><span class="mus-clef-symb">𝄞𝄢</span>Les deux</button>
-      </div>
-      <div class="tb-choix-titre">Niveau (toutes les notes, l'ambitus s'élargit)</div>
-      <div class="mus-niveaux-grille" id="mus-niveaux">
-        ${[1, 2, 3, 4, 5].map(n => `<button data-n="${n}" class="mus-choix-btn ${niveauChoisi === n ? "on" : ""}">${n}</button>`).join("")}
-      </div>
-      <div class="tb-choix-titre">Vitesse de départ</div>
-      <div class="mus-vitesses-grille" id="mus-vitesses">
-        ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="mus-choix-btn ${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
-      </div>
-      <button class="btn-primary btn-block" id="mus-valider">Enregistrer</button>
-    </div>`);
-  corps.querySelectorAll("[data-clef]").forEach(b => b.addEventListener("click", () => {
-    clefChoisie = b.dataset.clef;
-    corps.querySelectorAll("[data-clef]").forEach(x => x.classList.toggle("on", x === b));
-  }));
-  corps.querySelectorAll("[data-n]").forEach(b => b.addEventListener("click", () => {
-    niveauChoisi = Number(b.dataset.n);
-    corps.querySelectorAll("[data-n]").forEach(x => x.classList.toggle("on", x === b));
-  }));
-  corps.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
-    vitesseChoisie = Number(b.dataset.v);
-    corps.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
-  }));
-  corps.querySelector("#mus-valider").addEventListener("click", async () => {
-    if (await enregistrerMusique({ clef: clefChoisie, niveau: niveauChoisi, vitesse: vitesseChoisie })) {
-      document.getElementById("modal-libre-close").click();
-      loadMusique();
-    }
-  });
+  const notesPerso = new Set(musiqueEtat.notesPerso || []);
+  const corps = ouvrirLibre("");
+
+  const dessiner = () => {
+    corps.innerHTML = `<div class="game-head hdr-tapprendre"><div class="modal-kicker">🎼 Configuration</div><h3>Choisis comment t'entraîner</h3></div>
+      <div class="game-body">
+        <div class="mus-mode-grille">
+          <button data-mode="niveau" class="mus-choix-btn ${modeChoisi === "niveau" ? "on" : ""}">🎚️ Par niveau</button>
+          <button data-mode="perso" class="mus-choix-btn ${modeChoisi === "perso" ? "on" : ""}">🎯 Choisir mes notes</button>
+        </div>
+        ${modeChoisi === "niveau" ? `
+          <div class="tb-choix-titre">Clé</div>
+          <div class="mus-clefs-grille" id="mus-clefs">
+            <button data-clef="sol" class="mus-choix-btn ${clefChoisie === "sol" ? "on" : ""}"><span class="mus-clef-symb">𝄞</span>Sol</button>
+            <button data-clef="fa" class="mus-choix-btn ${clefChoisie === "fa" ? "on" : ""}"><span class="mus-clef-symb">𝄢</span>Fa</button>
+            <button data-clef="les-deux" class="mus-choix-btn ${clefChoisie === "les-deux" ? "on" : ""}"><span class="mus-clef-symb">𝄞𝄢</span>Les deux</button>
+          </div>
+          <div class="tb-choix-titre">Niveau (toutes les notes, l'ambitus s'élargit)</div>
+          <div class="mus-niveaux-grille" id="mus-niveaux">
+            ${[1, 2, 3, 4, 5].map(n => `<button data-n="${n}" class="mus-choix-btn ${niveauChoisi === n ? "on" : ""}">${n}</button>`).join("")}
+          </div>` : `
+          <div class="tb-choix-titre" id="mus-select-compteur">Clique sur les notes à travailler (${notesPerso.size} choisie${notesPerso.size > 1 ? "s" : ""})</div>
+          <div class="mus-select-actions">
+            <button class="btn-ghost-small" id="mus-tout">Tout cocher</button>
+            <button class="btn-ghost-small" id="mus-aucun">Tout décocher</button>
+          </div>
+          ${["sol", "fa"].map(c => `
+            <div class="mus-portee-select">
+              <div class="mus-cle">${c === "sol" ? "𝄞" : "𝄢"}</div>
+              <div class="mus-select-scroll">
+                <div class="mus-select-piste">
+                  ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${MUS_BASE_Y + i * 12}px"></div>`).join("")}
+                  ${(c === "sol" ? PORTEE_SOL : PORTEE_FA).map((n, idx) => `<button class="mus-note-select${notesPerso.has(`${c}-${n.pos}`) ? " on" : ""}" data-clef="${c}" data-pos="${n.pos}" data-lettre="${n.lettre}" data-octave="${n.octave}" style="left:${idx * 36}px;bottom:${MUS_BASE_Y + n.pos * 6}px"></button>`).join("")}
+                </div>
+              </div>
+            </div>`).join("")}
+        `}
+        <div class="tb-choix-titre">Vitesse de départ</div>
+        <div class="mus-vitesses-grille" id="mus-vitesses">
+          ${["🐢 Zen", "🐇 Dynamique", "🚀 Rapide"].map((l, k) => `<button data-v="${k + 1}" class="mus-choix-btn ${vitesseChoisie === k + 1 ? "on" : ""}">${l}</button>`).join("")}
+        </div>
+        <button class="btn-primary btn-block" id="mus-valider">Enregistrer</button>
+      </div>`;
+
+    corps.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { modeChoisi = b.dataset.mode; dessiner(); }));
+    corps.querySelectorAll("[data-clef]").forEach(b => b.addEventListener("click", () => {
+      clefChoisie = b.dataset.clef;
+      corps.querySelectorAll("[data-clef]").forEach(x => x.classList.toggle("on", x === b));
+    }));
+    corps.querySelectorAll("[data-n]").forEach(b => b.addEventListener("click", () => {
+      niveauChoisi = Number(b.dataset.n);
+      corps.querySelectorAll("[data-n]").forEach(x => x.classList.toggle("on", x === b));
+    }));
+    corps.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
+      vitesseChoisie = Number(b.dataset.v);
+      corps.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", Number(x.dataset.v) === vitesseChoisie));
+    }));
+    corps.querySelectorAll(".mus-note-select").forEach(b => b.addEventListener("click", () => {
+      const id = `${b.dataset.clef}-${b.dataset.pos}`;
+      if (notesPerso.has(id)) notesPerso.delete(id); else notesPerso.add(id);
+      b.classList.toggle("on");
+      jouerNote(b.dataset.lettre, Number(b.dataset.octave), 0.25);
+      const compteur = corps.querySelector("#mus-select-compteur");
+      if (compteur) compteur.textContent = `Clique sur les notes à travailler (${notesPerso.size} choisie${notesPerso.size > 1 ? "s" : ""})`;
+    }));
+    corps.querySelector("#mus-tout")?.addEventListener("click", () => { toutesNotesClef("les-deux").forEach(n => notesPerso.add(n.id)); dessiner(); });
+    corps.querySelector("#mus-aucun")?.addEventListener("click", () => { notesPerso.clear(); dessiner(); });
+
+    corps.querySelector("#mus-valider").addEventListener("click", async () => {
+      const champs = { mode: modeChoisi, clef: clefChoisie, niveau: niveauChoisi, vitesse: vitesseChoisie, notesPerso: [...notesPerso] };
+      if (await enregistrerMusique(champs)) {
+        document.getElementById("modal-libre-close").click();
+        loadMusique();
+      }
+    });
+  };
+  dessiner();
 }
 
 // JOUER : plusieurs notes visibles à la fois sur la portée (comme une vraie partition qui défile),
@@ -3396,10 +3443,14 @@ const MUS_ESPACEMENT = 72;
 const MUS_ZONE_RALENTI = 140;
 const MUS_BASE_Y = 24; // marge sous la 1ère ligne, pour que les notes sous la portée (ledger lines) ne soient pas rognées
 function jeuMusique() {
+  const modePerso = musiqueEtat.mode === "perso";
   const [ampliMin, ampliMax] = AMPLITUDE_NIVEAUX[(musiqueEtat.niveau || 1) - 1];
-  const clefs = musiqueEtat.clef === "les-deux" ? ["sol", "fa"] : [musiqueEtat.clef];
-  const pool = toutesNotesClef(musiqueEtat.clef).filter(n => n.pos >= ampliMin && n.pos <= ampliMax);
+  const pool = modePerso
+    ? toutesNotesClef("les-deux").filter(n => (musiqueEtat.notesPerso || []).includes(n.id))
+    : toutesNotesClef(musiqueEtat.clef).filter(n => n.pos >= ampliMin && n.pos <= ampliMax);
   if (pool.length < 2) return ouvrirConfigMusique();
+  const clefsPresentes = new Set(pool.map(n => n.clef));
+  const clefs = modePerso ? ["sol", "fa"].filter(c => clefsPresentes.has(c)) : (musiqueEtat.clef === "les-deux" ? ["sol", "fa"] : [musiqueEtat.clef]);
   const vitesseBase = { 1: 35, 2: 60, 3: 95 }[musiqueEtat.vitesse] || 35;
   const vitesseMax = vitesseBase * 2.5;
   const noms = ["Do", "Ré", "Mi", "Fa", "Sol", "La", "Si"];

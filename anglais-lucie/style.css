@@ -765,6 +765,13 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .mus-rep-btn { border: 1px solid #d8d4ea; border-radius: 10px; padding: 14px 10px; font-weight: 700; font-size: 15px; background: #f4f2fb; color: #2d2a4a; cursor: pointer; flex: 1; min-width: 70px; }
 .mus-rep-btn:active { transform: scale(.94); background: #e6e1fb; }
 .mus-niveaux-grille { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 4px; }
+.mus-mode-grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.mus-select-actions { display: flex; gap: 8px; margin-bottom: 6px; }
+.mus-portee-select { position: relative; height: 120px; margin: 0 0 18px 40px; }
+.mus-select-scroll { overflow-x: auto; height: 100%; -webkit-overflow-scrolling: touch; }
+.mus-select-piste { position: relative; height: 100%; width: 420px; }
+.mus-note-select { position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #b8b3d9; background: #fff; cursor: pointer; padding: 0; transform: translateY(50%); }
+.mus-note-select.on { border-color: #a152d6; background: #a152d6; }
 
 /* Téléphone tourné en paysage (faible hauteur) : resserrer pour que les boutons de réponse et
    "Terminer" restent visibles sans avoir à faire défiler. Les positions des notes (calculées en JS
