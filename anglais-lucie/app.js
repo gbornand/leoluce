@@ -3388,7 +3388,7 @@ function ouvrirConfigMusique() {
               <div class="mus-select-scroll">
                 <div class="mus-select-piste">
                   ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${MUS_BASE_Y + i * 12}px"></div>`).join("")}
-                  ${(c === "sol" ? PORTEE_SOL : PORTEE_FA).map((n, idx) => `<button class="mus-note-select${notesPerso.has(`${c}-${n.pos}`) ? " on" : ""}" data-clef="${c}" data-pos="${n.pos}" data-lettre="${n.lettre}" data-octave="${n.octave}" style="left:${idx * 36}px;bottom:${MUS_BASE_Y + n.pos * 6}px"></button>`).join("")}
+                  ${(c === "sol" ? PORTEE_SOL : PORTEE_FA).map((n, idx) => `<button class="mus-note-select${notesPerso.has(`${c}-${n.pos}`) ? " on" : ""}" data-noteclef="${c}" data-pos="${n.pos}" data-lettre="${n.lettre}" data-octave="${n.octave}" style="left:${idx * 36}px;bottom:${MUS_BASE_Y + n.pos * 6}px"></button>`).join("")}
                 </div>
               </div>
             </div>`).join("")}
@@ -3414,7 +3414,7 @@ function ouvrirConfigMusique() {
       corps.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", Number(x.dataset.v) === vitesseChoisie));
     }));
     corps.querySelectorAll(".mus-note-select").forEach(b => b.addEventListener("click", () => {
-      const id = `${b.dataset.clef}-${b.dataset.pos}`;
+      const id = `${b.dataset.noteclef}-${b.dataset.pos}`;
       if (notesPerso.has(id)) notesPerso.delete(id); else notesPerso.add(id);
       b.classList.toggle("on");
       jouerNote(b.dataset.lettre, Number(b.dataset.octave), 0.25);
