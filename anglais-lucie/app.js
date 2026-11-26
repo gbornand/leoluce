@@ -1280,7 +1280,7 @@ async function loadNotions() {
         <div class="acc-body" id="acc-body-${i}" hidden>
           <div class="theme-actions">${matiereCourante === "francais"
             ? `<button class="btn-primary btn-small" data-dictee-theme="${i}">🎧 Dictée sur ce thème</button>`
-            : `<button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button><button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button>`}</div>
+            : `<button class="btn-primary btn-small" data-flash="${i}">🃏 Flashcards</button><button class="btn-speed btn-small" data-speed="${i}">⚡ Jeu de vitesse</button><button class="btn-ghost-small" data-ecrire="${i}">✍️ Écrire</button>`}</div>
           <div class="vocab-grid">${mots.map(n => {
             const st = statutNiveau(n.niveau || 0);
             return `<button class="vocab-chip ${st.cls}${coursById[n.coursId]?.rattrapage ? " vocab-rattrapage" : ""}" data-id="${esc(n.id)}"><span class="vocab-mot">${esc(n.label)} ${marqueDerniere(n)}</span><span class="vocab-trad">${esc(tradDe(n))}</span></button>`;
@@ -1303,6 +1303,7 @@ async function loadNotions() {
   }));
   el.querySelectorAll("[data-flash]").forEach(b => b.addEventListener("click", () => lancerFlashcards(themes[b.dataset.flash])));
   el.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => lancerJeuVitesse(themes[b.dataset.speed], vocab)));
+  el.querySelectorAll("[data-ecrire]").forEach(b => b.addEventListener("click", () => lancerEcriture(themes[b.dataset.ecrire])));
   el.querySelectorAll("[data-dictee-theme]").forEach(b => b.addEventListener("click", () => lancerDictee(new Set(themes[b.dataset.dicteeTheme][1].map(n => n.id)))));
   el.querySelectorAll("[data-suppr-cours]").forEach(b => b.addEventListener("click", () => supprimerCours(b.dataset.supprCours, b)));
   el.querySelectorAll("[data-lire-cours]").forEach(b => b.addEventListener("click", () => lireCoursEnEntier(b.dataset.lireCours)));
@@ -1487,6 +1488,110 @@ function lancerFlashcards([theme, mots]) {
     card.addEventListener("click", () => { card.classList.add("flipped"); corps.querySelector("#fc-actions").hidden = false; });
     corps.querySelector(".fc-oui").addEventListener("click", () => { sus += 1; enregistrerReponse(n.id, true, { source: "flashcards", question: n.label }); i += 1; afficher(); });
     corps.querySelector(".fc-non").addEventListener("click", () => { enregistrerReponse(n.id, false, { source: "flashcards", question: n.label }); i += 1; afficher(); });
+  };
+  afficher();
+}
+
+// Comparaison tolérante (accents, majuscules, ponctuation ¿¡) pour les jeux où il faut écrire la réponse.
+function normaliserEcrit(s) {
+  return String(s || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[¿¡!?.,;:"']/g, "").replace(/\s+/g, " ").trim();
+}
+
+// Accepte les variantes d'un "mot" (ex: "violeta / morado / lila", "la goma (de borrar)", "septiembre (setiembre)").
+function variantesMot(mot) {
+  const base = String(mot || "").trim();
+  const variantes = new Set();
+  const ajouter = s => { const t = s.trim(); if (t) variantes.add(t); };
+  base.split("/").forEach(ajouter);
+  base.replace(/\s*\([^)]*\)/g, "").split("/").forEach(ajouter);
+  const paren = base.match(/\(([^)]*)\)/);
+  if (paren) paren[1].split("/").forEach(ajouter);
+  return [...variantes];
+}
+
+// ÉCRITURE : on lit la traduction, il faut taper le mot — teste vraiment l'orthographe (contrairement aux flashcards).
+function lancerEcriture([theme, mots]) {
+  const paquet = [...mots].sort((a, b) => (a.niveau || 0) - (b.niveau || 0)).slice(0, 20);
+  let i = 0, sus = 0;
+  const corps = ouvrirLibre("");
+  const afficher = () => {
+    if (i >= paquet.length) {
+      corps.innerHTML = `<div class="game-head hdr-vocab"><div class="modal-kicker">✍️ Écrire · ${esc(theme)}</div><h3>Série terminée !</h3></div>
+        <div class="game-body"><div class="today-score">🎉 ${sus}/${paquet.length} mots bien écrits</div>
+        <button class="btn-primary btn-block" id="ec-encore">🔁 Nouvelle série</button></div>`;
+      corps.querySelector("#ec-encore").addEventListener("click", () => lancerEcriture([theme, mots]));
+      return;
+    }
+    const n = paquet[i];
+    corps.innerHTML = `<div class="game-head hdr-vocab"><div class="modal-kicker">✍️ Écrire · ${esc(theme)}</div><h3>${i + 1} / ${paquet.length}</h3></div>
+      <div class="game-body">
+        <div class="fc-trad" style="text-align:center;margin-bottom:12px">${esc(tradDe(n))}</div>
+        <div class="ap-ecrire"><input type="text" class="exo-input" id="ec-saisie" placeholder="..." autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn-primary btn-small" id="ec-ok">OK</button></div>
+        <div id="ec-resultat"></div>
+      </div>`;
+    const input = corps.querySelector("#ec-saisie");
+    const valider = () => {
+      if (input.disabled || !input.value.trim()) return;
+      const candidats = variantesMot(n.label).map(normaliserEcrit);
+      const ok = candidats.includes(normaliserEcrit(input.value));
+      input.disabled = true;
+      corps.querySelector("#ec-ok").disabled = true;
+      input.classList.add(ok ? "correct" : "incorrect");
+      if (ok) sus += 1;
+      enregistrerReponse(n.id, ok, { source: "ecriture", question: tradDe(n), reponse: input.value.trim(), attendu: n.label });
+      corps.querySelector("#ec-resultat").innerHTML = `${ok ? "" : `<div class="pr-verdict ko">Réponse : ${esc(n.label)}</div>`}<button class="btn-primary btn-block" id="ec-suivant">Suivant →</button>`;
+      corps.querySelector("#ec-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    };
+    corps.querySelector("#ec-ok").addEventListener("click", valider);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+    input.focus();
+  };
+  afficher();
+}
+
+// CONJUGAISON ESPAGNOLE À L'ÉCRIT — verbes du cours, formes tirées telles quelles de la leçon.
+const VERBES_ESPAGNOL = {
+  "Le verbe llamarse (s'appeler)": { inf: "llamarse (s'appeler)", formas: ["me llamo", "te llamas", "se llama", "nos llamamos", "os llamáis", "se llaman"] },
+  "Le verbe ser (être) et ses emplois": { inf: "ser (être)", formas: ["soy", "eres", "es", "somos", "sois", "son"] },
+  "Le verbe tener (avoir) et l'âge": { inf: "tener (avoir)", formas: ["tengo", "tienes", "tiene", "tenemos", "tenéis", "tienen"] },
+  "Conjuguer HABLAR au présent": { inf: "hablar (parler)", formas: ["hablo", "hablas", "habla", "hablamos", "habláis", "hablan"] },
+};
+const PERSONAS_ESPAGNOL = ["yo", "tú", "él / ella", "nosotros / nosotras", "vosotros / vosotras", "ellos / ellas"];
+
+function jeuConjuguerEspagnol(notionId, verbe) {
+  const ordre = melanger([0, 1, 2, 3, 4, 5]);
+  let i = 0, bonnes = 0;
+  const corps = ouvrirLibre(`<div class="game-head hdr-tentrainement"><div class="modal-kicker">✍️ Conjuguer · ${esc(verbe.inf)}</div><h3 id="cj-compteur"></h3></div><div class="game-body"></div>`);
+  const afficher = () => {
+    if (i >= ordre.length) {
+      corps.querySelector(".game-body").innerHTML = `<div class="today-score">✍️ ${esc(verbe.inf)} : ${bonnes}/${ordre.length}</div>
+        <button class="btn-primary btn-block" id="cj-encore">🔁 Encore</button>
+        <button class="btn-ghost-small" id="cj-fermer">Fermer</button>`;
+      corps.querySelector("#cj-encore").addEventListener("click", () => jeuConjuguerEspagnol(notionId, verbe));
+      corps.querySelector("#cj-fermer").addEventListener("click", () => document.getElementById("modal-libre-close").click());
+      return;
+    }
+    const p = ordre[i];
+    corps.querySelector("#cj-compteur").textContent = `${i + 1} / ${ordre.length}`;
+    corps.querySelector(".game-body").innerHTML = `<div class="tj-question">${esc(verbe.inf)} — <b>${esc(PERSONAS_ESPAGNOL[p])}</b></div>
+      <div class="ap-ecrire tj-ecrire"><input type="text" class="exo-input" id="cj-saisie" placeholder="..." autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn-primary btn-small" id="cj-ok">OK</button></div>
+      <div id="cj-resultat"></div>`;
+    const input = corps.querySelector("#cj-saisie");
+    const valider = () => {
+      if (input.disabled || !input.value.trim()) return;
+      const ok = normaliserEcrit(input.value) === normaliserEcrit(verbe.formas[p]);
+      input.disabled = true;
+      corps.querySelector("#cj-ok").disabled = true;
+      input.classList.add(ok ? "correct" : "incorrect");
+      if (ok) bonnes += 1;
+      enregistrerReponse(notionId, ok, { source: "conjuguer", question: `${verbe.inf} – ${PERSONAS_ESPAGNOL[p]}`, reponse: input.value.trim(), attendu: verbe.formas[p] });
+      corps.querySelector("#cj-resultat").innerHTML = `${ok ? "" : `<div class="pr-verdict ko">Réponse : ${esc(verbe.formas[p])}</div>`}<button class="btn-primary btn-block" id="cj-suivant">Suivant →</button>`;
+      corps.querySelector("#cj-suivant").addEventListener("click", () => { i += 1; afficher(); });
+    };
+    corps.querySelector("#cj-ok").addEventListener("click", valider);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+    input.focus();
   };
   afficher();
 }
@@ -1741,6 +1846,8 @@ async function openNotionModal(notionId) {
          ${(g.exemples || []).length ? `<div class="exemples-title">Exemples</div>${g.exemples.map(ex => `<div class="exemple-card">${esc(ex)}</div>`).join("")}` : ""}`
       : `<div class="regle-box">${esc(notion.label)}</div>`;
   }
+  const verbeEspagnol = matiereCourante === "espagnol" ? VERBES_ESPAGNOL[notion.label] : null;
+  if (verbeEspagnol) corps.insertAdjacentHTML("beforeend", `<button class="btn-primary btn-block" id="btn-conjuguer-espagnol">✍️ Conjuguer à l'écrit</button>`);
   modalNotionId = notionId;
   corps.insertAdjacentHTML("beforeend", `<div id="notion-historique"></div>`);
   afficherHistoriqueNotion(notionId);
@@ -1748,6 +1855,7 @@ async function openNotionModal(notionId) {
   const btn = document.getElementById("btn-entrainer");
   btn.hidden = false;
   btn.disabled = false;
+  if (verbeEspagnol) document.getElementById("btn-conjuguer-espagnol").addEventListener("click", () => jeuConjuguerEspagnol(notionId, verbeEspagnol));
   document.getElementById("modal-notion").hidden = false;
 }
 
