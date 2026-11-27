@@ -749,11 +749,12 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .mus-note-case.on { border-color: #a152d6; background: rgba(161,82,214,.12); color: #a152d6; }
 .mus-note-octave { font-size: 9px; opacity: .55; }
 #mus-portees { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
-.mus-portee-vue { position: relative; height: 120px; margin-left: 40px; }
-.mus-cle { position: absolute; left: -34px; bottom: 6px; font-size: 44px; color: #2d2a4a; z-index: 2; }
+.mus-portee-vue { position: relative; height: 190px; margin-left: 40px; }
+.mus-cle { position: absolute; left: -34px; bottom: 50px; font-size: 44px; color: #2d2a4a; z-index: 2; }
 .mus-fenetre { position: relative; height: 100%; overflow: hidden; }
 .mus-surlignage { position: absolute; top: 0; bottom: 0; left: 0; width: 36px; background: rgba(161,82,214,.18); border-radius: 6px; z-index: 1; }
 .mus-ligne { position: absolute; left: 0; right: 0; height: 2px; background: #2d2a4a; }
+.mus-ligne-sup { position: absolute; height: 2px; background: #2d2a4a; }
 .mus-piste { position: absolute; inset: 0; will-change: transform; }
 .mus-note-fixe { position: absolute; width: 14px; height: 11px; border-radius: 50%; background: #2d2a4a; transform: translateY(50%); }
 .mus-note-fixe::after { content: ""; position: absolute; right: 1px; top: -26px; width: 2px; height: 26px; background: #2d2a4a; }
@@ -767,9 +768,9 @@ div.ap-carte { cursor: default; flex-direction: column; }
 .mus-niveaux-grille { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 4px; }
 .mus-mode-grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
 .mus-select-actions { display: flex; gap: 8px; margin-bottom: 6px; }
-.mus-portee-select { position: relative; height: 120px; margin: 0 0 18px 40px; }
+.mus-portee-select { position: relative; height: 190px; margin: 0 0 18px 40px; }
 .mus-select-scroll { overflow-x: auto; height: 100%; -webkit-overflow-scrolling: touch; }
-.mus-select-piste { position: relative; height: 100%; width: 420px; }
+.mus-select-piste { position: relative; height: 100%; width: 760px; }
 .mus-note-select { position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #b8b3d9; background: #fff; cursor: pointer; padding: 0; transform: translateY(50%); }
 .mus-note-select.on { border-color: #a152d6; background: #a152d6; }
 

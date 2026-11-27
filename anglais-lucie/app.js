@@ -3263,26 +3263,43 @@ function freqNote(lettre, octave) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 // pos : position sur la portée, 0 = 1ère ligne du bas, +1 par ligne/interligne (ledger lines en dehors de 0-8).
+// Amplitude large (jusqu'à 3 lignes supplémentaires de chaque côté) pour suivre une vraie partition.
 const PORTEE_SOL = [
+  { pos: -6, solfege: "Fa", lettre: "F", octave: 3 }, { pos: -5, solfege: "Sol", lettre: "G", octave: 3 },
+  { pos: -4, solfege: "La", lettre: "A", octave: 3 }, { pos: -3, solfege: "Si", lettre: "B", octave: 3 },
   { pos: -2, solfege: "Do", lettre: "C", octave: 4 }, { pos: -1, solfege: "Ré", lettre: "D", octave: 4 },
   { pos: 0, solfege: "Mi", lettre: "E", octave: 4 }, { pos: 1, solfege: "Fa", lettre: "F", octave: 4 },
   { pos: 2, solfege: "Sol", lettre: "G", octave: 4 }, { pos: 3, solfege: "La", lettre: "A", octave: 4 },
   { pos: 4, solfege: "Si", lettre: "B", octave: 4 }, { pos: 5, solfege: "Do", lettre: "C", octave: 5 },
   { pos: 6, solfege: "Ré", lettre: "D", octave: 5 }, { pos: 7, solfege: "Mi", lettre: "E", octave: 5 },
   { pos: 8, solfege: "Fa", lettre: "F", octave: 5 }, { pos: 9, solfege: "Sol", lettre: "G", octave: 5 },
+  { pos: 10, solfege: "La", lettre: "A", octave: 5 }, { pos: 11, solfege: "Si", lettre: "B", octave: 5 },
+  { pos: 12, solfege: "Do", lettre: "C", octave: 6 }, { pos: 13, solfege: "Ré", lettre: "D", octave: 6 },
 ];
 const PORTEE_FA = [
+  { pos: -6, solfege: "La", lettre: "A", octave: 1 }, { pos: -5, solfege: "Si", lettre: "B", octave: 1 },
+  { pos: -4, solfege: "Do", lettre: "C", octave: 2 }, { pos: -3, solfege: "Ré", lettre: "D", octave: 2 },
   { pos: -2, solfege: "Mi", lettre: "E", octave: 2 }, { pos: -1, solfege: "Fa", lettre: "F", octave: 2 },
   { pos: 0, solfege: "Sol", lettre: "G", octave: 2 }, { pos: 1, solfege: "La", lettre: "A", octave: 2 },
   { pos: 2, solfege: "Si", lettre: "B", octave: 2 }, { pos: 3, solfege: "Do", lettre: "C", octave: 3 },
   { pos: 4, solfege: "Ré", lettre: "D", octave: 3 }, { pos: 5, solfege: "Mi", lettre: "E", octave: 3 },
   { pos: 6, solfege: "Fa", lettre: "F", octave: 3 }, { pos: 7, solfege: "Sol", lettre: "G", octave: 3 },
   { pos: 8, solfege: "La", lettre: "A", octave: 3 }, { pos: 9, solfege: "Si", lettre: "B", octave: 3 },
+  { pos: 10, solfege: "Do", lettre: "C", octave: 4 }, { pos: 11, solfege: "Ré", lettre: "D", octave: 4 },
+  { pos: 12, solfege: "Mi", lettre: "E", octave: 4 }, { pos: 13, solfege: "Fa", lettre: "F", octave: 4 },
 ];
+
+// Ledger lines : positions paires (= sur une ligne) en dehors de 0-8, jusqu'à la position donnée.
+function lignesSupplementaires(pos) {
+  const lignes = [];
+  if (pos < 0) for (let p = -2; p >= pos; p -= 2) lignes.push(p);
+  else if (pos > 8) for (let p = 10; p <= pos; p += 2) lignes.push(p);
+  return lignes;
+}
 
 // Niveaux = ambitus (toutes les notes Do à Si sont dispo dès le niveau 1, seule la plage de
 // positions sur la portée s'élargit) : du plus proche du centre de la portée au plus large.
-const AMPLITUDE_NIVEAUX = [[0, 4], [-1, 5], [-2, 6], [-2, 8], [-2, 9]];
+const AMPLITUDE_NIVEAUX = [[0, 4], [-1, 5], [-2, 6], [-4, 9], [-6, 13]];
 let musiqueEtat = { clef: "les-deux", niveau: 1, vitesse: 1, record: 0, mode: "niveau", notesPerso: [] };
 let contexteAudio = null;
 function jouerNote(lettre, octave, duree = 0.6) {
@@ -3388,7 +3405,7 @@ function ouvrirConfigMusique() {
               <div class="mus-select-scroll">
                 <div class="mus-select-piste">
                   ${[0, 1, 2, 3, 4].map(i => `<div class="mus-ligne" style="bottom:${MUS_BASE_Y + i * 12}px"></div>`).join("")}
-                  ${(c === "sol" ? PORTEE_SOL : PORTEE_FA).map((n, idx) => `<button class="mus-note-select${notesPerso.has(`${c}-${n.pos}`) ? " on" : ""}" data-noteclef="${c}" data-pos="${n.pos}" data-lettre="${n.lettre}" data-octave="${n.octave}" style="left:${idx * 36}px;bottom:${MUS_BASE_Y + n.pos * 6}px"></button>`).join("")}
+                  ${(c === "sol" ? PORTEE_SOL : PORTEE_FA).map((n, idx) => `${ledgerLinesHtml(n.pos, idx * 36 + 11, 30)}<button class="mus-note-select${notesPerso.has(`${c}-${n.pos}`) ? " on" : ""}" data-noteclef="${c}" data-pos="${n.pos}" data-lettre="${n.lettre}" data-octave="${n.octave}" style="left:${idx * 36}px;bottom:${MUS_BASE_Y + n.pos * 6}px"></button>`).join("")}
                 </div>
               </div>
             </div>`).join("")}
@@ -3441,7 +3458,10 @@ function ouvrirConfigMusique() {
 // active et s'immobilise pile dessus si on bloque ; ça accélère tant qu'on répond vite.
 const MUS_ESPACEMENT = 72;
 const MUS_ZONE_RALENTI = 140;
-const MUS_BASE_Y = 24; // marge sous la 1ère ligne, pour que les notes sous la portée (ledger lines) ne soient pas rognées
+const MUS_BASE_Y = 66; // marge sous la 1ère ligne, pour que les notes sous la portée (jusqu'à 3 ledger lines) ne soient pas rognées
+function ledgerLinesHtml(pos, centreX, largeur) {
+  return lignesSupplementaires(pos).map(p => `<div class="mus-ligne-sup" style="left:${centreX - largeur / 2}px;width:${largeur}px;bottom:${MUS_BASE_Y + p * 6}px"></div>`).join("");
+}
 function jeuMusique() {
   const modePerso = musiqueEtat.mode === "perso";
   const [ampliMin, ampliMax] = AMPLITUDE_NIVEAUX[(musiqueEtat.niveau || 1) - 1];
@@ -3478,6 +3498,7 @@ function jeuMusique() {
     for (let i = depuis; i < sequence.length; i++) {
       const n = sequence[i];
       const piste = corps.querySelector(`#mus-piste-${n.clef}`);
+      piste.insertAdjacentHTML("beforeend", ledgerLinesHtml(n.pos, i * MUS_ESPACEMENT + 7, 26));
       const el = document.createElement("div");
       el.className = "mus-note-fixe";
       el.dataset.i = i;
